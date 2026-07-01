@@ -3,15 +3,15 @@ services:
     image: postgres:16-alpine
     container_name: epn_postgres
     environment:
-      POSTGRES_USER: epn
-      POSTGRES_PASSWORD: epn
-      POSTGRES_DB: epn
+      POSTGRES_USER: ${POSTGRES_USER:-epn}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-epn}
+      POSTGRES_DB: ${POSTGRES_DB:-epn}
     ports:
       - "5432:5432"
     volumes:
       - epn_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U epn"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -39,17 +39,27 @@ services:
       redis:
         condition: service_healthy
     environment:
-      APP_ENV: dev
+      APP_ENV: ${APP_ENV:-dev}
+      DEBUG: ${DEBUG:-true}
       POSTGRES_HOST: postgres
-      POSTGRES_USER: epn
-      POSTGRES_PASSWORD: epn
-      POSTGRES_DB: epn
+      POSTGRES_USER: ${POSTGRES_USER:-epn}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-epn}
+      POSTGRES_DB: ${POSTGRES_DB:-epn}
       REDIS_HOST: redis
-      JWT_SECRET: dev-insecure-secret-change-me-please-32bytes+
-      BACKEND_CORS_ORIGINS: "http://localhost:5173,http://localhost:3000"
+      JWT_SECRET: ${JWT_SECRET:-dev-insecure-secret-change-me-please-32bytes+}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-console}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_USE_SSL: ${SMTP_USE_SSL:-false}
+      SMTP_TIMEOUT_SECONDS: ${SMTP_TIMEOUT_SECONDS:-10}
       # Bootstrap admin so you can import mallas immediately. Change in real use.
-      FIRST_SUPERADMIN_EMAIL: admin@epn.edu.ec
-      FIRST_SUPERADMIN_PASSWORD: ChangeMe-12345
+      FIRST_SUPERADMIN_EMAIL: ${FIRST_SUPERADMIN_EMAIL:-admin@epn.edu.ec}
+      FIRST_SUPERADMIN_PASSWORD: ${FIRST_SUPERADMIN_PASSWORD:-ChangeMe-12345}
     ports:
       - "8000:8000"
     command: ["sh", "./scripts/entrypoint.sh"]

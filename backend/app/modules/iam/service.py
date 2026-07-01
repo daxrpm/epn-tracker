@@ -60,14 +60,20 @@ async def request_verification_code(db: AsyncSession, email: str) -> None:
     await redis_client.delete(_attempts_key(email))
     await redis_client.set(_resend_key(email), "1", ex=settings.email_code_resend_seconds)
 
-    await get_email_sender().send(
-        to=email,
-        subject="Tu código de verificación EPN",
-        body=(
-            f"Tu código es {code}. Expira en {settings.email_code_ttl_seconds // 60} minutos.\n"
-            "Si no solicitaste esto, ignora este correo."
-        ),
-    )
+    try:
+        await get_email_sender().send(
+            to=email,
+            subject="Tu código de verificación EPN",
+            body=(
+                f"Tu código es {code}. "
+                f"Expira en {settings.email_code_ttl_seconds // 60} minutos.\n"
+                "Si no solicitaste esto, ignora este correo."
+            ),
+        )
+    except Exception:
+        # A delivery failure must not leave an unusable code or resend lock behind.
+        await redis_client.delete(_code_key(email), _attempts_key(email), _resend_key(email))
+        raise
 
 
 async def verify_code_and_register(

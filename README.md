@@ -33,12 +33,39 @@ Con Docker instalado, un solo comando levanta Postgres + Redis + la API, aplica 
 malla de arranque y crea el super admin:
 
 ```bash
-docker compose up --build
+cp .env.dev.example .env.dev
+docker compose --env-file .env.dev up --build
 ```
 
 - API: `http://localhost:8000` · Docs: `http://localhost:8000/docs`
-- Super admin inicial: `admin@epn.edu.ec` / `ChangeMe-12345` (cámbialo en `docker-compose.yml`).
+- Super admin inicial: `admin@epn.edu.ec` / `ChangeMe-12345` (sobrescríbelo con variables de
+  entorno fuera del desarrollo local).
 - Readiness: `GET /api/v1/health/ready` (verifica base de datos y Redis).
+
+En local hay dos formas de entrar:
+
+- Credenciales listas: `admin@epn.edu.ec` / `ChangeMe-12345`.
+- Registro: solicita el código desde la UI y léelo con
+  `docker compose --env-file .env.dev logs backend`; el backend `console` solo imprime códigos
+  cuando `APP_ENV=dev`.
+
+## Correo SMTP en despliegue
+
+En un entorno distinto de `dev`, la aplicación exige un secreto JWT fuerte, SMTP y que no se use la
+contraseña inicial de desarrollo. Parte de la plantilla, reemplaza todos los valores `CHANGE_ME` y
+mantén el archivo resultante fuera de Git:
+
+```bash
+cp .env.prod.example .env.prod
+# Edita .env.prod o inyecta estos valores desde el gestor de secretos de tu plataforma.
+docker compose --env-file .env.prod config
+docker compose --env-file .env.prod up --build -d
+```
+
+Usa `SMTP_STARTTLS=true` normalmente en el puerto 587. Para TLS implícito (habitualmente 465), usa
+`SMTP_USE_SSL=true` y `SMTP_STARTTLS=false`. Las migraciones se aplican automáticamente antes de
+arrancar la API en el contenedor. Los archivos `.env.dev` y `.env.prod` están ignorados por Git;
+solo se versionan sus plantillas `.example`.
 
 ## Desarrollo local (sin Docker para la app)
 
@@ -48,7 +75,7 @@ postgres redis`.
 ```bash
 cd backend
 uv sync
-uv run pytest -q                   # 56 tests (dominio + integración, sin DB externa)
+uv run pytest -q                   # 62 tests (dominio + integración, sin DB externa)
 uv run alembic upgrade head        # migraciones (requiere Postgres)
 uv run python -m seeds.loader      # malla de arranque
 uv run python -m seeds.create_admin  # super admin (usa FIRST_SUPERADMIN_*)

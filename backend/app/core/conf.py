@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
 
-from pydantic import computed_field, model_validator
+from pydantic import EmailStr, Field, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _MIN_SECRET_LENGTH = 32
@@ -66,23 +67,62 @@ class Settings(BaseSettings):
     login_max_attempts: int = 10
     login_window_seconds: int = 900
 
-    # Email
-    email_backend: str = "console"
+    # Email. Console is intentionally restricted to local development.
+    email_backend: Literal["console", "smtp"] = "console"
+    smtp_host: str | None = None
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: EmailStr | None = None
+    smtp_starttls: bool = True
+    smtp_use_ssl: bool = False
+    smtp_timeout_seconds: float = Field(default=10.0, gt=0, le=120)
 
     # First super admin bootstrap (used by `python -m seeds.create_admin`).
     first_superadmin_email: str | None = None
     first_superadmin_password: str | None = None
 
+    @field_validator(
+        "database_url_override",
+        "smtp_host",
+        "smtp_username",
+        "smtp_password",
+        "smtp_from_email",
+        "first_superadmin_email",
+        "first_superadmin_password",
+        mode="before",
+    )
+    @classmethod
+    def _empty_optional_values_are_none(cls, value: object) -> object:
+        """Compose represents unset optional variables as empty strings."""
+        return None if value == "" else value
+
     @model_validator(mode="after")
     def _check_production_secret(self) -> Settings:
         if self.app_env != "dev" and (
-            len(self.jwt_secret) < _MIN_SECRET_LENGTH
-            or self.jwt_secret.startswith("dev-insecure")
+            len(self.jwt_secret) < _MIN_SECRET_LENGTH or self.jwt_secret.startswith("dev-insecure")
         ):
             raise ValueError(
                 "JWT_SECRET must be a strong secret of at least "
                 f"{_MIN_SECRET_LENGTH} characters outside of development."
             )
+        if self.app_env != "dev" and self.email_backend != "smtp":
+            raise ValueError("EMAIL_BACKEND must be 'smtp' outside of development.")
+        if self.app_env != "dev" and self.debug:
+            raise ValueError("DEBUG must be false outside of development.")
+        if self.app_env != "dev" and self.postgres_password == "epn":
+            raise ValueError("POSTGRES_PASSWORD must not use the development default.")
+        if self.app_env != "dev" and self.first_superadmin_password == "ChangeMe-12345":
+            raise ValueError("FIRST_SUPERADMIN_PASSWORD must not use the development default.")
+        if self.email_backend == "smtp":
+            if not self.smtp_host or not self.smtp_from_email:
+                raise ValueError(
+                    "SMTP_HOST and SMTP_FROM_EMAIL are required when EMAIL_BACKEND=smtp."
+                )
+            if bool(self.smtp_username) != bool(self.smtp_password):
+                raise ValueError("SMTP_USERNAME and SMTP_PASSWORD must be configured together.")
+            if self.smtp_starttls and self.smtp_use_ssl:
+                raise ValueError("SMTP_STARTTLS and SMTP_USE_SSL cannot both be enabled.")
         return self
 
     @computed_field  # type: ignore[prop-decorator]

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import String
+from sqlalchemy import DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.enums import UserRole, UserStatus
@@ -21,7 +21,9 @@ class User(UUIDMixin, TimestampMixin, Base):
 
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    email_verified_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     role: Mapped[UserRole] = mapped_column(enum_column(UserRole), default=UserRole.STUDENT)
     status: Mapped[UserStatus] = mapped_column(enum_column(UserStatus), default=UserStatus.ACTIVE)
 
