@@ -90,7 +90,11 @@ async def verify_code_and_register(
 
 
 async def login(db: AsyncSession, email: str, password: str) -> TokenOut:
-    user = await crud.get_user_by_email(db, email.lower())
+    email = email.lower()
+    await enforce_rate_limit(
+        f"rate:login:{email}", settings.login_max_attempts, settings.login_window_seconds
+    )
+    user = await crud.get_user_by_email(db, email)
     # Verify against a hash even when the user is missing to keep timing uniform.
     stored_hash = user.password_hash if user and user.password_hash else _DUMMY_HASH
     password_ok = verify_password(password, stored_hash)

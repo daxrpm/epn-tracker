@@ -31,8 +31,18 @@ class Settings(BaseSettings):
     postgres_password: str = "epn"
     postgres_db: str = "epn"
 
+    # Connection pool
+    db_pool_size: int = 10
+    db_max_overflow: int = 20
+    db_pool_timeout: int = 30
+    db_pool_recycle: int = 1800
+    db_echo: bool = False
+
     # Full URL override (used by the SQLite-based tests).
     database_url_override: str | None = None
+
+    # CORS — comma-separated list of allowed frontend origins.
+    backend_cors_origins: str = "http://localhost:5173,http://localhost:3000"
 
     # Redis
     redis_host: str = "localhost"
@@ -51,6 +61,10 @@ class Settings(BaseSettings):
     email_code_max_attempts: int = 5
     email_code_resend_seconds: int = 60
     email_codes_per_hour: int = 5
+
+    # Login throttling (ERS §25.2)
+    login_max_attempts: int = 10
+    login_window_seconds: int = 900
 
     # Email
     email_backend: str = "console"
@@ -81,6 +95,10 @@ class Settings(BaseSettings):
     @property
     def redis_url(self) -> str:
         return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.backend_cors_origins.split(",") if origin.strip()]
 
     @property
     def is_dev(self) -> bool:
