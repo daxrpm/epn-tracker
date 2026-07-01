@@ -1,4 +1,11 @@
-import { Calculator, GraduationCap, LayoutDashboard, LogOut } from "lucide-react";
+import {
+  Calculator,
+  GraduationCap,
+  LayoutDashboard,
+  ListChecks,
+  LogOut,
+  Network,
+} from "lucide-react";
 import { useState } from "react";
 import { Link, Outlet } from "react-router-dom";
 
@@ -9,6 +16,8 @@ import { useAuthStore } from "@/stores/auth.store";
 
 const NAV_LINKS = [
   { label: "Inicio", href: "/app/dashboard", icon: <LayoutDashboard className="size-5 shrink-0" /> },
+  { label: "Malla", href: "/app/curriculum", icon: <Network className="size-5 shrink-0" /> },
+  { label: "Requisitos", href: "/app/requisitos", icon: <ListChecks className="size-5 shrink-0" /> },
   { label: "Calculadora", href: "/app/calculadora", icon: <Calculator className="size-5 shrink-0" /> },
 ];
 
