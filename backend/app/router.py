@@ -1,6 +1,6 @@
-"""Router raíz de la API v1. Agrega los routers de cada módulo.
+"""Root API v1 router. Aggregates the routers of each module.
 
-Los routers de cada módulo se registran aquí a medida que se implementan.
+Module routers are registered here as they are implemented.
 """
 
 from __future__ import annotations

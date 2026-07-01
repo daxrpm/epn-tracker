@@ -1,4 +1,4 @@
-"""Modelos del estudiante: perfil, estados de materia, matrículas y gradebook (ERS §12.18-12.23)."""
+"""Student models: profile, course states, enrollments and gradebook (ERS §12.18-12.23)."""
 
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ class StudentCourseState(UUIDMixin, TimestampMixin, Base):
     source: Mapped[CourseStateSource] = mapped_column(
         enum_column(CourseStateSource), default=CourseStateSource.MANUAL
     )
-    # Reservado para reglas de repetición futuras (ERS §4.3, §8.14).
+    # Reserved for future repetition rules (ERS §4.3, §8.14).
     attempt_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     withdrawal_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     annulment_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -61,7 +61,7 @@ class StudentCourseState(UUIDMixin, TimestampMixin, Base):
 
 
 class StudentEnrollment(UUIDMixin, TimestampMixin, Base):
-    """Materia que el estudiante está cursando con su contexto (paralelo/profesor/esquema)."""
+    """A course the student is taking with its context (section/professor/scheme)."""
 
     __tablename__ = "student_enrollments"
 
@@ -83,7 +83,7 @@ class StudentEnrollment(UUIDMixin, TimestampMixin, Base):
 
 
 class GradeComponentState(UUIDMixin, TimestampMixin, Base):
-    """Estado de un componente de evaluación para una matrícula concreta (ERS §12.21)."""
+    """State of an evaluation component for a specific enrollment (ERS §12.21)."""
 
     __tablename__ = "grade_component_states"
 
@@ -100,7 +100,7 @@ class GradeComponentState(UUIDMixin, TimestampMixin, Base):
 
 
 class GradeItem(UUIDMixin, TimestampMixin, Base):
-    """Insumo interno de un componente (ej. Deber 1). Privado por defecto (ERS §8.9)."""
+    """Internal item within a component (e.g. Homework 1). Private by default (ERS §8.9)."""
 
     __tablename__ = "grade_items"
 

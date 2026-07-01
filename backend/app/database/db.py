@@ -29,7 +29,7 @@ async_session_factory = async_sessionmaker(
 
 
 async def get_db() -> AsyncGenerator[AsyncSession]:
-    """Dependencia FastAPI: una sesión por request con commit/rollback gestionado."""
+    """FastAPI dependency: one session per request with managed commit/rollback."""
     async with async_session_factory() as session:
         try:
             yield session

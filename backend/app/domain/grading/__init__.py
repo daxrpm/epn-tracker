@@ -1,4 +1,4 @@
-"""Reglas de dominio de notas: componentes, aportes, nota final y recuperación."""
+"""Grade domain rules: components, contributions, final grade and recovery."""
 
 from app.domain.grading.grade_calculation import (
     ComponentInput,

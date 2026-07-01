@@ -1,7 +1,7 @@
-"""Límite de créditos matriculables (ERS §8.16-8.18).
+"""Maximum enrollable credits (ERS §8.16-8.18).
 
-Combina el máximo normal (15), la restricción por repetición (12) y la restricción por inglés, y
-devuelve el mínimo aplicable junto con las razones textuales.
+Combines the normal maximum (15), the repetition restriction (12) and the English restriction, and
+returns the applicable minimum together with the textual reasons.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ def calculate_credit_limit(
     english: EnglishState,
     has_special_credit_authorization: bool = False,
 ) -> CreditLimitResult:
-    """Calcula el límite de créditos aplicando todas las restricciones (toma el mínimo)."""
+    """Compute the credit limit applying every restriction (takes the minimum)."""
     reasons: list[RestrictionReason] = []
     max_credits = MAX_CREDITS_NORMAL
 
@@ -61,7 +61,7 @@ def calculate_credit_limit(
             )
         )
 
-    # La autorización especial solo levanta el máximo normal, no las otras restricciones.
+    # A special authorization only lifts the normal maximum, not the other restrictions.
     if has_special_credit_authorization and not has_pending_failed_courses and not reasons:
         max_credits = MAX_CREDITS_NORMAL
 

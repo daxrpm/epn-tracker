@@ -1,7 +1,7 @@
-"""Base declarativa de SQLAlchemy y mixins compartidos.
+"""SQLAlchemy declarative base and shared mixins.
 
-Todas las entidades usan UUID como PK y llevan ``created_at`` / ``updated_at``. Los montos numéricos
-(notas, pesos, créditos) se modelan con ``Numeric`` para mapear a ``Decimal`` y evitar ``float``
+Every entity uses a UUID primary key and carries ``created_at`` / ``updated_at``. Numeric amounts
+(grades, weights, credits) are modelled with ``Numeric`` to map to ``Decimal`` and avoid ``float``
 (ERS §RNF-006).
 """
 
@@ -14,7 +14,7 @@ from sqlalchemy import MetaData, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.types import Uuid
 
-# Convención de nombres para índices/constraints: migraciones estables y deterministas.
+# Naming convention for indexes/constraints: stable, deterministic migrations.
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
     "uq": "uq_%(table_name)s_%(column_0_name)s",

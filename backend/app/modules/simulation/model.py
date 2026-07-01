@@ -1,4 +1,4 @@
-"""Modelo de simulación guardada (ERS §12.24)."""
+"""Saved simulation model (ERS §12.24)."""
 
 from __future__ import annotations
 

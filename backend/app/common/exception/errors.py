@@ -1,4 +1,4 @@
-"""Excepciones de dominio/aplicación con mapeo a códigos y estados HTTP (ERS §26)."""
+"""Application/domain exceptions mapped to error codes and HTTP status (ERS §26)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from typing import Any
 
 
 class AppError(Exception):
-    """Error base de la aplicación. Los handlers lo traducen al envelope de error estándar."""
+    """Base application error. Handlers translate it into the standard error envelope."""
 
     code: str = "APP_ERROR"
     status_code: int = 400

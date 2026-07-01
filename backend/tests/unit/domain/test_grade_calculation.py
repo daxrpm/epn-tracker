@@ -19,7 +19,7 @@ def test_direct_score_returns_value():
     assert score == Decimal("14.75")
 
 
-def test_equal_average(): # ERS §8.8
+def test_equal_average():  # ERS §8.8
     items = [ItemInput(score="18"), ItemInput(score="16"), ItemInput(score="20")]
     score = calculate_component_score(GradeComponentMode.EQUAL_AVERAGE, None, items)
     assert score == Decimal("18")
@@ -41,7 +41,7 @@ def test_equal_average_ignores_missing_items():
 
 
 def test_contribution_partial_reports_evaluated_weight():
-    # Deberes 18/20 @20% => 3.6 ; Examen sin nota @35% no cuenta aún
+    # Homework 18/20 @20% => 3.6 ; Exam without a score @35% does not count yet
     direct = GradeComponentMode.DIRECT_SCORE
     components = [
         ComponentInput(weight_percent="20", mode=direct, direct_score="18"),
@@ -58,7 +58,7 @@ def test_float_is_rejected():
         calculate_component_score(GradeComponentMode.DIRECT_SCORE, 14.75, [])  # type: ignore[arg-type]
 
 
-# ERS §24.2 — tabla de casos de nota final
+# ERS §24.2 — final grade test cases
 @pytest.mark.parametrize(
     ("a1", "a2", "final_40", "status"),
     [

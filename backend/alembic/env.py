@@ -1,16 +1,16 @@
-"""Entorno de migraciones Alembic (async)."""
+"""Alembic migration environment (async)."""
 
 from __future__ import annotations
 
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlalchemy.pool import NullPool
 
+from alembic import context
 from app.core.conf import settings
-from app.database.models import Base  # importa todos los modelos en la metadata
+from app.database.models import Base  # imports every model into the metadata
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

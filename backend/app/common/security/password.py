@@ -1,4 +1,4 @@
-"""Hash de contraseñas con Argon2id (ERS §RNF-003)."""
+"""Password hashing with Argon2id (ERS §RNF-003)."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Middleware de contexto de request: asigna un request-id y registra el acceso (ERS §RNF-008)."""
+"""Request-context middleware: assigns a request-id and logs access (ERS §RNF-008)."""
 
 from __future__ import annotations
 

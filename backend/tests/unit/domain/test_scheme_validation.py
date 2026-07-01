@@ -50,7 +50,7 @@ def test_ca_005_component_over_35_invalid():
 
 
 def test_personal_scheme_incomplete_is_warning_not_error():
-    # Un solo aporte, sin sumar 100: en modo no estricto son advertencias, no bloquea.
+    # Contributions not summing to 100: in non-strict mode these are warnings, not blocking.
     comps = [
         SchemeComponent(Contribution.APORTE_1, "Examen", "30", EvaluationType.SUMMATIVE),
         SchemeComponent(Contribution.APORTE_2, "Examen", "30", EvaluationType.SUMMATIVE),

@@ -1,7 +1,7 @@
-"""Registro central de todos los modelos.
+"""Central registry of every model.
 
-Importa cada modelo para que queden registrados en ``Base.metadata`` (necesario para Alembic y para
-crear el esquema en los tests). Importa este módulo antes de usar la metadata.
+Imports each model so they are registered on ``Base.metadata`` (needed by Alembic and to create the
+schema in tests). Import this module before using the metadata.
 """
 
 from __future__ import annotations

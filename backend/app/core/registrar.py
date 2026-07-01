@@ -1,4 +1,4 @@
-"""App factory: construye y configura la instancia de FastAPI."""
+"""App factory: builds and configures the FastAPI instance."""
 
 from __future__ import annotations
 

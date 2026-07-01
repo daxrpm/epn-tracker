@@ -1,4 +1,4 @@
-"""Configuración de logging estructurado básico (ERS §RNF-008)."""
+"""Basic structured logging configuration (ERS §RNF-008)."""
 
 from __future__ import annotations
 

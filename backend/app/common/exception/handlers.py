@@ -1,4 +1,4 @@
-"""Handlers de excepciones que producen el envelope de error estándar."""
+"""Exception handlers that produce the standard error envelope."""
 
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def _unhandled_handler(_: Request, exc: Exception) -> JSONResponse:
-        logger.exception("Error no controlado: %s", exc)
+        logger.exception("Unhandled error: %s", exc)
         return JSONResponse(
             status_code=500,
             content=error_payload("INTERNAL_ERROR", "Error interno del servidor."),

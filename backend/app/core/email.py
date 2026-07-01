@@ -1,4 +1,4 @@
-"""Envío de correo. En dev usa un backend de consola; la interfaz permite un SMTP real luego."""
+"""Email sending. Dev uses a console backend; the interface allows a real SMTP later."""
 
 from __future__ import annotations
 
@@ -16,14 +16,14 @@ class EmailSender(ABC):
 
 
 class ConsoleEmailSender(EmailSender):
-    """Imprime el correo en el log. Útil para desarrollo local (ERS §RF-001)."""
+    """Prints the email to the log. Useful for local development (ERS §RF-001)."""
 
     async def send(self, to: str, subject: str, body: str) -> None:
         logger.info("EMAIL -> %s | %s\n%s", to, subject, body)
 
 
 def get_email_sender() -> EmailSender:
-    # Extensible: agregar SMTP/API cuando se configure (ERS §RF-018).
+    # Extensible: add SMTP/API when configured (ERS §RF-018).
     if settings.email_backend == "console":
         return ConsoleEmailSender()
     return ConsoleEmailSender()

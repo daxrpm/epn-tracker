@@ -1,7 +1,7 @@
-"""Examen de recuperación / supletorio (ERS §8.5-8.6, §16.4).
+"""Recovery / makeup exam (ERS §8.5-8.6, §16.4).
 
-Sobre 40 puntos. Elegible si ``18 <= final_40 < 28``. Para aprobar, la recuperación debe ser >= 24 y
-el promedio ``(final_40 + recovery_40) / 2 >= 24``.
+Scored over 40 points. Eligible when ``18 <= final_40 < 28``. To pass, the recovery score must be
+>= 24 and the average ``(final_40 + recovery_40) / 2 >= 24``.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ def is_recovery_eligible(final_40: Decimal | str) -> bool:
 
 
 def required_recovery_score(final_40: Decimal | str) -> Decimal | None:
-    """Nota mínima necesaria en recuperación: ``max(24, 48 - final_40)`` (ERS §8.5)."""
+    """Minimum score needed in recovery: ``max(24, 48 - final_40)`` (ERS §8.5)."""
     value = to_decimal(final_40)
     if value is None or not (RECOVERY_FLOOR_40 <= value < APPROVED_THRESHOLD_40):
         return None
@@ -43,7 +43,7 @@ def required_recovery_score(final_40: Decimal | str) -> Decimal | None:
 def evaluate_recovery(
     final_40: Decimal | str, recovery_score_40: Decimal | str | None = None
 ) -> RecoveryResult:
-    """Evalúa elegibilidad y, si se da la nota de recuperación, si el estudiante aprueba."""
+    """Evaluate eligibility and, if a recovery score is given, whether the student passes."""
     eligible = is_recovery_eligible(final_40)
     required = required_recovery_score(final_40)
 
@@ -65,7 +65,7 @@ def evaluate_recovery(
 def improved_final_with_recovery(
     final_40: Decimal | str, recovery_score_40: Decimal | str
 ) -> Decimal:
-    """Mejora opcional de nota con recuperación (ERS §8.6). No es el flujo principal."""
+    """Optional grade improvement with recovery (ERS §8.6). Not the primary flow."""
     final = to_decimal(final_40) or Decimal("0")
     recovery = to_decimal(recovery_score_40) or Decimal("0")
     if recovery <= final:

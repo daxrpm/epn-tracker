@@ -1,9 +1,9 @@
-"""Restricción de créditos por inglés (ERS §8.18, §16.6).
+"""Credit restriction based on English level (ERS §8.18, §16.6).
 
-Para carreras de tercer nivel de grado:
-- >= 45 créditos y nivel < INTERMEDIATE_1  -> límite 12
-- >= 75 créditos y sin suficiencia          -> límite 9
-- >= 120 créditos y sin suficiencia         -> límite 9 (15 con excepción en el último nivel)
+For third-level undergraduate programs:
+- >= 45 credits and level < INTERMEDIATE_1  -> limit 12
+- >= 75 credits and no sufficiency          -> limit 9
+- >= 120 credits and no sufficiency         -> limit 9 (15 with an exception at the last level)
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ class EnglishState:
 def calculate_english_credit_limit(
     approved_credits: Decimal | str | int, english: EnglishState
 ) -> Decimal | None:
-    """Devuelve el límite de créditos impuesto por inglés, o ``None`` si no aplica."""
+    """Return the credit limit imposed by English, or ``None`` if it does not apply."""
     credits = to_decimal(approved_credits) or Decimal("0")
 
     if credits >= Decimal("120") and not english.sufficiency:

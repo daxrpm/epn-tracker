@@ -1,4 +1,4 @@
-"""Modelos de oferta: profesores, ofertas, paralelos (ERS §12.10-12.13)."""
+"""Offering models: professors, offerings, sections (ERS §12.10-12.13)."""
 
 from __future__ import annotations
 

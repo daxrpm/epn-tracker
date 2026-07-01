@@ -1,4 +1,4 @@
-"""Paginación simple por offset/limit."""
+"""Simple offset/limit pagination."""
 
 from __future__ import annotations
 

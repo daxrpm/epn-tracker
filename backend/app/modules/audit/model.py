@@ -1,4 +1,4 @@
-"""Log de auditoría genérico (ERS §24, §25.4)."""
+"""Generic audit log (ERS §24, §25.4)."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Endpoints públicos: calculadoras anónimas (ERS §17.11). No requieren autenticación."""
+"""Public endpoints: anonymous calculators (ERS §17.11). No authentication required."""
 
 from __future__ import annotations
 

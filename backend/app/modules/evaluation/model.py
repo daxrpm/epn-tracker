@@ -1,4 +1,4 @@
-"""Modelos de evaluación: esquemas, componentes, votos y auditoría (ERS §12.14-12.16)."""
+"""Evaluation models: schemes, components, votes and audit (ERS §12.14-12.16)."""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ class EvaluationScheme(UUIDMixin, TimestampMixin, Base):
     approval_count: Mapped[int] = mapped_column(Integer, default=0)
     revision_number: Mapped[int] = mapped_column(Integer, default=1)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    # Contexto para verificación comunitaria (ERS §21.3).
+    # Context for community verification (ERS §21.3).
     context_hash: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
 
 
@@ -79,7 +79,7 @@ class EvaluationSchemeVote(UUIDMixin, TimestampMixin, Base):
 
 
 class EvaluationSchemeAudit(UUIDMixin, TimestampMixin, Base):
-    """Snapshot antes/después de una edición admin de esquema (ERS §8.13)."""
+    """Before/after snapshot of an admin edit to a scheme (ERS §8.13)."""
 
     __tablename__ = "evaluation_scheme_audits"
 

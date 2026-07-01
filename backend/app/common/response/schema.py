@@ -1,4 +1,4 @@
-"""Envelope estándar de respuesta y error (ERS §26)."""
+"""Standard success and error response envelope (ERS §26)."""
 
 from __future__ import annotations
 

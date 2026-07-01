@@ -1,4 +1,4 @@
-"""Dependencias compartidas de FastAPI: sesión de BD y usuario autenticado."""
+"""Shared FastAPI dependencies: database session and authenticated user."""
 
 from __future__ import annotations
 

@@ -1,6 +1,6 @@
-"""Modelos del catálogo académico (ERS §12.1-12.9).
+"""Academic catalog models (ERS §12.1-12.9).
 
-Separación clave (ERS §33): materia de catálogo != materia dentro de una malla != oferta real.
+Key separation (ERS §33): catalog course != course within a curriculum != real offering.
 """
 
 from __future__ import annotations
@@ -66,14 +66,14 @@ class Curriculum(UUIDMixin, TimestampMixin, Base):
     status: Mapped[CurriculumStatus] = mapped_column(
         enum_column(CurriculumStatus), default=CurriculumStatus.DRAFT
     )
-    # Reservado para escalabilidad futura (ERS §4.3): equivalencias / transición de malla.
+    # Reserved for future scalability (ERS §4.3): equivalences / curriculum transition.
     supersedes_curriculum_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("curricula.id"), nullable=True
     )
 
 
 class Course(UUIDMixin, TimestampMixin, Base):
-    """Materia de catálogo (independiente de la malla)."""
+    """Catalog course (independent of any curriculum)."""
 
     __tablename__ = "courses"
     __table_args__ = (
@@ -93,7 +93,7 @@ class Course(UUIDMixin, TimestampMixin, Base):
 
 
 class CurriculumCourse(UUIDMixin, TimestampMixin, Base):
-    """Materia ubicada dentro de una malla (con su periodo referencial y créditos)."""
+    """A course placed within a curriculum (with its reference term and credits)."""
 
     __tablename__ = "curriculum_courses"
     __table_args__ = (
@@ -113,7 +113,7 @@ class CurriculumCourse(UUIDMixin, TimestampMixin, Base):
 
 
 class CourseRequirement(UUIDMixin, TimestampMixin, Base):
-    """Prerrequisito o correquisito entre materias de una malla (ERS §12.7)."""
+    """Prerequisite or corequisite between courses of a curriculum (ERS §12.7)."""
 
     __tablename__ = "course_requirements"
 
@@ -130,7 +130,7 @@ class CourseRequirement(UUIDMixin, TimestampMixin, Base):
 
 
 class GraduationRequirement(UUIDMixin, TimestampMixin, Base):
-    """Requisito de graduación sin créditos (inglés, deportes, clubes, etc.) (ERS §8.19)."""
+    """Non-credit graduation requirement (English, sports, clubs, etc.) (ERS §8.19)."""
 
     __tablename__ = "graduation_requirements"
     __table_args__ = (
@@ -149,7 +149,7 @@ class GraduationRequirement(UUIDMixin, TimestampMixin, Base):
 
 
 class CurriculumGraduationRequirement(UUIDMixin, TimestampMixin, Base):
-    """Asocia un requisito de graduación con una malla concreta."""
+    """Associates a graduation requirement with a specific curriculum."""
 
     __tablename__ = "curriculum_graduation_requirements"
     __table_args__ = (
@@ -165,7 +165,7 @@ class CurriculumGraduationRequirement(UUIDMixin, TimestampMixin, Base):
 
 
 class AcademicPeriod(UUIDMixin, TimestampMixin, Base):
-    """Periodo académico real, ej. 2026-A (ERS §12.9)."""
+    """Real academic period, e.g. 2026-A (ERS §12.9)."""
 
     __tablename__ = "academic_periods"
     __table_args__ = (

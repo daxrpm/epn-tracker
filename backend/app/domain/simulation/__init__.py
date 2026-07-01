@@ -1,4 +1,4 @@
-"""Reglas de dominio del simulador: inglés, créditos y elegibilidad de materias."""
+"""Simulator domain rules: English, credits and course eligibility."""
 
 from app.domain.simulation.credit_limits import (
     CreditLimitResult,

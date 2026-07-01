@@ -1,4 +1,4 @@
-"""Schemas de las calculadoras anónimas (ERS §17.11, §18.1)."""
+"""Schemas for the anonymous calculators (ERS §17.11, §18.1)."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Cliente Redis compartido (cache, rate limit, códigos de verificación)."""
+"""Shared Redis client (cache, rate limit, verification codes)."""
 
 from __future__ import annotations
 

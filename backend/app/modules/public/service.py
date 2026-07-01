@@ -1,4 +1,4 @@
-"""Servicio de calculadoras anónimas: orquesta el dominio puro (ERS §RF-010, §RF-011)."""
+"""Anonymous calculator service: orchestrates the pure domain (ERS §RF-010, §RF-011)."""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ def calculate_recovery(payload: AportesIn) -> RecoveryOut:
 
 
 def calculate_anon_scheme(payload: AnonSchemeIn) -> AnonSchemeOut:
-    """Calcula una materia temporal con componentes y pesos, sin guardar (ERS §RF-011)."""
+    """Compute a temporary course from components and weights, without saving (ERS §RF-011)."""
     validation = validate_scheme(
         [
             SchemeComponent(

@@ -1,14 +1,14 @@
-"""Enums de dominio del sistema EPN Notas Mallas.
+"""Domain enums for the EPN Notas Mallas system.
 
-Fuente de verdad para todos los estados y categorías (ver ERS §27 y §12). Estos enums no dependen de
-ningún framework; se reexportan desde ``app.common.enums`` para el resto de la aplicación.
+Single source of truth for every state and category (see ERS §27 and §12). These enums do not depend
+on any framework; they are re-exported from ``app.common.enums`` for the rest of the application.
 """
 
 from __future__ import annotations
 
 from enum import StrEnum
 
-# --- Identidad y acceso ---------------------------------------------------------------------------
+# --- Identity and access --------------------------------------------------------------------------
 
 
 class UserRole(StrEnum):
@@ -23,7 +23,7 @@ class UserStatus(StrEnum):
     DELETED = "DELETED"
 
 
-# --- Catálogo académico ---------------------------------------------------------------------------
+# --- Academic catalog -----------------------------------------------------------------------------
 
 
 class CurriculumStatus(StrEnum):
@@ -68,7 +68,7 @@ class GraduationRequirementType(StrEnum):
     OTHER = "OTHER"
 
 
-# --- Oferta ---------------------------------------------------------------------------------------
+# --- Offering -------------------------------------------------------------------------------------
 
 
 class CourseOfferingStatus(StrEnum):
@@ -92,7 +92,7 @@ class SectionProfessorRole(StrEnum):
     OTHER = "OTHER"
 
 
-# --- Evaluación -----------------------------------------------------------------------------------
+# --- Evaluation -----------------------------------------------------------------------------------
 
 
 class Contribution(StrEnum):
@@ -132,7 +132,7 @@ class SchemeVote(StrEnum):
     REJECT = "REJECT"
 
 
-# --- Notas del estudiante -------------------------------------------------------------------------
+# --- Student grades -------------------------------------------------------------------------------
 
 
 class GradeComponentMode(StrEnum):
@@ -142,7 +142,7 @@ class GradeComponentMode(StrEnum):
 
 
 class CourseState(StrEnum):
-    """Estado que el estudiante asigna a una materia dentro de su malla."""
+    """State the student assigns to a course within their curriculum."""
 
     NOT_TAKEN = "NOT_TAKEN"
     IN_PROGRESS = "IN_PROGRESS"
@@ -171,11 +171,11 @@ class GraduationRequirementState(StrEnum):
     NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
-# --- Resultados de cálculo (dominio) --------------------------------------------------------------
+# --- Calculation results (domain) -----------------------------------------------------------------
 
 
 class CourseFinalStatus(StrEnum):
-    """Resultado del cálculo de la nota final ordinaria (ERS §8.4)."""
+    """Result of the ordinary final-grade calculation (ERS §8.4)."""
 
     APPROVED = "APPROVED"
     RECOVERY_ELIGIBLE = "RECOVERY_ELIGIBLE"
@@ -184,7 +184,7 @@ class CourseFinalStatus(StrEnum):
 
 
 class CalculationMode(StrEnum):
-    """Cómo se tratan las notas al calcular (ERS §8.7)."""
+    """How grades are treated during calculation (ERS §8.7)."""
 
     CURRENT = "CURRENT"
     PROJECTION = "PROJECTION"
@@ -197,7 +197,7 @@ class MissingPolicy(StrEnum):
     USER_ASSUMPTION = "USER_ASSUMPTION"
 
 
-# --- Inglés (ordenado por nivel) ------------------------------------------------------------------
+# --- English (ordered by level) -------------------------------------------------------------------
 
 
 class EnglishLevel(StrEnum):
@@ -211,7 +211,7 @@ class EnglishLevel(StrEnum):
 
     @property
     def rank(self) -> int:
-        """Índice ordinal para comparar niveles de inglés de forma fiable."""
+        """Ordinal index used to compare English levels reliably."""
         return _ENGLISH_LEVEL_ORDER.index(self)
 
     def __lt__(self, other: object) -> bool:  # type: ignore[override]
@@ -231,7 +231,7 @@ _ENGLISH_LEVEL_ORDER: list[EnglishLevel] = [
 ]
 
 
-# --- Simulación -----------------------------------------------------------------------------------
+# --- Simulation -----------------------------------------------------------------------------------
 
 
 class SimulationMode(StrEnum):
@@ -239,7 +239,7 @@ class SimulationMode(StrEnum):
     SAVED = "SAVED"
 
 
-# --- Sílabos / trabajos IA (reservado para Fase 5) ------------------------------------------------
+# --- Syllabi / AI jobs (reserved for Phase 5) -----------------------------------------------------
 
 
 class SyllabusJobStatus(StrEnum):

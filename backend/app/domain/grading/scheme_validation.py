@@ -1,9 +1,9 @@
-"""Validación de esquemas de evaluación (ERS §8.3).
+"""Evaluation scheme validation (ERS §8.3).
 
-Un esquema válido tiene exactamente dos aportes (APORTE_1, APORTE_2); cada aporte suma 100%; cada
-componente pesa entre 0 y 35%; y (para esquemas de sílabo/RRA) cada aporte tiene al menos un
-componente formativo y uno sumativo. Para esquemas personales las últimas reglas producen
-advertencias en lugar de errores.
+A valid scheme has exactly two contributions (APORTE_1, APORTE_2); each contribution sums to 100%;
+each component weighs between 0 and 35%; and (for syllabus/RRA schemes) each contribution has at
+least one formative and one summative component. For personal schemes the last rules produce
+warnings instead of errors.
 """
 
 from __future__ import annotations
@@ -46,10 +46,10 @@ def validate_scheme(
     strict: bool = True,
     tolerance: Decimal = DEFAULT_TOLERANCE,
 ) -> SchemeValidationResult:
-    """Valida un esquema. ``strict=True`` para sílabo/admin; ``False`` para esquemas personales.
+    """Validate a scheme. ``strict=True`` for syllabus/admin; ``False`` for personal schemes.
 
-    En modo no estricto, la ausencia de componentes formativo+sumativo y la suma incompleta se
-    reportan como advertencias en lugar de errores.
+    In non-strict mode, a missing formative+summative pair and an incomplete sum are reported as
+    warnings instead of errors.
     """
     errors: list[SchemeIssue] = []
     warnings: list[SchemeIssue] = []
@@ -98,6 +98,4 @@ def validate_scheme(
             )
             (errors if strict else warnings).append(issue)
 
-    return SchemeValidationResult(
-        is_valid=not errors, errors=errors, warnings=warnings
-    )
+    return SchemeValidationResult(is_valid=not errors, errors=errors, warnings=warnings)

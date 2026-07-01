@@ -1,7 +1,7 @@
-"""Modelo de usuario (ERS §12.17).
+"""User model (ERS §12.17).
 
-El email se almacena normalizado a minúsculas para unicidad case-insensitive (portable a SQLite;
-en producción PostgreSQL puede migrarse a ``citext``). Los códigos de verificación viven en Redis.
+The email is stored lowercased for case-insensitive uniqueness (portable to SQLite; in production
+PostgreSQL it can be migrated to ``citext``). Verification codes live in Redis.
 """
 
 from __future__ import annotations

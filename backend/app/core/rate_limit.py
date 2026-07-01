@@ -1,7 +1,7 @@
-"""Rate limiting basado en Redis (ERS §25.2).
+"""Redis-based rate limiting (ERS §25.2).
 
-Usa un contador con expiración por ventana. Si Redis no está disponible, falla de forma abierta
-(no bloquea) para no romper el desarrollo local sin Redis.
+Uses a counter with a per-window expiry. If Redis is unavailable it fails open (does not block) so
+local development without Redis keeps working.
 """
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ async def enforce_rate_limit(key: str, limit: int, window_seconds: int) -> None:
         current = await redis_client.incr(key)
         if current == 1:
             await redis_client.expire(key, window_seconds)
-    except Exception as exc:  # pragma: no cover - degradación si no hay Redis
-        logger.warning("Rate limit deshabilitado (Redis no disponible): %s", exc)
+    except Exception as exc:  # pragma: no cover - degrade gracefully without Redis
+        logger.warning("Rate limit disabled (Redis unavailable): %s", exc)
         return
 
     if current > limit:

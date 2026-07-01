@@ -12,7 +12,7 @@ from app.domain.grading.recovery import (
 )
 
 
-# ERS §8.5 — nota mínima necesaria en recuperación
+# ERS §8.5 — minimum score required in recovery
 @pytest.mark.parametrize(
     ("final_40", "eligible", "required"),
     [
@@ -34,12 +34,12 @@ def test_required_recovery_table(final_40, eligible, required):
 
 
 def test_ca_001_final_20_needs_28():
-    # CA-001: final 20/40 => necesita 28/40 en recuperación
+    # CA-001: final 20/40 => needs 28/40 in recovery
     assert required_recovery_score("20") == Decimal("28")
 
 
 def test_evaluate_recovery_pass():
-    # final 20 + recuperación 30 => promedio 25 >= 24 y recuperación >= 24 => aprueba
+    # final 20 + recovery 30 => average 25 >= 24 and recovery >= 24 => passes
     result = evaluate_recovery("20", "30")
     assert result.is_eligible is True
     assert result.passed is True
@@ -47,7 +47,7 @@ def test_evaluate_recovery_pass():
 
 
 def test_evaluate_recovery_fail_low_recovery():
-    # recuperación 23 < 24 => no aprueba aunque el promedio pudiera acercarse
+    # recovery 23 < 24 => does not pass even if the average were close
     result = evaluate_recovery("24", "23")
     assert result.passed is False
 

@@ -49,7 +49,7 @@ def test_repetition_limit_12():
 
 
 def test_min_of_restrictions_taken():
-    # 75 créditos sin inglés => 9, más repetición 12 => se toma el mínimo 9
+    # 75 credits without English => 9, plus repetition 12 => take the minimum 9
     result = calculate_credit_limit(
         "75", has_pending_failed_courses=True, english=EnglishState(sufficiency=False)
     )
@@ -83,7 +83,7 @@ def test_prerequisite_passed_makes_eligible():
 
 
 def test_ca_011_annulled_does_not_unlock():
-    # ICCD442 anulada != aprobada => ICCD523 sigue bloqueada
+    # ICCD442 annulled != passed => ICCD523 stays blocked
     scenario = ScenarioState(annulled={"ICCD442"})
     result = check_course_eligibility(_courses()[1], scenario, selected=set())
     assert result.is_eligible is False
@@ -122,7 +122,7 @@ def test_simulate_repeated_must_be_first():
         CourseNode(key="NEW1", credits="4"),
     ]
     scenario = ScenarioState(failed={"FAILED1"})
-    # Selecciona la nueva dejando fuera la reprobada elegible => inválido
+    # Selects the new course while leaving out the eligible failed one => invalid
     result = simulate_next_courses(courses, scenario, selected={"NEW1"})
     assert result.selected_valid is False
     codes = [r.code for r in result.restriction_reasons]

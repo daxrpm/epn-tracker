@@ -1,9 +1,9 @@
-"""Utilidades numéricas puras del dominio (ERS §8.1, §RNF-006).
+"""Pure numeric helpers for the domain layer (ERS §8.1, §RNF-006).
 
-Regla: internamente se conservan todos los decimales posibles con ``Decimal``. El redondeo es solo
-para visualización (2 decimales, ``ROUND_HALF_UP``). Nunca se usa ``float``.
+Rule: internally we keep full precision with ``Decimal``. Rounding is only for display (2 decimals,
+``ROUND_HALF_UP``). ``float`` is never used.
 
-Este módulo no depende de ningún framework; es la base numérica de la capa de dominio.
+This module has no framework dependencies; it is the numeric foundation of the domain layer.
 """
 
 from __future__ import annotations
@@ -15,28 +15,28 @@ ZERO = Decimal("0")
 
 
 def to_decimal(value: str | int | Decimal | None) -> Decimal | None:
-    """Convierte a ``Decimal`` de forma segura. Rechaza ``float`` para evitar imprecisión."""
+    """Safely convert to ``Decimal``. Rejects ``float`` to avoid precision loss."""
     if value is None:
         return None
     if isinstance(value, Decimal):
         return value
     if isinstance(value, float):
-        raise TypeError("No se permite float en cálculos de notas; usa str o Decimal.")
+        raise TypeError("float is not allowed in grade calculations; use str or Decimal.")
     try:
         return Decimal(value)
     except (InvalidOperation, ValueError) as exc:
-        raise ValueError(f"Valor decimal inválido: {value!r}") from exc
+        raise ValueError(f"Invalid decimal value: {value!r}") from exc
 
 
 def require_decimal(value: str | int | Decimal) -> Decimal:
     result = to_decimal(value)
     if result is None:
-        raise ValueError("Se esperaba un valor decimal, se recibió None.")
+        raise ValueError("Expected a decimal value but received None.")
     return result
 
 
 def display_round(value: Decimal | None, places: Decimal = TWO_PLACES) -> Decimal | None:
-    """Redondeo visual a 2 decimales. Solo para presentación, no para almacenamiento."""
+    """Round for display to 2 decimals. Presentation only, never for storage."""
     if value is None:
         return None
     return value.quantize(places, rounding=ROUND_HALF_UP)

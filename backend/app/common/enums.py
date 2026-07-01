@@ -1,6 +1,6 @@
-"""Reexport de los enums de dominio para el resto de la aplicación.
+"""Re-export of the domain enums for the rest of the application.
 
-Los enums viven en ``app.domain.enums`` (capa pura). El resto del código importa desde aquí.
+The enums live in ``app.domain.enums`` (pure layer). The rest of the code imports them from here.
 """
 
 from app.domain.enums import (

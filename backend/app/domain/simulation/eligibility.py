@@ -1,8 +1,8 @@
-"""Elegibilidad de materias y simulación de matrícula (ERS §8.20-8.22, §16.5).
+"""Course eligibility and enrollment simulation (ERS §8.20-8.22, §16.5).
 
-Un curso es elegible si no está aprobado, todos sus prerrequisitos están aprobados y sus
-correquisitos están aprobados o seleccionados en el mismo escenario. Las materias anuladas no
-cuentan como aprobadas ni como reprobadas (ERS §8.15).
+A course is eligible if it is not already passed, all its prerequisites are passed and its
+corequisites are passed or selected in the same scenario. Annulled courses count neither as passed
+nor as failed (ERS §8.15).
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from app.domain.simulation.english_rules import EnglishState
 
 @dataclass(slots=True)
 class CourseNode:
-    """Materia de la malla para el simulador, identificada por ``key`` (código o id)."""
+    """A curriculum course for the simulator, identified by ``key`` (code or id)."""
 
     key: str
     credits: Decimal | str
@@ -36,7 +36,7 @@ class CourseNode:
 
 @dataclass(slots=True)
 class ScenarioState:
-    """Estado asumido del estudiante en el escenario simulado."""
+    """The student's assumed state in the simulated scenario."""
 
     passed: set[str] = field(default_factory=set)
     failed: set[str] = field(default_factory=set)
@@ -74,7 +74,7 @@ class SimulationResult:
 def check_course_eligibility(
     course: CourseNode, scenario: ScenarioState, selected: set[str]
 ) -> EligibilityResult:
-    """Evalúa si un curso puede tomarse en el escenario dado."""
+    """Decide whether a course can be taken in the given scenario."""
     reasons: list[BlockReason] = []
 
     if course.key in scenario.passed:
@@ -113,7 +113,7 @@ def simulate_next_courses(
     english: EnglishState | None = None,
     has_special_credit_authorization: bool = False,
 ) -> SimulationResult:
-    """Motor principal del simulador (ERS §8.22, §16.5)."""
+    """Main simulator engine (ERS §8.22, §16.5)."""
     english = english or EnglishState()
     approved_credits = calculate_approved_credits(courses, scenario)
 
@@ -162,7 +162,7 @@ def simulate_next_courses(
 def _repeated_courses_selected_first(
     scenario: ScenarioState, selected: set[str], eligible: list[CourseNode]
 ) -> bool:
-    """Si hay reprobadas pendientes y elegibles, deben incluirse antes que otras (ERS §8.17)."""
+    """If there are pending eligible failed courses they must be selected first (ERS §8.17)."""
     if not scenario.failed:
         return True
     eligible_keys = {c.key for c in eligible}
@@ -171,5 +171,5 @@ def _repeated_courses_selected_first(
         return True
     selects_other = bool(selected - scenario.failed)
     missing_failed = bool(eligible_failed - selected)
-    # Solo es inválido si selecciona otras materias dejando reprobadas elegibles fuera.
+    # Only invalid when selecting other courses while leaving eligible failed ones out.
     return not (selects_other and missing_failed)
