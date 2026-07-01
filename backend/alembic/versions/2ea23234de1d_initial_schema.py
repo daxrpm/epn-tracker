@@ -1,8 +1,8 @@
 """initial schema
 
-Revision ID: ee36e5670096
+Revision ID: 2ea23234de1d
 Revises: 
-Create Date: 2026-06-30 21:25:00.995132
+Create Date: 2026-07-01 06:57:32.430722
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = 'ee36e5670096'
+revision: str = '2ea23234de1d'
 down_revision: str | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
@@ -156,6 +156,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id', name=op.f('pk_curricula')),
     sa.UniqueConstraint('career_id', 'pensum_year', name='uq_curriculum_career_year')
     )
+    op.create_index(op.f('ix_curricula_career_id'), 'curricula', ['career_id'], unique=False)
     op.create_table('course_offerings',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('course_id', sa.Uuid(), nullable=False),
@@ -182,10 +183,12 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.ForeignKeyConstraint(['course_id'], ['courses.id'], name=op.f('fk_curriculum_courses_course_id_courses')),
-    sa.ForeignKeyConstraint(['curriculum_id'], ['curricula.id'], name=op.f('fk_curriculum_courses_curriculum_id_curricula')),
+    sa.ForeignKeyConstraint(['curriculum_id'], ['curricula.id'], name=op.f('fk_curriculum_courses_curriculum_id_curricula'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_curriculum_courses')),
     sa.UniqueConstraint('curriculum_id', 'course_id', name='uq_curriculum_course')
     )
+    op.create_index(op.f('ix_curriculum_courses_course_id'), 'curriculum_courses', ['course_id'], unique=False)
+    op.create_index(op.f('ix_curriculum_courses_curriculum_id'), 'curriculum_courses', ['curriculum_id'], unique=False)
     op.create_table('curriculum_graduation_requirements',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('curriculum_id', sa.Uuid(), nullable=False),
@@ -223,10 +226,11 @@ def upgrade() -> None:
     sa.Column('notes', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.ForeignKeyConstraint(['curriculum_course_id'], ['curriculum_courses.id'], name=op.f('fk_course_requirements_curriculum_course_id_curriculum_courses')),
-    sa.ForeignKeyConstraint(['required_curriculum_course_id'], ['curriculum_courses.id'], name=op.f('fk_course_requirements_required_curriculum_course_id_curriculum_courses')),
+    sa.ForeignKeyConstraint(['curriculum_course_id'], ['curriculum_courses.id'], name=op.f('fk_course_requirements_curriculum_course_id_curriculum_courses'), ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['required_curriculum_course_id'], ['curriculum_courses.id'], name=op.f('fk_course_requirements_required_curriculum_course_id_curriculum_courses'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_course_requirements'))
     )
+    op.create_index(op.f('ix_course_requirements_curriculum_course_id'), 'course_requirements', ['curriculum_course_id'], unique=False)
     op.create_table('sections',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('course_offering_id', sa.Uuid(), nullable=False),
@@ -268,9 +272,10 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.ForeignKeyConstraint(['academic_period_id'], ['academic_periods.id'], name=op.f('fk_student_course_states_academic_period_id_academic_periods')),
     sa.ForeignKeyConstraint(['curriculum_course_id'], ['curriculum_courses.id'], name=op.f('fk_student_course_states_curriculum_course_id_curriculum_courses')),
-    sa.ForeignKeyConstraint(['student_profile_id'], ['student_profiles.id'], name=op.f('fk_student_course_states_student_profile_id_student_profiles')),
+    sa.ForeignKeyConstraint(['student_profile_id'], ['student_profiles.id'], name=op.f('fk_student_course_states_student_profile_id_student_profiles'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_student_course_states'))
     )
+    op.create_index(op.f('ix_student_course_states_student_profile_id'), 'student_course_states', ['student_profile_id'], unique=False)
     op.create_table('student_graduation_requirement_states',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('student_profile_id', sa.Uuid(), nullable=False),
@@ -281,9 +286,10 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.ForeignKeyConstraint(['graduation_requirement_id'], ['graduation_requirements.id'], name=op.f('fk_student_graduation_requirement_states_graduation_requirement_id_graduation_requirements')),
-    sa.ForeignKeyConstraint(['student_profile_id'], ['student_profiles.id'], name=op.f('fk_student_graduation_requirement_states_student_profile_id_student_profiles')),
+    sa.ForeignKeyConstraint(['student_profile_id'], ['student_profiles.id'], name=op.f('fk_student_graduation_requirement_states_student_profile_id_student_profiles'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_student_graduation_requirement_states'))
     )
+    op.create_index(op.f('ix_student_graduation_requirement_states_student_profile_id'), 'student_graduation_requirement_states', ['student_profile_id'], unique=False)
     op.create_table('evaluation_schemes',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('course_id', sa.Uuid(), nullable=False),
@@ -309,6 +315,9 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id', name=op.f('pk_evaluation_schemes'))
     )
     op.create_index(op.f('ix_evaluation_schemes_context_hash'), 'evaluation_schemes', ['context_hash'], unique=False)
+    op.create_index(op.f('ix_evaluation_schemes_course_id'), 'evaluation_schemes', ['course_id'], unique=False)
+    op.create_index(op.f('ix_evaluation_schemes_professor_id'), 'evaluation_schemes', ['professor_id'], unique=False)
+    op.create_index(op.f('ix_evaluation_schemes_section_id'), 'evaluation_schemes', ['section_id'], unique=False)
     op.create_table('section_professors',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('section_id', sa.Uuid(), nullable=False),
@@ -331,9 +340,10 @@ def upgrade() -> None:
     sa.Column('display_order', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.ForeignKeyConstraint(['evaluation_scheme_id'], ['evaluation_schemes.id'], name=op.f('fk_evaluation_components_evaluation_scheme_id_evaluation_schemes')),
+    sa.ForeignKeyConstraint(['evaluation_scheme_id'], ['evaluation_schemes.id'], name=op.f('fk_evaluation_components_evaluation_scheme_id_evaluation_schemes'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_evaluation_components'))
     )
+    op.create_index(op.f('ix_evaluation_components_evaluation_scheme_id'), 'evaluation_components', ['evaluation_scheme_id'], unique=False)
     op.create_table('evaluation_scheme_audits',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('evaluation_scheme_id', sa.Uuid(), nullable=False),
@@ -354,8 +364,8 @@ def upgrade() -> None:
     sa.Column('context_hash', sa.String(length=128), nullable=True),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.ForeignKeyConstraint(['evaluation_scheme_id'], ['evaluation_schemes.id'], name=op.f('fk_evaluation_scheme_votes_evaluation_scheme_id_evaluation_schemes')),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_evaluation_scheme_votes_user_id_users')),
+    sa.ForeignKeyConstraint(['evaluation_scheme_id'], ['evaluation_schemes.id'], name=op.f('fk_evaluation_scheme_votes_evaluation_scheme_id_evaluation_schemes'), ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], name=op.f('fk_evaluation_scheme_votes_user_id_users'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_evaluation_scheme_votes')),
     sa.UniqueConstraint('evaluation_scheme_id', 'user_id', name='uq_scheme_vote_user')
     )
@@ -375,9 +385,10 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['evaluation_scheme_id'], ['evaluation_schemes.id'], name=op.f('fk_student_enrollments_evaluation_scheme_id_evaluation_schemes')),
     sa.ForeignKeyConstraint(['professor_id'], ['professors.id'], name=op.f('fk_student_enrollments_professor_id_professors')),
     sa.ForeignKeyConstraint(['section_id'], ['sections.id'], name=op.f('fk_student_enrollments_section_id_sections')),
-    sa.ForeignKeyConstraint(['student_profile_id'], ['student_profiles.id'], name=op.f('fk_student_enrollments_student_profile_id_student_profiles')),
+    sa.ForeignKeyConstraint(['student_profile_id'], ['student_profiles.id'], name=op.f('fk_student_enrollments_student_profile_id_student_profiles'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_student_enrollments'))
     )
+    op.create_index(op.f('ix_student_enrollments_student_profile_id'), 'student_enrollments', ['student_profile_id'], unique=False)
     op.create_table('grade_component_states',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('student_enrollment_id', sa.Uuid(), nullable=False),
@@ -389,9 +400,10 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.ForeignKeyConstraint(['evaluation_component_id'], ['evaluation_components.id'], name=op.f('fk_grade_component_states_evaluation_component_id_evaluation_components')),
-    sa.ForeignKeyConstraint(['student_enrollment_id'], ['student_enrollments.id'], name=op.f('fk_grade_component_states_student_enrollment_id_student_enrollments')),
+    sa.ForeignKeyConstraint(['student_enrollment_id'], ['student_enrollments.id'], name=op.f('fk_grade_component_states_student_enrollment_id_student_enrollments'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_grade_component_states'))
     )
+    op.create_index(op.f('ix_grade_component_states_student_enrollment_id'), 'grade_component_states', ['student_enrollment_id'], unique=False)
     op.create_table('grade_items',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('grade_component_state_id', sa.Uuid(), nullable=False),
@@ -404,32 +416,46 @@ def upgrade() -> None:
     sa.Column('display_order', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
     sa.Column('updated_at', sa.DateTime(), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.ForeignKeyConstraint(['grade_component_state_id'], ['grade_component_states.id'], name=op.f('fk_grade_items_grade_component_state_id_grade_component_states')),
+    sa.ForeignKeyConstraint(['grade_component_state_id'], ['grade_component_states.id'], name=op.f('fk_grade_items_grade_component_state_id_grade_component_states'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_grade_items'))
     )
+    op.create_index(op.f('ix_grade_items_grade_component_state_id'), 'grade_items', ['grade_component_state_id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_index(op.f('ix_grade_items_grade_component_state_id'), table_name='grade_items')
     op.drop_table('grade_items')
+    op.drop_index(op.f('ix_grade_component_states_student_enrollment_id'), table_name='grade_component_states')
     op.drop_table('grade_component_states')
+    op.drop_index(op.f('ix_student_enrollments_student_profile_id'), table_name='student_enrollments')
     op.drop_table('student_enrollments')
     op.drop_table('evaluation_scheme_votes')
     op.drop_table('evaluation_scheme_audits')
+    op.drop_index(op.f('ix_evaluation_components_evaluation_scheme_id'), table_name='evaluation_components')
     op.drop_table('evaluation_components')
     op.drop_table('section_professors')
+    op.drop_index(op.f('ix_evaluation_schemes_section_id'), table_name='evaluation_schemes')
+    op.drop_index(op.f('ix_evaluation_schemes_professor_id'), table_name='evaluation_schemes')
+    op.drop_index(op.f('ix_evaluation_schemes_course_id'), table_name='evaluation_schemes')
     op.drop_index(op.f('ix_evaluation_schemes_context_hash'), table_name='evaluation_schemes')
     op.drop_table('evaluation_schemes')
+    op.drop_index(op.f('ix_student_graduation_requirement_states_student_profile_id'), table_name='student_graduation_requirement_states')
     op.drop_table('student_graduation_requirement_states')
+    op.drop_index(op.f('ix_student_course_states_student_profile_id'), table_name='student_course_states')
     op.drop_table('student_course_states')
     op.drop_table('simulations')
     op.drop_table('sections')
+    op.drop_index(op.f('ix_course_requirements_curriculum_course_id'), table_name='course_requirements')
     op.drop_table('course_requirements')
     op.drop_table('student_profiles')
     op.drop_table('curriculum_graduation_requirements')
+    op.drop_index(op.f('ix_curriculum_courses_curriculum_id'), table_name='curriculum_courses')
+    op.drop_index(op.f('ix_curriculum_courses_course_id'), table_name='curriculum_courses')
     op.drop_table('curriculum_courses')
     op.drop_table('course_offerings')
+    op.drop_index(op.f('ix_curricula_career_id'), table_name='curricula')
     op.drop_table('curricula')
     op.drop_table('careers')
     op.drop_table('professors')

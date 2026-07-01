@@ -56,7 +56,7 @@ class Curriculum(UUIDMixin, TimestampMixin, Base):
         UniqueConstraint("career_id", "pensum_year", name="uq_curriculum_career_year"),
     )
 
-    career_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("careers.id"))
+    career_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("careers.id"), index=True)
     name: Mapped[str] = mapped_column(String(255))
     pensum_year: Mapped[int] = mapped_column(Integer)
     total_credits: Mapped[Decimal] = mapped_column(Credits, default=Decimal("0"))
@@ -100,8 +100,10 @@ class CurriculumCourse(UUIDMixin, TimestampMixin, Base):
         UniqueConstraint("curriculum_id", "course_id", name="uq_curriculum_course"),
     )
 
-    curriculum_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("curricula.id"))
-    course_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("courses.id"))
+    curriculum_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("curricula.id", ondelete="CASCADE"), index=True
+    )
+    course_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("courses.id"), index=True)
     reference_term: Mapped[int] = mapped_column(Integer)
     credits: Mapped[Decimal] = mapped_column(Credits, default=Decimal("0"))
     hours: Mapped[int] = mapped_column(Integer, default=0)
@@ -117,9 +119,11 @@ class CourseRequirement(UUIDMixin, TimestampMixin, Base):
 
     __tablename__ = "course_requirements"
 
-    curriculum_course_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("curriculum_courses.id"))
+    curriculum_course_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("curriculum_courses.id", ondelete="CASCADE"), index=True
+    )
     required_curriculum_course_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("curriculum_courses.id")
+        ForeignKey("curriculum_courses.id", ondelete="CASCADE")
     )
     requirement_type: Mapped[RequirementType] = mapped_column(enum_column(RequirementType))
     rule_operator: Mapped[RuleOperator] = mapped_column(

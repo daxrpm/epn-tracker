@@ -77,6 +77,20 @@ async def get_items(
     return (await db.execute(stmt)).scalars().all()
 
 
+async def get_items_for_states(
+    db: AsyncSession, component_state_ids: list[uuid.UUID]
+) -> Sequence[GradeItem]:
+    """Load every item for a set of component states in a single query (avoids N+1)."""
+    if not component_state_ids:
+        return []
+    stmt = (
+        select(GradeItem)
+        .where(GradeItem.grade_component_state_id.in_(component_state_ids))
+        .order_by(GradeItem.display_order)
+    )
+    return (await db.execute(stmt)).scalars().all()
+
+
 async def get_item(db: AsyncSession, item_id: uuid.UUID) -> GradeItem | None:
     return await db.get(GradeItem, item_id)
 

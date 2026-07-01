@@ -40,7 +40,9 @@ class StudentProfile(UUIDMixin, TimestampMixin, Base):
 class StudentCourseState(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "student_course_states"
 
-    student_profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("student_profiles.id"))
+    student_profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("student_profiles.id", ondelete="CASCADE"), index=True
+    )
     curriculum_course_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("curriculum_courses.id"))
     state: Mapped[CourseState] = mapped_column(
         enum_column(CourseState), default=CourseState.NOT_TAKEN
@@ -65,7 +67,9 @@ class StudentEnrollment(UUIDMixin, TimestampMixin, Base):
 
     __tablename__ = "student_enrollments"
 
-    student_profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("student_profiles.id"))
+    student_profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("student_profiles.id", ondelete="CASCADE"), index=True
+    )
     curriculum_course_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("curriculum_courses.id"))
     academic_period_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("academic_periods.id"), nullable=True
@@ -87,7 +91,9 @@ class GradeComponentState(UUIDMixin, TimestampMixin, Base):
 
     __tablename__ = "grade_component_states"
 
-    student_enrollment_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("student_enrollments.id"))
+    student_enrollment_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("student_enrollments.id", ondelete="CASCADE"), index=True
+    )
     evaluation_component_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("evaluation_components.id")
     )
@@ -105,7 +111,7 @@ class GradeItem(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "grade_items"
 
     grade_component_state_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("grade_component_states.id")
+        ForeignKey("grade_component_states.id", ondelete="CASCADE"), index=True
     )
     name: Mapped[str] = mapped_column(String(255))
     score: Mapped[Decimal | None] = mapped_column(Score, nullable=True)
@@ -119,7 +125,9 @@ class GradeItem(UUIDMixin, TimestampMixin, Base):
 class StudentGraduationRequirementState(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "student_graduation_requirement_states"
 
-    student_profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("student_profiles.id"))
+    student_profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("student_profiles.id", ondelete="CASCADE"), index=True
+    )
     graduation_requirement_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("graduation_requirements.id")
     )

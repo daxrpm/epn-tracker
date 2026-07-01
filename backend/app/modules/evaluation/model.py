@@ -24,13 +24,15 @@ from app.database.types import Score, enum_column
 class EvaluationScheme(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "evaluation_schemes"
 
-    course_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("courses.id"))
+    course_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("courses.id"), index=True)
     academic_period_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("academic_periods.id"), nullable=True
     )
-    section_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("sections.id"), nullable=True)
+    section_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("sections.id"), nullable=True, index=True
+    )
     professor_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("professors.id"), nullable=True
+        ForeignKey("professors.id"), nullable=True, index=True
     )
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id"), nullable=True
@@ -55,7 +57,9 @@ class EvaluationScheme(UUIDMixin, TimestampMixin, Base):
 class EvaluationComponent(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "evaluation_components"
 
-    evaluation_scheme_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("evaluation_schemes.id"))
+    evaluation_scheme_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("evaluation_schemes.id", ondelete="CASCADE"), index=True
+    )
     contribution: Mapped[Contribution] = mapped_column(enum_column(Contribution))
     name: Mapped[str] = mapped_column(String(255))
     evaluation_type: Mapped[EvaluationType] = mapped_column(
@@ -72,8 +76,10 @@ class EvaluationSchemeVote(UUIDMixin, TimestampMixin, Base):
         UniqueConstraint("evaluation_scheme_id", "user_id", name="uq_scheme_vote_user"),
     )
 
-    evaluation_scheme_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("evaluation_schemes.id"))
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    evaluation_scheme_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("evaluation_schemes.id", ondelete="CASCADE")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     vote: Mapped[SchemeVote] = mapped_column(enum_column(SchemeVote), default=SchemeVote.APPROVE)
     context_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
 

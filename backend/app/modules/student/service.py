@@ -156,35 +156,48 @@ async def get_gradebook(
 ) -> GradebookOut:
     enrollment = await _owned_enrollment(db, profile, enrollment_id)
     states = await crud.get_component_states(db, enrollment.id)
+    components = await _load_components(db, states)
+    items_by_state = await _load_items_by_state(db, states)
 
-    component_ids = [s.evaluation_component_id for s in states]
-    components = {
-        c.id: c
-        for c in (
-            await db.execute(
-                select(EvaluationComponent).where(EvaluationComponent.id.in_(component_ids))
-            )
-        ).scalars().all()
-    }
-
-    out: list[ComponentStateOut] = []
-    for state in states:
-        component = components[state.evaluation_component_id]
-        items = await crud.get_items(db, state.id)
-        out.append(
-            ComponentStateOut(
-                id=state.id,
-                evaluation_component_id=state.evaluation_component_id,
-                name=component.name,
-                contribution=component.contribution,
-                weight_percent=component.weight_percent,
-                mode=state.mode,
-                direct_score=state.direct_score,
-                calculated_score=state.calculated_score,
-                items=[GradeItemOut.model_validate(i) for i in items],
-            )
+    out = [
+        ComponentStateOut(
+            id=state.id,
+            evaluation_component_id=state.evaluation_component_id,
+            name=components[state.evaluation_component_id].name,
+            contribution=components[state.evaluation_component_id].contribution,
+            weight_percent=components[state.evaluation_component_id].weight_percent,
+            mode=state.mode,
+            direct_score=state.direct_score,
+            calculated_score=state.calculated_score,
+            items=[GradeItemOut.model_validate(i) for i in items_by_state.get(state.id, [])],
         )
+        for state in states
+    ]
     return GradebookOut(enrollment_id=enrollment.id, components=out)
+
+
+async def _load_components(
+    db: AsyncSession, states: list[GradeComponentState]
+) -> dict[uuid.UUID, EvaluationComponent]:
+    component_ids = [s.evaluation_component_id for s in states]
+    if not component_ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(EvaluationComponent).where(EvaluationComponent.id.in_(component_ids))
+        )
+    ).scalars().all()
+    return {c.id: c for c in rows}
+
+
+async def _load_items_by_state(
+    db: AsyncSession, states: list[GradeComponentState]
+) -> dict[uuid.UUID, list[GradeItem]]:
+    items = await crud.get_items_for_states(db, [s.id for s in states])
+    grouped: dict[uuid.UUID, list[GradeItem]] = {}
+    for item in items:
+        grouped.setdefault(item.grade_component_state_id, []).append(item)
+    return grouped
 
 
 async def patch_component(
@@ -260,20 +273,19 @@ async def calculate(
     """Compute contributions, final grade and recovery for an enrollment (ERS §16)."""
     enrollment = await _owned_enrollment(db, profile, enrollment_id)
     states = await crud.get_component_states(db, enrollment.id)
-    component_ids = [s.evaluation_component_id for s in states]
-    components = {
-        c.id: c
-        for c in (
-            await db.execute(
-                select(EvaluationComponent).where(EvaluationComponent.id.in_(component_ids))
-            )
-        ).scalars().all()
-    }
+    components = await _load_components(db, states)
+    items_by_state = await _load_items_by_state(db, states)
 
     grouped: dict[str, list[ComponentInput]] = {"APORTE_1": [], "APORTE_2": []}
     for state in states:
         component = components[state.evaluation_component_id]
-        await _recompute_component(db, state)
+        item_inputs = [
+            ItemInput(score=i.score, internal_weight_percent=i.internal_weight_percent)
+            for i in items_by_state.get(state.id, [])
+        ]
+        state.calculated_score = calculate_component_score(
+            state.mode, state.direct_score, item_inputs
+        )
         grouped[component.contribution.value].append(
             ComponentInput(
                 weight_percent=component.weight_percent,
