@@ -12,6 +12,9 @@ from app.common.enums import RequirementType
 from app.common.exception.errors import NotFoundError
 from app.modules.academic import crud, service
 from app.modules.academic.schema import (
+    AcademicPeriodCreateIn,
+    AcademicPeriodOut,
+    AcademicPeriodUpdateIn,
     CareerOut,
     CourseOut,
     CurriculumCourseOut,
@@ -116,6 +119,36 @@ async def get_course(course_id: uuid.UUID, db: DbSession) -> CourseOut:
     if course is None:
         raise NotFoundError("Materia no encontrada.")
     return CourseOut.model_validate(course)
+
+
+@router.get("/academic-periods", response_model=list[AcademicPeriodOut])
+async def list_academic_periods(db: DbSession) -> list[AcademicPeriodOut]:
+    return list(await crud.list_academic_periods(db))
+
+
+# --- Admin: academic periods ----------------------------------------------------------------------
+
+period_admin_router = APIRouter(
+    prefix="/admin/academic-periods",
+    tags=["admin-academic"],
+    dependencies=[Depends(require_admin)],
+)
+
+
+@period_admin_router.post("", response_model=AcademicPeriodOut)
+async def create_academic_period(
+    payload: AcademicPeriodCreateIn, db: DbSession
+) -> AcademicPeriodOut:
+    period = await service.create_academic_period(db, payload)
+    return AcademicPeriodOut.model_validate(period)
+
+
+@period_admin_router.patch("/{period_id}", response_model=AcademicPeriodOut)
+async def update_academic_period(
+    period_id: uuid.UUID, payload: AcademicPeriodUpdateIn, db: DbSession
+) -> AcademicPeriodOut:
+    period = await service.update_academic_period(db, period_id, payload)
+    return AcademicPeriodOut.model_validate(period)
 
 
 # --- Admin: curriculum import ---------------------------------------------------------------------

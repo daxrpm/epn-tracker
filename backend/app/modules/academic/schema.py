@@ -72,6 +72,37 @@ class CurriculumCourseOut(BaseModel):
     corequisite_codes: list[str] = []
 
 
+# --- Academic periods (ERS §12.9) -----------------------------------------------------------------
+
+
+class AcademicPeriodOut(BaseModel):
+    id: uuid.UUID
+    institution_id: uuid.UUID
+    code: str
+    name: str
+    starts_on: str | None
+    ends_on: str | None
+    is_current: bool
+    model_config = {"from_attributes": True}
+
+
+class AcademicPeriodCreateIn(BaseModel):
+    institution_id: uuid.UUID
+    code: str = Field(min_length=1, max_length=20)
+    name: str = Field(min_length=1, max_length=255)
+    starts_on: str | None = None
+    ends_on: str | None = None
+    is_current: bool = False
+
+
+class AcademicPeriodUpdateIn(BaseModel):
+    code: str | None = Field(default=None, min_length=1, max_length=20)
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    starts_on: str | None = None
+    ends_on: str | None = None
+    is_current: bool | None = None
+
+
 # --- Curriculum import (input, ERS §14.2) ---------------------------------------------------------
 
 

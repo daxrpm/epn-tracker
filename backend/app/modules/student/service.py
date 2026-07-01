@@ -7,13 +7,14 @@ adapts between ORM rows and domain inputs. User-facing messages stay in Spanish.
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.common.decimal_utils import display_str
-from app.common.enums import CourseStateSource, GradeComponentMode
-from app.common.exception.errors import ForbiddenError, NotFoundError
+from app.common.decimal_utils import ZERO, display_str
+from app.common.enums import CourseState, CourseStateSource, GradeComponentMode
+from app.common.exception.errors import ForbiddenError, NotFoundError, ValidationAppError
 from app.domain.grading.grade_calculation import (
     ComponentInput,
     ItemInput,
@@ -22,6 +23,7 @@ from app.domain.grading.grade_calculation import (
     calculate_final,
 )
 from app.domain.grading.recovery import required_recovery_score
+from app.modules.academic import crud as academic_crud
 from app.modules.evaluation.model import EvaluationComponent, EvaluationScheme
 from app.modules.iam.model import User
 from app.modules.student import crud
@@ -30,6 +32,7 @@ from app.modules.student.model import (
     GradeItem,
     StudentCourseState,
     StudentEnrollment,
+    StudentGraduationRequirementState,
     StudentProfile,
 )
 from app.modules.student.schema import (
@@ -41,6 +44,8 @@ from app.modules.student.schema import (
     GradebookOut,
     GradeItemOut,
     ProfileUpdateIn,
+    ProgressOut,
+    ProgressTermOut,
 )
 
 
@@ -60,7 +65,85 @@ async def update_profile(
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(profile, field, value)
     await db.flush()
+    if profile.current_curriculum_id is not None:
+        await provision_graduation_requirements(db, profile)
     return profile
+
+
+async def provision_graduation_requirements(
+    db: AsyncSession, profile: StudentProfile
+) -> None:
+    """Seed missing graduation-requirement states for the student's curriculum (idempotent)."""
+    if profile.current_curriculum_id is None:
+        return
+    curriculum_reqs = await academic_crud.list_curriculum_graduation_requirements(
+        db, profile.current_curriculum_id
+    )
+    existing = await crud.get_grad_req_states(db, profile.id)
+    existing_ids = {s.graduation_requirement_id for s in existing}
+    created = False
+    for req in curriculum_reqs:
+        if req.graduation_requirement_id in existing_ids:
+            continue
+        db.add(
+            StudentGraduationRequirementState(
+                student_profile_id=profile.id,
+                graduation_requirement_id=req.graduation_requirement_id,
+            )
+        )
+        existing_ids.add(req.graduation_requirement_id)
+        created = True
+    if created:
+        await db.flush()
+
+
+async def get_progress(db: AsyncSession, profile: StudentProfile) -> ProgressOut:
+    """Compute malla progress from the student's curriculum and course states (ERS §RF-020)."""
+    if profile.current_curriculum_id is None:
+        raise ValidationAppError("No tienes una malla asignada.")
+
+    curriculum_courses = await academic_crud.list_curriculum_courses(
+        db, profile.current_curriculum_id
+    )
+    states = await crud.get_course_states(db, profile.id)
+    state_by_cc = {s.curriculum_course_id: s.state for s in states}
+
+    counts: dict[CourseState, int] = dict.fromkeys(CourseState, 0)
+    total_credits = ZERO
+    approved_credits = ZERO
+    term_totals: dict[int, Decimal] = {}
+    term_approved: dict[int, Decimal] = {}
+
+    for cc in curriculum_courses:
+        state = state_by_cc.get(cc.id, CourseState.NOT_TAKEN)
+        counts[state] += 1
+        credits = cc.credits or ZERO
+        total_credits += credits
+        term_totals[cc.reference_term] = term_totals.get(cc.reference_term, ZERO) + credits
+        if state == CourseState.PASSED:
+            approved_credits += credits
+            term_approved[cc.reference_term] = (
+                term_approved.get(cc.reference_term, ZERO) + credits
+            )
+
+    percent = ZERO if total_credits == ZERO else approved_credits / total_credits * Decimal("100")
+
+    by_term = [
+        ProgressTermOut(
+            term=term,
+            approved_credits=str(term_approved.get(term, ZERO)),
+            total_credits=str(term_totals[term]),
+        )
+        for term in sorted(term_totals)
+    ]
+
+    return ProgressOut(
+        total_credits=str(total_credits),
+        approved_credits=str(approved_credits),
+        percent=display_str(percent) or "0.00",
+        counts_by_state={state.value: counts[state] for state in CourseState},
+        by_term=by_term,
+    )
 
 
 async def bulk_upsert_course_states(

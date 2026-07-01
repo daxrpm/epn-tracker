@@ -132,6 +132,23 @@ class ItemPatchIn(BaseModel):
     internal_weight_percent: Decimal | None = None
 
 
+# --- Malla progress -------------------------------------------------------------------------------
+
+
+class ProgressTermOut(BaseModel):
+    term: int
+    approved_credits: str
+    total_credits: str
+
+
+class ProgressOut(BaseModel):
+    total_credits: str
+    approved_credits: str
+    percent: str
+    counts_by_state: dict[str, int]
+    by_term: list[ProgressTermOut]
+
+
 # --- Calculation result ---------------------------------------------------------------------------
 
 

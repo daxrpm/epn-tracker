@@ -14,8 +14,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.enums import CurriculumStatus
-from app.common.exception.errors import ValidationAppError
+from app.common.exception.errors import ConflictError, NotFoundError, ValidationAppError
+from app.modules.academic import crud
 from app.modules.academic.model import (
+    AcademicPeriod,
     Career,
     Course,
     CourseRequirement,
@@ -27,6 +29,8 @@ from app.modules.academic.model import (
     Institution,
 )
 from app.modules.academic.schema import (
+    AcademicPeriodCreateIn,
+    AcademicPeriodUpdateIn,
     CurriculumImportIn,
     ImportCommitOut,
     ImportGraduationRequirement,
@@ -112,6 +116,74 @@ def validate_import(payload: CurriculumImportIn) -> ImportValidationOut:
         )
 
     return ImportValidationOut(valid=not errors, errors=errors, warnings=warnings)
+
+
+# --- Academic periods (ERS §12.9) -----------------------------------------------------------------
+
+
+async def create_academic_period(
+    db: AsyncSession, payload: AcademicPeriodCreateIn
+) -> AcademicPeriod:
+    """Create a real academic period; codes are unique per institution."""
+    if await db.get(Institution, payload.institution_id) is None:
+        raise NotFoundError("Institución no encontrada.")
+    existing = await crud.get_academic_period_by_code(
+        db, payload.institution_id, payload.code
+    )
+    if existing is not None:
+        raise ConflictError(f"Ya existe un periodo con el código {payload.code}.")
+
+    period = AcademicPeriod(
+        institution_id=payload.institution_id,
+        code=payload.code,
+        name=payload.name,
+        starts_on=payload.starts_on,
+        ends_on=payload.ends_on,
+        is_current=payload.is_current,
+    )
+    db.add(period)
+    await db.flush()
+    if period.is_current:
+        await _unset_other_current_periods(db, period)
+    return period
+
+
+async def update_academic_period(
+    db: AsyncSession, period_id: uuid.UUID, payload: AcademicPeriodUpdateIn
+) -> AcademicPeriod:
+    period = await crud.get_academic_period(db, period_id)
+    if period is None:
+        raise NotFoundError("Periodo académico no encontrado.")
+
+    data = payload.model_dump(exclude_unset=True)
+    new_code = data.get("code")
+    if new_code is not None and new_code != period.code:
+        clash = await crud.get_academic_period_by_code(
+            db, period.institution_id, new_code
+        )
+        if clash is not None:
+            raise ConflictError(f"Ya existe un periodo con el código {new_code}.")
+
+    for field, value in data.items():
+        setattr(period, field, value)
+    await db.flush()
+    if period.is_current:
+        await _unset_other_current_periods(db, period)
+    return period
+
+
+async def _unset_other_current_periods(db: AsyncSession, period: AcademicPeriod) -> None:
+    """Only one period per institution may be flagged as current."""
+    others = await db.execute(
+        select(AcademicPeriod).where(
+            AcademicPeriod.institution_id == period.institution_id,
+            AcademicPeriod.id != period.id,
+            AcademicPeriod.is_current.is_(True),
+        )
+    )
+    for other in others.scalars().all():
+        other.is_current = False
+    await db.flush()
 
 
 async def commit_import(db: AsyncSession, payload: CurriculumImportIn) -> ImportCommitOut:

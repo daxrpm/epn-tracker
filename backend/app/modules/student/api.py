@@ -24,6 +24,7 @@ from app.modules.student.schema import (
     ItemPatchIn,
     ProfileOut,
     ProfileUpdateIn,
+    ProgressOut,
 )
 
 router = APIRouter(prefix="/student", tags=["student"])
@@ -39,6 +40,12 @@ async def get_profile(user: CurrentUser, db: DbSession) -> ProfileOut:
 async def update_profile(payload: ProfileUpdateIn, user: CurrentUser, db: DbSession) -> ProfileOut:
     profile = await service.update_profile(db, user, payload)
     return ProfileOut.model_validate(profile)
+
+
+@router.get("/progress", response_model=ProgressOut)
+async def get_progress(user: CurrentUser, db: DbSession) -> ProgressOut:
+    profile = await service.get_or_create_profile(db, user)
+    return await service.get_progress(db, profile)
 
 
 @router.get("/course-states", response_model=list[CourseStateOut])

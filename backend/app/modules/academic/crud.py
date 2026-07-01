@@ -9,11 +9,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.academic.model import (
+    AcademicPeriod,
     Career,
     Course,
     CourseRequirement,
     Curriculum,
     CurriculumCourse,
+    CurriculumGraduationRequirement,
     Faculty,
     Institution,
 )
@@ -83,5 +85,34 @@ async def requirements_for_curriculum(
         return []
     stmt = select(CourseRequirement).where(
         CourseRequirement.curriculum_course_id.in_(curriculum_course_ids)
+    )
+    return (await db.execute(stmt)).scalars().all()
+
+
+async def list_academic_periods(db: AsyncSession) -> Sequence[AcademicPeriod]:
+    stmt = select(AcademicPeriod).order_by(AcademicPeriod.code)
+    return (await db.execute(stmt)).scalars().all()
+
+
+async def get_academic_period(
+    db: AsyncSession, period_id: uuid.UUID
+) -> AcademicPeriod | None:
+    return await db.get(AcademicPeriod, period_id)
+
+
+async def get_academic_period_by_code(
+    db: AsyncSession, institution_id: uuid.UUID, code: str
+) -> AcademicPeriod | None:
+    stmt = select(AcademicPeriod).where(
+        AcademicPeriod.institution_id == institution_id, AcademicPeriod.code == code
+    )
+    return (await db.execute(stmt)).scalar_one_or_none()
+
+
+async def list_curriculum_graduation_requirements(
+    db: AsyncSession, curriculum_id: uuid.UUID
+) -> Sequence[CurriculumGraduationRequirement]:
+    stmt = select(CurriculumGraduationRequirement).where(
+        CurriculumGraduationRequirement.curriculum_id == curriculum_id
     )
     return (await db.execute(stmt)).scalars().all()
