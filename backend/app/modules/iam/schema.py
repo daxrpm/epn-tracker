@@ -1,0 +1,71 @@
+"""Schemas (DTOs) del módulo de identidad y acceso."""
+
+from __future__ import annotations
+
+import uuid
+
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+from app.common.enums import UserRole
+from app.core.conf import settings
+
+
+def _validate_epn_domain(email: str) -> str:
+    email = email.strip().lower()
+    domain = settings.allowed_email_domain.lower()
+    if not email.endswith(f"@{domain}"):
+        raise ValueError(f"El correo debe terminar en @{domain}.")
+    return email
+
+
+class RequestCodeIn(BaseModel):
+    email: EmailStr
+
+    @field_validator("email")
+    @classmethod
+    def _domain(cls, v: str) -> str:
+        return _validate_epn_domain(v)
+
+
+class VerifyCodeIn(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=4, max_length=12)
+    password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def _domain(cls, v: str) -> str:
+        return _validate_epn_domain(v)
+
+
+class LoginIn(BaseModel):
+    email: EmailStr
+    password: str
+
+    @field_validator("email")
+    @classmethod
+    def _domain(cls, v: str) -> str:
+        return _validate_epn_domain(v)
+
+
+class RefreshIn(BaseModel):
+    refresh_token: str
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+
+class MessageOut(BaseModel):
+    message: str
+
+
+class UserOut(BaseModel):
+    id: uuid.UUID
+    email: str
+    role: UserRole
+    is_verified: bool
+
+    model_config = {"from_attributes": True}

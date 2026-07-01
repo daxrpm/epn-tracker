@@ -1,0 +1,32 @@
+"""Acceso a datos del módulo IAM (sin lógica de negocio)."""
+
+from __future__ import annotations
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.common.enums import UserRole, UserStatus
+from app.modules.iam.model import User
+
+
+async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
+    result = await db.execute(select(User).where(User.email == email.lower()))
+    return result.scalar_one_or_none()
+
+
+async def create_user(
+    db: AsyncSession,
+    *,
+    email: str,
+    password_hash: str,
+    role: UserRole = UserRole.STUDENT,
+) -> User:
+    user = User(
+        email=email.lower(),
+        password_hash=password_hash,
+        role=role,
+        status=UserStatus.ACTIVE,
+    )
+    db.add(user)
+    await db.flush()
+    return user
