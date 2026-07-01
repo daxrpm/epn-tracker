@@ -1,4 +1,4 @@
-import { Spinner } from "@heroui/react";
+import { Loader2 } from "lucide-react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { useAuthStore } from "@/stores/auth.store";
@@ -10,8 +10,8 @@ export function ProtectedRoute() {
 
   if (status === "idle") {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Spinner label="Cargando…" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </div>
     );
   }

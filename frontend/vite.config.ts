@@ -28,7 +28,7 @@ export default defineConfig({
         // Split large vendors into cacheable chunks for faster repeat loads.
         manualChunks: {
           react: ["react", "react-dom", "react-router-dom"],
-          heroui: ["@heroui/react", "framer-motion"],
+          motion: ["motion"],
           query: ["@tanstack/react-query"],
         },
       },

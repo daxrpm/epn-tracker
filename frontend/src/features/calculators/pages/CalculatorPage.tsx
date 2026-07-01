@@ -1,8 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Button, Card, CardBody, Chip, Input } from "@heroui/react";
+import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/types";
 
 import { useRecoveryCalculator } from "../hooks";
@@ -14,10 +19,13 @@ const scoreField = z
 const schema = z.object({ aporte_1: scoreField, aporte_2: scoreField });
 type FormValues = z.infer<typeof schema>;
 
-const STATUS_LABELS: Record<string, { label: string; color: "success" | "warning" | "danger" }> = {
-  APPROVED: { label: "Aprobado", color: "success" },
-  RECOVERY_ELIGIBLE: { label: "Va a recuperación", color: "warning" },
-  FAILED_DIRECT: { label: "Reprobado", color: "danger" },
+const STATUS_META: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+> = {
+  APPROVED: { label: "Aprobado", variant: "default" },
+  RECOVERY_ELIGIBLE: { label: "Va a recuperación", variant: "secondary" },
+  FAILED_DIRECT: { label: "Reprobado", variant: "destructive" },
 };
 
 export function CalculatorPage() {
@@ -34,53 +42,52 @@ export function CalculatorPage() {
   const onSubmit = handleSubmit((values) => calculator.mutate(values));
 
   const result = calculator.data;
-  const status = result ? STATUS_LABELS[result.status] : null;
+  const status = result ? STATUS_META[result.status] : null;
   const serverError = calculator.error instanceof ApiError ? calculator.error.message : null;
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Calculadora de recuperación</h1>
-        <p className="mt-1 text-sm text-default-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           Ingresa tus dos aportes sobre 20 para ver tu nota final y si necesitas recuperación.
         </p>
       </div>
 
-      <Card className="border border-default-100 shadow-sm">
-        <CardBody className="gap-4 p-6">
+      <Card>
+        <CardContent className="p-6">
           <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
             <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Aporte 1"
-                variant="bordered"
-                isInvalid={Boolean(errors.aporte_1)}
-                errorMessage={errors.aporte_1?.message}
-                {...register("aporte_1")}
-              />
-              <Input
-                label="Aporte 2"
-                variant="bordered"
-                isInvalid={Boolean(errors.aporte_2)}
-                errorMessage={errors.aporte_2?.message}
-                {...register("aporte_2")}
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="aporte_1">Aporte 1</Label>
+                <Input id="aporte_1" inputMode="decimal" {...register("aporte_1")} />
+                {errors.aporte_1 && (
+                  <p className="text-sm text-destructive">{errors.aporte_1.message}</p>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="aporte_2">Aporte 2</Label>
+                <Input id="aporte_2" inputMode="decimal" {...register("aporte_2")} />
+                {errors.aporte_2 && (
+                  <p className="text-sm text-destructive">{errors.aporte_2.message}</p>
+                )}
+              </div>
             </div>
-            {serverError && <p className="text-sm text-danger">{serverError}</p>}
-            <Button type="submit" color="primary" isLoading={calculator.isPending} fullWidth>
+            {serverError && <p className="text-sm text-destructive">{serverError}</p>}
+            <Button type="submit" className="w-full" disabled={calculator.isPending}>
+              {calculator.isPending && <Loader2 className="size-4 animate-spin" />}
               Calcular
             </Button>
           </form>
-        </CardBody>
+        </CardContent>
       </Card>
 
       {result && status && (
-        <Card className="border border-default-100 shadow-sm">
-          <CardBody className="gap-3 p-6">
+        <Card>
+          <CardContent className="flex flex-col gap-3 p-6">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-default-500">Estado</span>
-              <Chip color={status.color} variant="flat" size="sm">
-                {status.label}
-              </Chip>
+              <span className="text-sm text-muted-foreground">Estado</span>
+              <Badge variant={status.variant}>{status.label}</Badge>
             </div>
             <Row label="Nota final /40" value={result.final_40} />
             <Row label="Equivalente /20" value={result.display_final_20} />
@@ -90,7 +97,7 @@ export function CalculatorPage() {
                 value={result.display_required_recovery_score_40}
               />
             )}
-          </CardBody>
+          </CardContent>
         </Card>
       )}
     </div>
@@ -99,8 +106,8 @@ export function CalculatorPage() {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between border-t border-default-100 pt-3 first:border-0 first:pt-0">
-      <span className="text-sm text-default-500">{label}</span>
+    <div className="flex items-center justify-between border-t border-border pt-3 first:border-0 first:pt-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
       <span className="text-sm font-medium tabular-nums">{value}</span>
     </div>
   );

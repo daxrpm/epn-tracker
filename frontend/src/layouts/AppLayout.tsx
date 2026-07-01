@@ -1,55 +1,60 @@
-import { Button } from "@heroui/react";
-import { NavLink, Outlet } from "react-router-dom";
+import { Calculator, GraduationCap, LayoutDashboard, LogOut } from "lucide-react";
+import { useState } from "react";
+import { Link, Outlet } from "react-router-dom";
 
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui/button";
+import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
 import { useAuthStore } from "@/stores/auth.store";
 
-const NAV_ITEMS = [
-  { to: "/app/dashboard", label: "Inicio" },
-  { to: "/app/calculadora", label: "Calculadora" },
+const NAV_LINKS = [
+  { label: "Inicio", href: "/app/dashboard", icon: <LayoutDashboard className="size-5 shrink-0" /> },
+  { label: "Calculadora", href: "/app/calculadora", icon: <Calculator className="size-5 shrink-0" /> },
 ];
 
-/** Authenticated shell: minimal top bar + routed content. */
 export function AppLayout() {
+  const [open, setOpen] = useState(false);
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-default-100">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-          <div className="flex items-center gap-8">
-            <span className="text-sm font-semibold tracking-tight">EPN Notas Mallas</span>
-            <nav className="flex items-center gap-1">
-              {NAV_ITEMS.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    cn(
-                      "rounded-md px-3 py-1.5 text-sm text-default-500 transition-colors hover:text-foreground",
-                      isActive && "bg-default-100 text-foreground",
-                    )
-                  }
-                >
-                  {item.label}
-                </NavLink>
+    <div className="flex min-h-screen bg-background text-foreground">
+      <Sidebar open={open} setOpen={setOpen}>
+        <SidebarBody className="justify-between gap-10">
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <Link to="/app/dashboard" className="flex items-center gap-2 py-1">
+              <GraduationCap className="size-6 shrink-0 text-primary" />
+              {open && <span className="whitespace-pre font-semibold">EPN Notas</span>}
+            </Link>
+            <nav className="mt-8 flex flex-col gap-2">
+              {NAV_LINKS.map((link) => (
+                <SidebarLink key={link.href} link={link} as={Link} />
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden text-sm text-default-500 sm:inline">{user?.email}</span>
-            <ThemeToggle />
-            <Button size="sm" variant="flat" onPress={() => void logout()}>
-              Salir
-            </Button>
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto max-w-5xl px-6 py-8">
-        <Outlet />
-      </main>
+          <button
+            type="button"
+            onClick={() => void logout()}
+            className="flex items-center justify-start gap-2 py-2 text-sm text-neutral-700 dark:text-neutral-200"
+          >
+            <LogOut className="size-5 shrink-0" />
+            {open && <span className="whitespace-pre">Salir</span>}
+          </button>
+        </SidebarBody>
+      </Sidebar>
+
+      <div className="flex flex-1 flex-col">
+        <header className="flex h-14 items-center justify-end gap-3 border-b border-border px-6">
+          <span className="hidden text-sm text-muted-foreground sm:inline">{user?.email}</span>
+          <ThemeToggle />
+          <Button variant="outline" size="sm" onClick={() => void logout()}>
+            Salir
+          </Button>
+        </header>
+        <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-8">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

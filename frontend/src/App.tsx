@@ -1,9 +1,10 @@
-import { HeroUIProvider } from "@heroui/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useEffect } from "react";
 import { RouterProvider } from "react-router-dom";
 
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { env } from "@/config/env";
 import { queryClient } from "@/lib/query";
 import { router } from "@/router";
@@ -26,11 +27,12 @@ export function App() {
   }, [theme, setTheme]);
 
   return (
-    <HeroUIProvider>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider delayDuration={200}>
         <RouterProvider router={router} />
+        <Toaster richColors position="top-center" />
         {env.isDev && <ReactQueryDevtools initialIsOpen={false} />}
-      </QueryClientProvider>
-    </HeroUIProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }

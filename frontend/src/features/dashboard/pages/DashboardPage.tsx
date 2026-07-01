@@ -1,40 +1,86 @@
-import { Card, CardBody } from "@heroui/react";
+import { BookOpen, Calculator, GraduationCap, LineChart } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 import { useAuthStore } from "@/stores/auth.store";
 
 /**
- * Minimal authenticated landing. Intentionally sparse (ERS §20.5: no invented KPIs) — real academic
- * widgets (current courses, malla progress) plug in here as those features are built.
+ * Authenticated landing built with Aceternity's BentoGrid. Cards route into features as they are
+ * built out in later phases.
  */
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Hola{user ? `, ${user.email}` : ""}</h1>
-        <p className="mt-1 text-sm text-default-500">
-          Tu panel académico se construirá aquí: materias actuales, notas y progreso de malla.
+        <h1 className="text-2xl font-bold tracking-tight">
+          Hola{user ? `, ${user.email.split("@")[0]}` : ""}
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Tu panel académico: materias, notas, avance de malla y simulaciones.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card as={Link} to="/app/calculadora" isPressable className="border border-default-100">
-          <CardBody className="gap-1 p-5">
-            <span className="text-sm font-medium">Calculadora de recuperación</span>
-            <span className="text-sm text-default-500">
-              Calcula tu nota final y cuánto necesitas para aprobar.
-            </span>
-          </CardBody>
-        </Card>
-        <Card className="border border-dashed border-default-200">
-          <CardBody className="gap-1 p-5">
-            <span className="text-sm font-medium text-default-400">Materias actuales</span>
-            <span className="text-sm text-default-400">Próximamente.</span>
-          </CardBody>
-        </Card>
-      </div>
+      <BentoGrid className="mx-0 max-w-full md:auto-rows-[16rem]">
+        <BentoGridItem
+          className="md:col-span-2"
+          title="Calculadora de recuperación"
+          description="Calcula tu nota final sobre 40 y cuánto necesitas para aprobar."
+          header={<GradientHeader icon={<Calculator className="size-8 text-primary" />} />}
+          icon={<Calculator className="size-4 text-muted-foreground" />}
+        />
+        <DashboardLink
+          to="/app/calculadora"
+          title="Simulador de matrícula"
+          description="Próximamente: materias disponibles y límites de crédito."
+          icon={<LineChart className="size-4 text-muted-foreground" />}
+        />
+        <DashboardLink
+          to="/app/calculadora"
+          title="Mis materias"
+          description="Próximamente: notas por aporte, componentes e insumos."
+          icon={<BookOpen className="size-4 text-muted-foreground" />}
+        />
+        <BentoGridItem
+          className="md:col-span-2"
+          title="Avance de malla"
+          description="Próximamente: progreso por periodo y requisitos de graduación."
+          header={<GradientHeader icon={<GraduationCap className="size-8 text-primary" />} />}
+          icon={<GraduationCap className="size-4 text-muted-foreground" />}
+        />
+      </BentoGrid>
     </div>
+  );
+}
+
+function GradientHeader({ icon }: { icon: React.ReactNode }) {
+  return (
+    <div className="flex size-full min-h-24 flex-1 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 via-transparent to-primary/5">
+      {icon}
+    </div>
+  );
+}
+
+function DashboardLink({
+  to,
+  title,
+  description,
+  icon,
+}: {
+  to: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <Link to={to} className="[&>div]:h-full">
+      <BentoGridItem
+        title={title}
+        description={description}
+        header={<GradientHeader icon={icon} />}
+        icon={icon}
+      />
+    </Link>
   );
 }
