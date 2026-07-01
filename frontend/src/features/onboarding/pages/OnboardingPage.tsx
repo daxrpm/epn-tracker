@@ -17,6 +17,7 @@ import {
 import { CurriculumGrid } from "@/features/curriculum/components/CurriculumGrid";
 import { COURSE_STATE_META } from "@/features/curriculum/constants";
 import { useCareers, useCurricula, useCurriculumCourses } from "@/features/curriculum/hooks";
+import { coursesWithUnmetPrereqs } from "@/features/curriculum/prerequisites";
 import type { CourseState, EnglishLevel } from "@/features/student/api";
 import { ENGLISH_LEVELS } from "@/features/student/constants";
 import { useBulkCourseStates, useUpdateProfile } from "@/features/student/hooks";
@@ -58,6 +59,11 @@ export function OnboardingPage() {
   const stateByCourse = useMemo(
     () => new Map<string, CourseState>(Object.entries(courseStates)),
     [courseStates],
+  );
+
+  const prereqWarnings = useMemo(
+    () => coursesWithUnmetPrereqs(coursesQuery.data ?? [], stateByCourse),
+    [coursesQuery.data, stateByCourse],
   );
 
   const submitting = updateProfile.isPending || bulkStates.isPending;
@@ -183,6 +189,7 @@ export function OnboardingPage() {
                     courses={coursesQuery.data}
                     stateByCourse={stateByCourse}
                     onSelect={(course) => cycleCourse(course.id)}
+                    prereqWarnings={prereqWarnings}
                   />
                 </div>
               )}

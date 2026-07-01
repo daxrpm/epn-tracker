@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   ArrowRight,
   BookOpen,
   Clock3,
@@ -38,6 +39,7 @@ import type { CurriculumCourse } from "../api";
 import { CurriculumGrid } from "../components/CurriculumGrid";
 import { COURSE_STATE_META, COURSE_STATE_ORDER, UNIT_META, courseHours } from "../constants";
 import { useCareers, useCurricula, useCurriculumCourses } from "../hooks";
+import { buildCodeStateMap, coursesWithUnmetPrereqs, unmetPrerequisites } from "../prerequisites";
 
 export function CurriculumPage() {
   const profileQuery = useProfile();
@@ -72,6 +74,16 @@ export function CurriculumPage() {
         !query || `${course.code} ${course.name}`.toLocaleLowerCase("es").includes(query),
     );
   }, [coursesQuery.data, search]);
+
+  const prereqWarnings = useMemo(
+    () => coursesWithUnmetPrereqs(coursesQuery.data ?? [], stateByCourse),
+    [coursesQuery.data, stateByCourse],
+  );
+
+  const missingPrereqs = useMemo(() => {
+    if (!selected) return [];
+    return unmetPrerequisites(selected, buildCodeStateMap(coursesQuery.data ?? [], stateByCourse));
+  }, [selected, coursesQuery.data, stateByCourse]);
 
   async function changeState(course: CurriculumCourse, state: CourseState) {
     try {
@@ -156,6 +168,7 @@ export function CurriculumPage() {
             courses={filteredCourses}
             stateByCourse={stateByCourse}
             onSelect={setSelected}
+            prereqWarnings={prereqWarnings}
           />
         )}
       </section>
@@ -163,6 +176,7 @@ export function CurriculumPage() {
       <CourseDialog
         course={selected}
         state={selected ? stateByCourse.get(selected.id) ?? "NOT_TAKEN" : "NOT_TAKEN"}
+        missingPrereqs={missingPrereqs}
         pending={bulkStates.isPending}
         onClose={() => setSelected(null)}
         onChange={changeState}
@@ -201,12 +215,14 @@ function Legend() {
 function CourseDialog({
   course,
   state,
+  missingPrereqs,
   pending,
   onClose,
   onChange,
 }: {
   course: CurriculumCourse | null;
   state: CourseState;
+  missingPrereqs: string[];
   pending: boolean;
   onClose: () => void;
   onChange: (course: CurriculumCourse, state: CourseState) => Promise<void>;
@@ -223,6 +239,15 @@ function CourseDialog({
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
+              {missingPrereqs.length > 0 && (
+                <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                  <p>
+                    Te faltan prerrequisitos para esta materia:{" "}
+                    <span className="font-medium">{missingPrereqs.join(", ")}</span>.
+                  </p>
+                </div>
+              )}
               <DetailRow label="Prerrequisitos" value={course.prerequisite_codes.join(", ") || "Ninguno"} />
               <DetailRow label="Correquisitos" value={course.corequisite_codes.join(", ") || "Ninguno"} />
               <DetailRow label="Unidad" value={UNIT_META[course.organization_unit].label} />
