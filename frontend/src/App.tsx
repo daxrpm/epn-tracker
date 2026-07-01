@@ -15,6 +15,7 @@ export function App() {
   const bootstrap = useAuthStore((state) => state.bootstrap);
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
+  const syncSystemTheme = useThemeStore((state) => state.syncSystemTheme);
 
   // Restore the session once on startup (uses the persisted refresh token).
   useEffect(() => {
@@ -25,6 +26,12 @@ export function App() {
   useEffect(() => {
     setTheme(theme);
   }, [theme, setTheme]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    media.addEventListener("change", syncSystemTheme);
+    return () => media.removeEventListener("change", syncSystemTheme);
+  }, [syncSystemTheme]);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -15,7 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
 import { useCareers, useCurricula, useCurriculumCourses } from "@/features/curriculum/hooks";
 import type { CourseState, EnglishLevel } from "@/features/student/api";
 import { ENGLISH_LEVELS } from "@/features/student/constants";
@@ -88,18 +87,16 @@ export function OnboardingPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8">
       <div>
-        <TextGenerateEffect
-          words="Configura tu malla"
-          className="[&_div]:mt-0 [&_div>div]:text-3xl"
-        />
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Configuración inicial</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Configura tu malla</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Tres pasos para tener tu avance académico al día.
         </p>
       </div>
 
       <Stepper current={step} />
 
-      <Card>
+      <Card className="rounded-2xl bg-card/65">
         <CardContent className="p-6">
           {step === 0 && (
             <div className="flex flex-col gap-5">

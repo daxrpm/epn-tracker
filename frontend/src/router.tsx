@@ -4,6 +4,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { LoginPage } from "@/features/auth/pages/LoginPage";
 import { RegisterPage } from "@/features/auth/pages/RegisterPage";
 import { CalculatorPage } from "@/features/calculators/pages/CalculatorPage";
+import { PublicCalculatorPage } from "@/features/calculators/pages/PublicCalculatorPage";
 import { CurriculumPage } from "@/features/curriculum/pages/CurriculumPage";
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
 import { OnboardingPage } from "@/features/onboarding/pages/OnboardingPage";
@@ -16,6 +17,13 @@ export const router = createBrowserRouter([
     element: <AuthLayout />,
     children: [
       { path: "/login", element: <LoginPage /> },
+      {
+        path: "/login/hero",
+        lazy: async () => {
+          const { HeroLoginPage } = await import("@/features/auth/pages/HeroLoginPage");
+          return { Component: HeroLoginPage };
+        },
+      },
       { path: "/registro", element: <RegisterPage /> },
     ],
   },
@@ -36,6 +44,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: "/", element: <Navigate to="/app/dashboard" replace /> },
-  { path: "*", element: <Navigate to="/app/dashboard" replace /> },
+  { path: "/", element: <PublicCalculatorPage /> },
+  { path: "*", element: <Navigate to="/" replace /> },
 ]);

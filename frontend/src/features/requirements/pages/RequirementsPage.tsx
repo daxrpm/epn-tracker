@@ -33,8 +33,9 @@ export function RequirementsPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Requisitos de graduación</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Progreso académico</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Requisitos de graduación</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Actualiza el estado de cada requisito no crediticio para tu graduación.
         </p>
       </div>
@@ -57,7 +58,7 @@ export function RequirementsPage() {
           {requirements.map((requirement) => {
             const meta = GRAD_REQ_STATE_META[requirement.state];
             return (
-              <Card key={requirement.id}>
+              <Card key={requirement.id} className="rounded-xl bg-card/65">
                 <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-col gap-1">
                     <span className="text-sm font-medium">{requirement.name}</span>

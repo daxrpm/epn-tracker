@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/types";
 
 import { useRecoveryCalculator } from "../hooks";
+import { formatScore } from "../format";
 
 const scoreField = z
   .string()
@@ -48,13 +49,14 @@ export function CalculatorPage() {
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Calculadora de recuperación</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Herramientas académicas</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em]">Calculadora de recuperación</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Ingresa tus dos aportes sobre 20 para ver tu nota final y si necesitas recuperación.
         </p>
       </div>
 
-      <Card>
+      <Card className="rounded-2xl bg-card/65">
         <CardContent className="p-6">
           <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
             <div className="grid grid-cols-2 gap-4">
@@ -83,18 +85,18 @@ export function CalculatorPage() {
       </Card>
 
       {result && status && (
-        <Card>
+        <Card className="rounded-2xl bg-card/65">
           <CardContent className="flex flex-col gap-3 p-6">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Estado</span>
               <Badge variant={status.variant}>{status.label}</Badge>
             </div>
-            <Row label="Nota final /40" value={result.final_40} />
-            <Row label="Equivalente /20" value={result.display_final_20} />
+            <Row label="Nota final /40" value={formatScore(result.final_40)} />
+            <Row label="Equivalente /20" value={formatScore(result.display_final_20)} />
             {result.display_required_recovery_score_40 && (
               <Row
                 label="Necesitas en recuperación /40"
-                value={result.display_required_recovery_score_40}
+                value={formatScore(result.display_required_recovery_score_40)}
               />
             )}
           </CardContent>
