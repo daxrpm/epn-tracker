@@ -11,12 +11,11 @@ La especificación completa vive en [`ERS_EPN_Notas_Mallas.md`](./ERS_EPN_Notas_
 ```
 EPN-system/
 ├── backend/            # API FastAPI (Python + uv) — arquitectura fba + dominio puro
+├── frontend/           # SPA Vite + React + TS — HeroUI + Aceternity UI
 ├── mallas/             # PDFs fuente de las mallas FIS
 ├── Silabos/            # PDFs fuente de sílabos de ejemplo
 └── ERS_EPN_Notas_Mallas.md
 ```
-
-El frontend (Vite + React + Hero UI) se agregará en una entrega posterior.
 
 ## Arquitectura
 
@@ -55,6 +54,16 @@ uv run python -m seeds.loader      # malla de arranque
 uv run python -m seeds.create_admin  # super admin (usa FIRST_SUPERADMIN_*)
 uv run uvicorn app.main:app --reload
 ```
+
+## Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev        # http://localhost:5173 (proxya /api al backend en :8000)
+```
+
+Arquitectura, seguridad de tokens y comandos en `frontend/README.md`.
 
 ## Precisión numérica
 
