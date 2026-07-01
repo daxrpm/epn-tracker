@@ -8,6 +8,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.modules.iam.api import router as iam_router
+from app.modules.public.api import router as public_router
 
 api_router = APIRouter()
 
@@ -18,3 +19,4 @@ async def health() -> dict[str, str]:
 
 
 api_router.include_router(iam_router)
+api_router.include_router(public_router)
