@@ -22,6 +22,11 @@ from app.domain.grading.grade_calculation import (
     calculate_contribution,
     calculate_final,
 )
+from app.domain.grading.projection import (
+    DEFAULT_TARGET_FINAL_40,
+    ProjectionComponent,
+    project_target,
+)
 from app.domain.grading.recovery import required_recovery_score
 from app.modules.academic import crud as academic_crud
 from app.modules.evaluation.model import EvaluationComponent, EvaluationScheme
@@ -46,6 +51,7 @@ from app.modules.student.schema import (
     ProfileUpdateIn,
     ProgressOut,
     ProgressTermOut,
+    ProjectionOut,
 )
 
 
@@ -402,4 +408,50 @@ def _contribution_out(contribution: str, result) -> ContributionOut:  # noqa: AN
         score_20=str(result.score_20),
         evaluated_weight_percent=str(result.evaluated_weight_percent),
         is_complete=result.is_complete,
+    )
+
+
+async def project(
+    db: AsyncSession,
+    profile: StudentProfile,
+    enrollment_id: uuid.UUID,
+    target_final_40: Decimal | None = None,
+) -> ProjectionOut:
+    """Project what the student still needs to reach ``target_final_40`` (ERS §RF-009)."""
+    target = DEFAULT_TARGET_FINAL_40 if target_final_40 is None else target_final_40
+    enrollment = await _owned_enrollment(db, profile, enrollment_id)
+    states = await crud.get_component_states(db, enrollment.id)
+    components = await _load_components(db, states)
+    items_by_state = await _load_items_by_state(db, states)
+
+    projection_components: list[ProjectionComponent] = []
+    for state in states:
+        component = components[state.evaluation_component_id]
+        item_inputs = [
+            ItemInput(score=i.score, internal_weight_percent=i.internal_weight_percent)
+            for i in items_by_state.get(state.id, [])
+        ]
+        state.calculated_score = calculate_component_score(
+            state.mode, state.direct_score, item_inputs
+        )
+        projection_components.append(
+            ProjectionComponent(
+                contribution=component.contribution,
+                weight_percent=component.weight_percent,
+                calculated_score=state.calculated_score,
+            )
+        )
+    await db.flush()
+
+    result = project_target(projection_components, target_final_40=target)
+    return ProjectionOut(
+        target_final_40=str(result.target_final_40),
+        current_points_40=str(result.current_points_40),
+        evaluated_weight_percent=str(result.evaluated_weight_percent),
+        remaining_weight_percent=str(result.remaining_weight_percent),
+        required_avg_score_20=(
+            None if result.required_avg_score_20 is None else str(result.required_avg_score_20)
+        ),
+        already_reached=result.already_reached,
+        is_reachable=result.is_reachable,
     )

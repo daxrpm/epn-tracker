@@ -172,3 +172,16 @@ class CalculateOut(BaseModel):
     status: CourseFinalStatus
     is_complete: bool
     required_recovery_score_40: str | None = Field(default=None)
+
+
+# --- Projection (RF-009) --------------------------------------------------------------------------
+
+
+class ProjectionOut(BaseModel):
+    target_final_40: str
+    current_points_40: str
+    evaluated_weight_percent: str
+    remaining_weight_percent: str
+    required_avg_score_20: str | None = Field(default=None)
+    already_reached: bool
+    is_reachable: bool
