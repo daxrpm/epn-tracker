@@ -99,6 +99,7 @@ async def get_curriculum_courses(
             name=courses[cc.course_id].name,
             reference_term=cc.reference_term,
             credits=cc.credits,
+            hours=cc.hours,
             organization_unit=cc.organization_unit,
             is_required=cc.is_required,
             prerequisite_codes=prerequisites.get(cc.id, []),
