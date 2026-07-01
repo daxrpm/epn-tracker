@@ -54,16 +54,19 @@ export function RequirementsPage() {
         </Card>
       ) : (
         <div className="flex flex-col gap-3">
-          {requirements.map((requirement, index) => {
+          {requirements.map((requirement) => {
             const meta = GRAD_REQ_STATE_META[requirement.state];
             return (
               <Card key={requirement.id}>
                 <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-col gap-1">
-                    <span className="text-sm font-medium">Requisito {index + 1}</span>
-                    <Badge variant={meta.badge} className="w-fit">
-                      {meta.label}
-                    </Badge>
+                    <span className="text-sm font-medium">{requirement.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{requirement.code}</span>
+                      <Badge variant={meta.badge} className="w-fit">
+                        {meta.label}
+                      </Badge>
+                    </div>
                   </div>
                   <Select
                     value={requirement.state}

@@ -47,9 +47,22 @@ export interface CourseStateBulkItem {
   final_score_40?: string | null;
 }
 
+export type GradRequirementType =
+  | "ENGLISH"
+  | "SPORTS"
+  | "CLUBS"
+  | "SOCIAL"
+  | "ENTREPRENEURSHIP"
+  | "ENVIRONMENT"
+  | "PROJECTS"
+  | "OTHER";
+
 export interface GradRequirementRecord {
   id: string;
   graduation_requirement_id: string;
+  code: string;
+  name: string;
+  requirement_type: GradRequirementType;
   state: GradRequirementState;
 }
 

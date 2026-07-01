@@ -67,8 +67,18 @@ async def bulk_course_states(
 @router.get("/graduation-requirements", response_model=list[GradReqStateOut])
 async def list_grad_requirements(user: CurrentUser, db: DbSession) -> list[GradReqStateOut]:
     profile = await service.get_or_create_profile(db, user)
-    states = await crud.get_grad_req_states(db, profile.id)
-    return [GradReqStateOut.model_validate(s) for s in states]
+    rows = await crud.get_grad_req_states_with_details(db, profile.id)
+    return [
+        GradReqStateOut(
+            id=state.id,
+            graduation_requirement_id=state.graduation_requirement_id,
+            code=requirement.code,
+            name=requirement.name,
+            requirement_type=requirement.requirement_type,
+            state=state.state,
+        )
+        for state, requirement in rows
+    ]
 
 
 @router.put("/graduation-requirements/{state_id}", response_model=GradReqStateOut)

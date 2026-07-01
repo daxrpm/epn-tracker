@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.academic.model import GraduationRequirement
 from app.modules.student.model import (
     GradeComponentState,
     GradeItem,
@@ -102,6 +103,23 @@ async def get_grad_req_states(
         StudentGraduationRequirementState.student_profile_id == profile_id
     )
     return (await db.execute(stmt)).scalars().all()
+
+
+async def get_grad_req_states_with_details(
+    db: AsyncSession, profile_id: uuid.UUID
+) -> Sequence[tuple[StudentGraduationRequirementState, GraduationRequirement]]:
+    """State rows joined with their graduation requirement (code/name/type for the UI)."""
+    stmt = (
+        select(StudentGraduationRequirementState, GraduationRequirement)
+        .join(
+            GraduationRequirement,
+            GraduationRequirement.id
+            == StudentGraduationRequirementState.graduation_requirement_id,
+        )
+        .where(StudentGraduationRequirementState.student_profile_id == profile_id)
+        .order_by(GraduationRequirement.code)
+    )
+    return [tuple(row) for row in (await db.execute(stmt)).all()]
 
 
 async def get_grad_req_state(

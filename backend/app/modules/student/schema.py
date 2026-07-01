@@ -14,6 +14,7 @@ from app.common.enums import (
     EnglishLevel,
     GradeComponentMode,
     GraduationRequirementState,
+    GraduationRequirementType,
 )
 
 # --- Profile --------------------------------------------------------------------------------------
@@ -64,6 +65,9 @@ class CourseStateBulkIn(BaseModel):
 class GradReqStateOut(BaseModel):
     id: uuid.UUID
     graduation_requirement_id: uuid.UUID
+    code: str
+    name: str
+    requirement_type: GraduationRequirementType
     state: GraduationRequirementState
     model_config = {"from_attributes": True}
 
