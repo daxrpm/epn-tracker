@@ -26,6 +26,7 @@ dev = [
     "pytest-asyncio>=0.24",
     "httpx>=0.28",
     "aiosqlite>=0.20",
+    "fakeredis>=2.36.2",
 ]
 
 [tool.uv]
