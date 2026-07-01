@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     # Email
     email_backend: str = "console"
 
+    # First super admin bootstrap (used by `python -m seeds.create_admin`).
+    first_superadmin_email: str | None = None
+    first_superadmin_password: str | None = None
+
     @model_validator(mode="after")
     def _check_production_secret(self) -> Settings:
         if self.app_env != "dev" and (

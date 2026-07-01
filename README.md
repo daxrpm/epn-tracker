@@ -28,24 +28,33 @@ El frontend (Vite + React + Hero UI) se agregará en una entrega posterior.
   de framework y cubiertas por tests unitarios. **Toda la lógica académica vive aquí, nunca en
   routers ni CRUD.**
 
-## Desarrollo
+## Arranque completo con Docker (recomendado)
 
-Requisitos: [`uv`](https://docs.astral.sh/uv/) y (para la base de datos) Docker.
+Con Docker instalado, un solo comando levanta Postgres + Redis + la API, aplica migraciones, carga la
+malla de arranque y crea el super admin:
 
 ```bash
-# Servicios de datos (Postgres + Redis)
-docker compose up -d
-
-# Backend
-cd backend
-uv sync
-uv run pytest tests/unit -q        # tests de dominio (no requieren DB)
-uv run alembic upgrade head        # migraciones
-uv run python -m seeds.loader      # datos iniciales EPN/FIS
-uv run uvicorn app.main:app --reload
+docker compose up --build
 ```
 
-API en `http://localhost:8000`, documentación en `/docs`.
+- API: `http://localhost:8000` · Docs: `http://localhost:8000/docs`
+- Super admin inicial: `admin@epn.edu.ec` / `ChangeMe-12345` (cámbialo en `docker-compose.yml`).
+- Readiness: `GET /api/v1/health/ready` (verifica base de datos y Redis).
+
+## Desarrollo local (sin Docker para la app)
+
+Requisitos: [`uv`](https://docs.astral.sh/uv/). La base de datos puede venir de `docker compose up -d
+postgres redis`.
+
+```bash
+cd backend
+uv sync
+uv run pytest -q                   # 56 tests (dominio + integración, sin DB externa)
+uv run alembic upgrade head        # migraciones (requiere Postgres)
+uv run python -m seeds.loader      # malla de arranque
+uv run python -m seeds.create_admin  # super admin (usa FIRST_SUPERADMIN_*)
+uv run uvicorn app.main:app --reload
+```
 
 ## Precisión numérica
 

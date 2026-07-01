@@ -29,6 +29,31 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: ./backend
+    container_name: epn_backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: dev
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: epn
+      POSTGRES_PASSWORD: epn
+      POSTGRES_DB: epn
+      REDIS_HOST: redis
+      JWT_SECRET: dev-insecure-secret-change-me-please-32bytes+
+      BACKEND_CORS_ORIGINS: "http://localhost:5173,http://localhost:3000"
+      # Bootstrap admin so you can import mallas immediately. Change in real use.
+      FIRST_SUPERADMIN_EMAIL: admin@epn.edu.ec
+      FIRST_SUPERADMIN_PASSWORD: ChangeMe-12345
+    ports:
+      - "8000:8000"
+    command: ["sh", "./scripts/entrypoint.sh"]
+
 volumes:
   epn_pgdata:
   epn_redisdata:
