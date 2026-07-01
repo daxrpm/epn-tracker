@@ -86,3 +86,20 @@ class SchemeCreateOut(BaseModel):
     status: EvaluationSchemeStatus
     is_valid: bool
     warnings: list[SchemeIssueOut] = []
+
+
+class SchemeCopyOut(BaseModel):
+    id: uuid.UUID
+    status: EvaluationSchemeStatus
+
+
+# --- Priority suggestion (ERS §8.12) --------------------------------------------------------------
+
+
+class SchemeSuggestionOut(BaseModel):
+    id: uuid.UUID
+    title: str
+    status: EvaluationSchemeStatus
+    approval_count: int
+    match: str  # "EXACT" | "PROFESSOR" | "COURSE"
+    warning: str | None = None
