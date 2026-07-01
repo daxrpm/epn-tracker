@@ -5,6 +5,7 @@ import {
   Clock3,
   GraduationCap,
   Loader2,
+  NotebookPen,
   Search,
   Settings2,
 } from "lucide-react";
@@ -266,6 +267,13 @@ function CourseDialog({
                   </SelectContent>
                 </Select>
               </div>
+              {state === "IN_PROGRESS" && (
+                <Button asChild className="w-full">
+                  <Link to={`/app/notas/${course.id}`}>
+                    <NotebookPen className="size-4" /> Gestionar notas
+                  </Link>
+                </Button>
+              )}
             </div>
           </>
         )}

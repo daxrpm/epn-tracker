@@ -6,6 +6,7 @@ import {
   LogOut,
   Menu,
   Network,
+  NotebookPen,
   Settings2,
   X,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 const NAV_LINKS = [
   { label: "Inicio", href: "/app/dashboard", icon: LayoutDashboard },
   { label: "Malla", href: "/app/curriculum", icon: Network },
+  { label: "Notas", href: "/app/notas", icon: NotebookPen },
   { label: "Requisitos", href: "/app/requisitos", icon: ListChecks },
   { label: "Calculadora", href: "/app/calculadora", icon: Calculator },
   { label: "Ajustes", href: "/app/ajustes", icon: Settings2 },

@@ -154,3 +154,14 @@ export async function copySchemeToPersonal(id: string): Promise<{ id: string; st
   );
   return data;
 }
+
+export interface VoteResult {
+  scheme_id: string;
+  status: string;
+  approval_count: number;
+}
+
+export async function voteScheme(id: string, vote: "APPROVE" | "REJECT" = "APPROVE"): Promise<VoteResult> {
+  const { data } = await apiClient.post<VoteResult>(`/evaluation-schemes/${id}/vote`, { vote });
+  return data;
+}

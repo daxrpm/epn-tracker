@@ -5,6 +5,7 @@ import {
   GraduationCap,
   ListChecks,
   Loader2,
+  NotebookPen,
 } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
@@ -99,6 +100,14 @@ export function DashboardPage() {
                 description="Explora tu pénsum por semestre y actualiza tus materias."
                 header={<GradientHeader icon={<GraduationCap className="size-8 text-primary" />} />}
                 icon={<GraduationCap className="size-4 text-muted-foreground" />}
+              />
+            </Link>
+            <Link to="/app/notas" className="[&>div]:h-full">
+              <BentoGridItem
+                title="Gestión de notas"
+                description="Registra tus notas por bimestre y proyecta tu resultado final."
+                header={<GradientHeader icon={<NotebookPen className="size-8 text-primary" />} />}
+                icon={<NotebookPen className="size-4 text-muted-foreground" />}
               />
             </Link>
             <Link to="/app/requisitos" className="[&>div]:h-full">

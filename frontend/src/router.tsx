@@ -7,6 +7,8 @@ import { CalculatorPage } from "@/features/calculators/pages/CalculatorPage";
 import { PublicCalculatorPage } from "@/features/calculators/pages/PublicCalculatorPage";
 import { CurriculumPage } from "@/features/curriculum/pages/CurriculumPage";
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
+import { GradebookPage } from "@/features/evaluation/pages/GradebookPage";
+import { MyCoursesPage } from "@/features/evaluation/pages/MyCoursesPage";
 import { OnboardingPage } from "@/features/onboarding/pages/OnboardingPage";
 import { RequirementsPage } from "@/features/requirements/pages/RequirementsPage";
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
@@ -39,6 +41,8 @@ export const router = createBrowserRouter([
           { path: "dashboard", element: <DashboardPage /> },
           { path: "onboarding", element: <OnboardingPage /> },
           { path: "curriculum", element: <CurriculumPage /> },
+          { path: "notas", element: <MyCoursesPage /> },
+          { path: "notas/:curriculumCourseId", element: <GradebookPage /> },
           { path: "requisitos", element: <RequirementsPage /> },
           { path: "calculadora", element: <CalculatorPage /> },
           { path: "ajustes", element: <SettingsPage /> },
