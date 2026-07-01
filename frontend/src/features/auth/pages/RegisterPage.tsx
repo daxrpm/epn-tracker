@@ -35,7 +35,7 @@ function RequestStep({ onSent }: { onSent: (email: string) => void }) {
   const serverError = requestCode.error instanceof ApiError ? requestCode.error.message : null;
 
   return (
-    <Card className="border border-slate-100 shadow-sm">
+    <Card className="border border-default-100 shadow-sm">
       <CardBody className="gap-4 p-6">
         <h2 className="text-lg font-medium">Crear cuenta</h2>
         <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
@@ -53,7 +53,7 @@ function RequestStep({ onSent }: { onSent: (email: string) => void }) {
             Enviar código
           </Button>
         </form>
-        <p className="text-center text-sm text-slate-500">
+        <p className="text-center text-sm text-default-500">
           ¿Ya tienes cuenta?{" "}
           <Link as={RouterLink} to="/login" size="sm">
             Inicia sesión
@@ -83,10 +83,10 @@ function VerifyStep({ email, onDone }: { email: string; onDone: () => void }) {
   const serverError = verifyCode.error instanceof ApiError ? verifyCode.error.message : null;
 
   return (
-    <Card className="border border-slate-100 shadow-sm">
+    <Card className="border border-default-100 shadow-sm">
       <CardBody className="gap-4 p-6">
         <h2 className="text-lg font-medium">Verifica tu correo</h2>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-default-500">
           Enviamos un código a <span className="font-medium">{email}</span>.
         </p>
         <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>

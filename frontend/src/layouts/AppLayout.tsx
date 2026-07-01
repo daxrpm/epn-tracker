@@ -1,6 +1,7 @@
 import { Button } from "@heroui/react";
 import { NavLink, Outlet } from "react-router-dom";
 
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/cn";
 import { useAuthStore } from "@/stores/auth.store";
 
@@ -15,8 +16,8 @@ export function AppLayout() {
   const logout = useAuthStore((state) => state.logout);
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="border-b border-slate-100">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b border-default-100">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
           <div className="flex items-center gap-8">
             <span className="text-sm font-semibold tracking-tight">EPN Notas Mallas</span>
@@ -27,8 +28,8 @@ export function AppLayout() {
                   to={item.to}
                   className={({ isActive }) =>
                     cn(
-                      "rounded-md px-3 py-1.5 text-sm text-slate-600 transition-colors hover:text-slate-900",
-                      isActive && "bg-slate-100 text-slate-900",
+                      "rounded-md px-3 py-1.5 text-sm text-default-500 transition-colors hover:text-foreground",
+                      isActive && "bg-default-100 text-foreground",
                     )
                   }
                 >
@@ -37,8 +38,9 @@ export function AppLayout() {
               ))}
             </nav>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-slate-500 sm:inline">{user?.email}</span>
+          <div className="flex items-center gap-2">
+            <span className="hidden text-sm text-default-500 sm:inline">{user?.email}</span>
+            <ThemeToggle />
             <Button size="sm" variant="flat" onPress={() => void logout()}>
               Salir
             </Button>

@@ -1,10 +1,11 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-:root {
-  color-scheme: light;
-}
+/* HeroUI plugin (themes defined in src/hero.ts) and its class source for scanning. */
+@plugin "./../hero.ts";
+@source "../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}";
+
+/* HeroUI toggles dark mode via a `dark` class on a parent element. */
+@custom-variant dark (&:is(.dark *));
 
 html,
 body,
@@ -13,7 +14,7 @@ body,
 }
 
 body {
-  @apply bg-white text-slate-900 antialiased;
+  @apply bg-background text-foreground antialiased;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 

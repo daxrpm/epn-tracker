@@ -25,7 +25,7 @@ export function LoginPage() {
   const serverError = login.error instanceof ApiError ? login.error.message : null;
 
   return (
-    <Card className="border border-slate-100 shadow-sm">
+    <Card className="border border-default-100 shadow-sm">
       <CardBody className="gap-4 p-6">
         <h2 className="text-lg font-medium">Iniciar sesión</h2>
         <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
@@ -51,7 +51,7 @@ export function LoginPage() {
             Entrar
           </Button>
         </form>
-        <p className="text-center text-sm text-slate-500">
+        <p className="text-center text-sm text-default-500">
           ¿No tienes cuenta?{" "}
           <Link as={RouterLink} to="/registro" size="sm">
             Regístrate

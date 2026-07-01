@@ -41,12 +41,12 @@ export function CalculatorPage() {
     <div className="mx-auto flex max-w-md flex-col gap-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight">Calculadora de recuperación</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-default-500">
           Ingresa tus dos aportes sobre 20 para ver tu nota final y si necesitas recuperación.
         </p>
       </div>
 
-      <Card className="border border-slate-100 shadow-sm">
+      <Card className="border border-default-100 shadow-sm">
         <CardBody className="gap-4 p-6">
           <form className="flex flex-col gap-4" onSubmit={onSubmit} noValidate>
             <div className="grid grid-cols-2 gap-4">
@@ -74,10 +74,10 @@ export function CalculatorPage() {
       </Card>
 
       {result && status && (
-        <Card className="border border-slate-100 shadow-sm">
+        <Card className="border border-default-100 shadow-sm">
           <CardBody className="gap-3 p-6">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-500">Estado</span>
+              <span className="text-sm text-default-500">Estado</span>
               <Chip color={status.color} variant="flat" size="sm">
                 {status.label}
               </Chip>
@@ -99,8 +99,8 @@ export function CalculatorPage() {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between border-t border-slate-50 pt-3 first:border-0 first:pt-0">
-      <span className="text-sm text-slate-500">{label}</span>
+    <div className="flex items-center justify-between border-t border-default-100 pt-3 first:border-0 first:pt-0">
+      <span className="text-sm text-default-500">{label}</span>
       <span className="text-sm font-medium tabular-nums">{value}</span>
     </div>
   );
