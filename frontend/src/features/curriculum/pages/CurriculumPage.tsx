@@ -34,16 +34,10 @@ import { useBulkCourseStates, useCourseStates, useProfile } from "@/features/stu
 import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
-import type { CurriculumCourse, OrganizationUnit } from "../api";
-import { COURSE_STATE_META, COURSE_STATE_ORDER } from "../constants";
+import type { CurriculumCourse } from "../api";
+import { CurriculumGrid } from "../components/CurriculumGrid";
+import { COURSE_STATE_META, COURSE_STATE_ORDER, UNIT_META, courseHours } from "../constants";
 import { useCareers, useCurricula, useCurriculumCourses } from "../hooks";
-
-const UNIT_META: Record<OrganizationUnit, { label: string; stripe: string }> = {
-  BASIC: { label: "Unidad básica", stripe: "bg-yellow-400 dark:bg-yellow-500" },
-  PROFESSIONAL: { label: "Unidad profesional", stripe: "bg-blue-600" },
-  CAPSTONE: { label: "Integración curricular", stripe: "bg-emerald-600" },
-  OTHER: { label: "Otra", stripe: "bg-zinc-500" },
-};
 
 export function CurriculumPage() {
   const profileQuery = useProfile();
@@ -71,18 +65,12 @@ export function CurriculumPage() {
     [statesQuery.data],
   );
 
-  const terms = useMemo(() => {
+  const filteredCourses = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("es");
-    const grouped = new Map<number, CurriculumCourse[]>();
-    for (const course of coursesQuery.data ?? []) {
-      if (query && !`${course.code} ${course.name}`.toLocaleLowerCase("es").includes(query)) {
-        continue;
-      }
-      const list = grouped.get(course.reference_term) ?? [];
-      list.push(course);
-      grouped.set(course.reference_term, list);
-    }
-    return [...grouped.entries()].sort((a, b) => a[0] - b[0]);
+    return (coursesQuery.data ?? []).filter(
+      (course) =>
+        !query || `${course.code} ${course.name}`.toLocaleLowerCase("es").includes(query),
+    );
   }, [coursesQuery.data, search]);
 
   async function changeState(course: CurriculumCourse, state: CourseState) {
@@ -133,7 +121,7 @@ export function CurriculumPage() {
           </p>
         </div>
         <Button asChild variant="outline" className="w-fit bg-background/60">
-          <Link to="/app/onboarding"><Settings2 /> Configurar malla</Link>
+          <Link to="/app/ajustes"><Settings2 /> Cambiar carrera o pénsum</Link>
         </Button>
       </header>
 
@@ -159,22 +147,16 @@ export function CurriculumPage() {
 
         {coursesQuery.isLoading ? (
           <PageLoader />
-        ) : terms.length === 0 ? (
+        ) : filteredCourses.length === 0 ? (
           <div className="p-12 text-center text-sm text-muted-foreground">
             No encontramos materias con esa búsqueda.
           </div>
         ) : (
-          <div className="divide-y divide-border/70">
-            {terms.map(([term, courses]) => (
-              <TermRow
-                key={term}
-                term={term}
-                courses={courses}
-                stateByCourse={stateByCourse}
-                onSelect={setSelected}
-              />
-            ))}
-          </div>
+          <CurriculumGrid
+            courses={filteredCourses}
+            stateByCourse={stateByCourse}
+            onSelect={setSelected}
+          />
         )}
       </section>
 
@@ -196,66 +178,6 @@ function SummaryCard({ icon: Icon, label, value }: { icon: typeof BookOpen; labe
       <div>
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="text-lg font-semibold tabular-nums">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function TermRow({
-  term,
-  courses,
-  stateByCourse,
-  onSelect,
-}: {
-  term: number;
-  courses: CurriculumCourse[];
-  stateByCourse: Map<string, CourseState>;
-  onSelect: (course: CurriculumCourse) => void;
-}) {
-  return (
-    <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] bg-background/25">
-      <div className="flex flex-col items-center justify-center border-r border-border/70 px-2 py-5">
-        <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">Sem</span>
-        <span className="text-2xl font-semibold tabular-nums">{term}</span>
-      </div>
-      <div className="overflow-x-auto p-3 scrollbar-thin">
-        <div className="flex min-w-max gap-3">
-          {courses.map((course) => {
-            const state = stateByCourse.get(course.id) ?? "NOT_TAKEN";
-            const stateMeta = COURSE_STATE_META[state];
-            const unitMeta = UNIT_META[course.organization_unit];
-            return (
-              <button
-                key={course.id}
-                type="button"
-                onClick={() => onSelect(course)}
-                className={cn(
-                  "group relative flex h-36 w-44 shrink-0 flex-col overflow-hidden rounded-lg border text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
-                  stateMeta.card,
-                )}
-              >
-                <div className="flex items-center justify-between border-b border-current/10 px-3 py-2 text-[10px] text-muted-foreground">
-                  <span>{Number(course.credits)} créditos</span>
-                  <span>{courseHours(course)} h</span>
-                </div>
-                <div className="flex flex-1 flex-col px-3 py-2.5">
-                  <span className="line-clamp-3 text-xs font-semibold uppercase leading-[1.35]">
-                    {course.name}
-                  </span>
-                  {course.prerequisite_codes.length > 0 && (
-                    <span className="mt-auto truncate text-[10px] text-muted-foreground">
-                      Req. {course.prerequisite_codes.join(", ")}
-                    </span>
-                  )}
-                </div>
-                <div className={cn("flex h-6 items-center justify-between px-3 text-[10px] font-semibold text-white", unitMeta.stripe)}>
-                  <span>{course.code}</span>
-                  <span className="size-1.5 rounded-full bg-white/90" title={stateMeta.label} />
-                </div>
-              </button>
-            );
-          })}
-        </div>
       </div>
     </div>
   );
@@ -338,8 +260,4 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 function PageLoader() {
   return <div className="flex justify-center py-16"><Loader2 className="size-6 animate-spin text-muted-foreground" /></div>;
-}
-
-function courseHours(course: CurriculumCourse): number {
-  return course.hours ?? Number(course.credits) * 48;
 }

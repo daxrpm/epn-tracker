@@ -2,6 +2,7 @@ import {
   Calculator,
   LayoutDashboard,
   ListChecks,
+  Loader2,
   LogOut,
   Menu,
   Network,
@@ -10,11 +11,12 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { BrandMark } from "@/components/BrandMark";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
+import { useProfile } from "@/features/student/hooks";
 import { useAuthStore } from "@/stores/auth.store";
 import { cn } from "@/lib/utils";
 
@@ -23,16 +25,33 @@ const NAV_LINKS = [
   { label: "Malla", href: "/app/curriculum", icon: Network },
   { label: "Requisitos", href: "/app/requisitos", icon: ListChecks },
   { label: "Calculadora", href: "/app/calculadora", icon: Calculator },
-  { label: "Configurar malla", href: "/app/onboarding", icon: Settings2 },
+  { label: "Ajustes", href: "/app/ajustes", icon: Settings2 },
 ];
+
+const ONBOARDING_PATH = "/app/onboarding";
 
 export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const profileQuery = useProfile();
 
   useEffect(() => setMobileOpen(false), [location.pathname]);
+
+  // Force first-time users through onboarding until they pick a carrera + pénsum.
+  if (profileQuery.isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  const needsOnboarding =
+    profileQuery.data != null && profileQuery.data.current_curriculum_id == null;
+  if (needsOnboarding && location.pathname !== ONBOARDING_PATH) {
+    return <Navigate to={ONBOARDING_PATH} replace />;
+  }
 
   useEffect(() => {
     if (!mobileOpen) return;

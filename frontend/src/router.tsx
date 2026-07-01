@@ -9,6 +9,7 @@ import { CurriculumPage } from "@/features/curriculum/pages/CurriculumPage";
 import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
 import { OnboardingPage } from "@/features/onboarding/pages/OnboardingPage";
 import { RequirementsPage } from "@/features/requirements/pages/RequirementsPage";
+import { SettingsPage } from "@/features/settings/pages/SettingsPage";
 import { AppLayout } from "@/layouts/AppLayout";
 import { AuthLayout } from "@/layouts/AuthLayout";
 
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
           { path: "curriculum", element: <CurriculumPage /> },
           { path: "requisitos", element: <RequirementsPage /> },
           { path: "calculadora", element: <CalculatorPage /> },
+          { path: "ajustes", element: <SettingsPage /> },
         ],
       },
     ],

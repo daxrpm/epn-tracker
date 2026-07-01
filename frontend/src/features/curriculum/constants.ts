@@ -1,5 +1,20 @@
 import type { CourseState } from "@/features/student/api";
 
+import type { CurriculumCourse, OrganizationUnit } from "./api";
+
+/** Visual + copy metadata for each organization unit, shared across malla and onboarding. */
+export const UNIT_META: Record<OrganizationUnit, { label: string; stripe: string }> = {
+  BASIC: { label: "Unidad básica", stripe: "bg-yellow-400 dark:bg-yellow-500" },
+  PROFESSIONAL: { label: "Unidad profesional", stripe: "bg-blue-600" },
+  CAPSTONE: { label: "Integración curricular", stripe: "bg-emerald-600" },
+  OTHER: { label: "Otra", stripe: "bg-zinc-500" },
+};
+
+/** Hours for a course, falling back to a credits-based estimate when unknown. */
+export function courseHours(course: CurriculumCourse): number {
+  return course.hours ?? Number(course.credits) * 48;
+}
+
 /** Visual + copy metadata for each course state, shared across malla and dashboard. */
 export const COURSE_STATE_META: Record<
   CourseState,

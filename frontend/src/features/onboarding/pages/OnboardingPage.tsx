@@ -3,9 +3,9 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CurriculumGrid } from "@/features/curriculum/components/CurriculumGrid";
+import { COURSE_STATE_META } from "@/features/curriculum/constants";
 import { useCareers, useCurricula, useCurriculumCourses } from "@/features/curriculum/hooks";
 import type { CourseState, EnglishLevel } from "@/features/student/api";
 import { ENGLISH_LEVELS } from "@/features/student/constants";
@@ -22,7 +23,16 @@ import { useBulkCourseStates, useUpdateProfile } from "@/features/student/hooks"
 import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
-const STEPS = ["Carrera y pénsum", "Materias aprobadas", "Nivel de inglés"];
+const STEPS = ["Carrera y pénsum", "Tus materias", "Nivel de inglés"];
+
+/** Click a course to cycle: sin tomar → aprobada → cursando → sin tomar. */
+const CYCLE: Record<string, CourseState> = {
+  NOT_TAKEN: "PASSED",
+  PASSED: "IN_PROGRESS",
+  IN_PROGRESS: "NOT_TAKEN",
+  FAILED: "NOT_TAKEN",
+  ANNULLED: "NOT_TAKEN",
+};
 
 export function OnboardingPage() {
   const navigate = useNavigate();
@@ -45,19 +55,19 @@ export function OnboardingPage() {
     [curriculaQuery.data, careerId],
   );
 
-  const terms = useMemo(() => {
-    const set = new Set<number>();
-    (coursesQuery.data ?? []).forEach((c) => set.add(c.reference_term));
-    return [...set].sort((a, b) => a - b);
-  }, [coursesQuery.data]);
+  const stateByCourse = useMemo(
+    () => new Map<string, CourseState>(Object.entries(courseStates)),
+    [courseStates],
+  );
 
   const submitting = updateProfile.isPending || bulkStates.isPending;
 
-  function setCourse(id: string, state: CourseState) {
+  function cycleCourse(id: string) {
     setCourseStates((prev) => {
       const next = { ...prev };
-      if (state === "NOT_TAKEN") delete next[id];
-      else next[id] = state;
+      const target = CYCLE[prev[id] ?? "NOT_TAKEN"];
+      if (target === "NOT_TAKEN") delete next[id];
+      else next[id] = target;
       return next;
     });
   }
@@ -85,10 +95,14 @@ export function OnboardingPage() {
   const canNext = step === 0 ? Boolean(curriculumId) : true;
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-col gap-8">
+    <div className="mx-auto flex max-w-4xl flex-col gap-8">
       <div>
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Configuración inicial</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Configura tu malla</h1>
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          Configuración inicial
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
+          Configura tu malla
+        </h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Tres pasos para tener tu avance académico al día.
         </p>
@@ -111,9 +125,7 @@ export function OnboardingPage() {
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue
-                      placeholder={
-                        careersQuery.isLoading ? "Cargando..." : "Selecciona tu carrera"
-                      }
+                      placeholder={careersQuery.isLoading ? "Cargando..." : "Selecciona tu carrera"}
                     />
                   </SelectTrigger>
                   <SelectContent>
@@ -128,11 +140,7 @@ export function OnboardingPage() {
 
               <div className="flex flex-col gap-1.5">
                 <Label>Pénsum</Label>
-                <Select
-                  value={curriculumId}
-                  onValueChange={setCurriculumId}
-                  disabled={!careerId}
-                >
+                <Select value={curriculumId} onValueChange={setCurriculumId} disabled={!careerId}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecciona tu pénsum" />
                   </SelectTrigger>
@@ -155,72 +163,28 @@ export function OnboardingPage() {
 
           {step === 1 && (
             <div className="flex flex-col gap-4">
-              <p className="text-sm text-muted-foreground">
-                Marca las materias que ya aprobaste o que estás cursando. Puedes ajustarlo
-                después en tu malla.
-              </p>
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Toca una materia para marcarla. Primero las que{" "}
+                  <span className="font-medium text-foreground">ya aprobaste</span>, luego las que
+                  estás <span className="font-medium text-foreground">cursando</span> ahora. Puedes
+                  ajustarlo después en tu malla.
+                </p>
+                <CycleLegend />
+              </div>
               {coursesQuery.isLoading && (
                 <div className="flex justify-center py-8">
                   <Loader2 className="size-5 animate-spin text-muted-foreground" />
                 </div>
               )}
-              {coursesQuery.data && terms.length > 0 && (
-                <Tabs defaultValue={String(terms[0])}>
-                  <TabsList className="flex-wrap">
-                    {terms.map((term) => (
-                      <TabsTrigger key={term} value={String(term)}>
-                        Sem {term}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                  {terms.map((term) => (
-                    <TabsContent key={term} value={String(term)} className="mt-4">
-                      <div className="flex flex-col divide-y divide-border">
-                        {(coursesQuery.data ?? [])
-                          .filter((course) => course.reference_term === term)
-                          .map((course) => {
-                            const state = courseStates[course.id] ?? "NOT_TAKEN";
-                            return (
-                              <div
-                                key={course.id}
-                                className="flex items-center justify-between gap-3 py-2.5"
-                              >
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-medium">{course.name}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {course.code} · {Number(course.credits)} cr
-                                  </p>
-                                </div>
-                                <div className="flex shrink-0 items-center gap-4">
-                                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <Checkbox
-                                      checked={state === "PASSED"}
-                                      onCheckedChange={(checked) =>
-                                        setCourse(course.id, checked ? "PASSED" : "NOT_TAKEN")
-                                      }
-                                    />
-                                    Aprobada
-                                  </label>
-                                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <Checkbox
-                                      checked={state === "IN_PROGRESS"}
-                                      onCheckedChange={(checked) =>
-                                        setCourse(
-                                          course.id,
-                                          checked ? "IN_PROGRESS" : "NOT_TAKEN",
-                                        )
-                                      }
-                                    />
-                                    Cursando
-                                  </label>
-                                </div>
-                              </div>
-                            );
-                          })}
-                      </div>
-                    </TabsContent>
-                  ))}
-                </Tabs>
+              {coursesQuery.data && coursesQuery.data.length > 0 && (
+                <div className="overflow-hidden rounded-2xl border border-border/80 bg-card/40">
+                  <CurriculumGrid
+                    courses={coursesQuery.data}
+                    stateByCourse={stateByCourse}
+                    onSelect={(course) => cycleCourse(course.id)}
+                  />
+                </div>
               )}
             </div>
           )}
@@ -269,15 +233,26 @@ export function OnboardingPage() {
           </Button>
         ) : (
           <Button onClick={() => void finish()} disabled={submitting}>
-            {submitting ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Check className="size-4" />
-            )}
+            {submitting ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
             Finalizar
           </Button>
         )}
       </div>
+    </div>
+  );
+}
+
+function CycleLegend() {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {(["PASSED", "IN_PROGRESS", "NOT_TAKEN"] as const).map((state) => {
+        const meta = COURSE_STATE_META[state];
+        return (
+          <Badge key={state} variant="outline" className="gap-1.5 bg-background/50 font-normal">
+            <span className={cn("size-1.5 rounded-full", meta.dot)} /> {meta.label}
+          </Badge>
+        );
+      })}
     </div>
   );
 }
