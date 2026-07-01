@@ -17,6 +17,7 @@ from app.common.enums import (
     EvaluationSchemeStatus,
     SchemeSourceType,
     SchemeVote,
+    UserRole,
     Visibility,
 )
 from app.common.exception.errors import (
@@ -77,7 +78,19 @@ async def create_scheme(
             details=[{"field": e.field, "message": e.message} for e in validation.errors],
         )
 
+    # Admins publish verified schemes directly; students need community approval (ERS §RF-019).
+    is_admin = user.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN)
     is_private = payload.visibility == Visibility.PRIVATE
+    if is_admin and not is_private:
+        status = EvaluationSchemeStatus.ADMIN_VERIFIED
+        source_type = SchemeSourceType.MANUAL_ADMIN
+    elif is_private:
+        status = EvaluationSchemeStatus.PERSONAL
+        source_type = SchemeSourceType.MANUAL_STUDENT
+    else:
+        status = EvaluationSchemeStatus.COMMUNITY_PENDING
+        source_type = SchemeSourceType.MANUAL_STUDENT
+
     scheme = EvaluationScheme(
         course_id=payload.course_id,
         academic_period_id=payload.academic_period_id,
@@ -85,11 +98,9 @@ async def create_scheme(
         professor_id=payload.professor_id,
         created_by_user_id=user.id,
         title=payload.title,
-        status=EvaluationSchemeStatus.PERSONAL
-        if is_private
-        else EvaluationSchemeStatus.COMMUNITY_PENDING,
+        status=status,
         visibility=payload.visibility,
-        source_type=SchemeSourceType.MANUAL_STUDENT,
+        source_type=source_type,
         context_hash=build_context_hash(
             payload.course_id, payload.academic_period_id, payload.section_id, payload.professor_id
         ),

@@ -173,3 +173,55 @@ async def test_duplicate_vote_rejected(client, db_session):
         f"/api/v1/evaluation-schemes/{scheme_id}/vote", json={}, headers=_auth(voter)
     )
     assert second.status_code == 409
+
+
+async def test_admin_created_scheme_is_verified(client, db_session):
+    course_id, _ = await _seed_course(client, db_session)
+    admin = await _make_user(db_session, "admin2@epn.edu.ec", role=UserRole.ADMIN)
+
+    created = await client.post(
+        "/api/v1/evaluation-schemes", json=_four_component_scheme(course_id), headers=_auth(admin)
+    )
+    assert created.status_code == 200, created.text
+    # Admins publish without needing three community approvals (ERS §RF-019).
+    assert created.json()["status"] == "ADMIN_VERIFIED"
+
+
+async def test_suggest_returns_scheme_for_course(client, db_session):
+    course_id, _ = await _seed_course(client, db_session)
+    creator = await _make_user(db_session, "creator2@epn.edu.ec")
+    scheme_id = (
+        await client.post(
+            "/api/v1/evaluation-schemes",
+            json=_four_component_scheme(course_id),
+            headers=_auth(creator),
+        )
+    ).json()["id"]
+
+    resp = await client.get(
+        "/api/v1/evaluation-schemes/suggest", params={"course_id": course_id}
+    )
+    assert resp.status_code == 200, resp.text
+    ids = [item["id"] for item in resp.json()]
+    assert scheme_id in ids
+
+
+async def test_copy_scheme_to_personal(client, db_session):
+    course_id, _ = await _seed_course(client, db_session)
+    creator = await _make_user(db_session, "creator3@epn.edu.ec")
+    scheme_id = (
+        await client.post(
+            "/api/v1/evaluation-schemes",
+            json=_four_component_scheme(course_id),
+            headers=_auth(creator),
+        )
+    ).json()["id"]
+
+    student = await _make_user(db_session, "student2@epn.edu.ec")
+    resp = await client.post(
+        f"/api/v1/evaluation-schemes/{scheme_id}/copy-to-personal", headers=_auth(student)
+    )
+    assert resp.status_code == 200, resp.text
+    copy = resp.json()
+    assert copy["id"] != scheme_id
+    assert copy["status"] == "PERSONAL"
