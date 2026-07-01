@@ -66,3 +66,25 @@ async def test_refresh_rotates_tokens(client, fake_redis):
     )
     assert resp.status_code == 200
     assert resp.json()["access_token"]
+
+
+async def test_refresh_reuse_is_rejected(client, fake_redis):
+    # A rotated refresh token must not be usable a second time (reuse detection).
+    tokens = (await _register(client, fake_redis)).json()
+    first = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": tokens["refresh_token"]}
+    )
+    assert first.status_code == 200
+    reused = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": tokens["refresh_token"]}
+    )
+    assert reused.status_code == 401
+
+
+async def test_logout_revokes_refresh(client, fake_redis):
+    tokens = (await _register(client, fake_redis)).json()
+    await client.post("/api/v1/auth/logout", json={"refresh_token": tokens["refresh_token"]})
+    resp = await client.post(
+        "/api/v1/auth/refresh", json={"refresh_token": tokens["refresh_token"]}
+    )
+    assert resp.status_code == 401

@@ -48,6 +48,7 @@ def fake_redis(monkeypatch) -> fakeredis.aioredis.FakeRedis:
     monkeypatch.setattr("app.database.redis.redis_client", client)
     monkeypatch.setattr("app.core.rate_limit.redis_client", client)
     monkeypatch.setattr("app.modules.iam.service.redis_client", client)
+    monkeypatch.setattr("app.modules.iam.token_store.redis_client", client)
     return client
 
 

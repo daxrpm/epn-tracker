@@ -1,4 +1,4 @@
-"""Schemas (DTOs) del módulo de identidad y acceso."""
+"""Schemas (DTOs) for the identity and access module."""
 
 from __future__ import annotations
 
@@ -50,6 +50,10 @@ class LoginIn(BaseModel):
 
 class RefreshIn(BaseModel):
     refresh_token: str
+
+
+class LogoutIn(BaseModel):
+    refresh_token: str | None = None
 
 
 class TokenOut(BaseModel):

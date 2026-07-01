@@ -1,11 +1,13 @@
-"""Configuración de la aplicación cargada desde variables de entorno / .env."""
+"""Application settings loaded from environment variables / .env."""
 
 from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import computed_field
+from pydantic import computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_MIN_SECRET_LENGTH = 32
 
 
 class Settings(BaseSettings):
@@ -29,7 +31,7 @@ class Settings(BaseSettings):
     postgres_password: str = "epn"
     postgres_db: str = "epn"
 
-    # Override completo de la URL (usado por los tests con SQLite)
+    # Full URL override (used by the SQLite-based tests).
     database_url_override: str | None = None
 
     # Redis
@@ -37,21 +39,33 @@ class Settings(BaseSettings):
     redis_port: int = 6379
     redis_db: int = 0
 
-    # JWT
-    jwt_secret: str = "change-me-in-production"
+    # JWT — the dev default is long enough for HS256; production must override it.
+    jwt_secret: str = "dev-insecure-secret-change-me-please-32bytes+"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
 
-    # Registro EPN
+    # EPN registration
     allowed_email_domain: str = "epn.edu.ec"
     email_code_ttl_seconds: int = 600
     email_code_max_attempts: int = 5
     email_code_resend_seconds: int = 60
     email_codes_per_hour: int = 5
 
-    # Correo
+    # Email
     email_backend: str = "console"
+
+    @model_validator(mode="after")
+    def _check_production_secret(self) -> Settings:
+        if self.app_env != "dev" and (
+            len(self.jwt_secret) < _MIN_SECRET_LENGTH
+            or self.jwt_secret.startswith("dev-insecure")
+        ):
+            raise ValueError(
+                "JWT_SECRET must be a strong secret of at least "
+                f"{_MIN_SECRET_LENGTH} characters outside of development."
+            )
+        return self
 
     @computed_field  # type: ignore[prop-decorator]
     @property

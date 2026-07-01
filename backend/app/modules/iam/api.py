@@ -1,4 +1,4 @@
-"""Endpoints de autenticación (ERS §17.1)."""
+"""Authentication endpoints (ERS §17.1)."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from app.common.deps import CurrentUser, DbSession
 from app.modules.iam import service
 from app.modules.iam.schema import (
     LoginIn,
+    LogoutIn,
     MessageOut,
     RefreshIn,
     RequestCodeIn,
@@ -22,7 +23,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/register/request-code", response_model=MessageOut)
 async def request_code(payload: RequestCodeIn, db: DbSession) -> MessageOut:
     await service.request_verification_code(db, payload.email)
-    # Mensaje neutral: no revela si el correo ya existe (ERS §RF-001).
+    # Neutral message: never reveals whether the account exists (ERS §RF-001).
     return MessageOut(message="Si el correo es válido, enviamos un código de verificación.")
 
 
@@ -44,8 +45,8 @@ async def refresh(payload: RefreshIn) -> TokenOut:
 
 
 @router.post("/logout", response_model=MessageOut)
-async def logout() -> MessageOut:
-    # Con JWT stateless el logout es del lado del cliente (descartar tokens).
+async def logout(payload: LogoutIn) -> MessageOut:
+    await service.logout(payload.refresh_token)
     return MessageOut(message="Sesión cerrada.")
 
 
