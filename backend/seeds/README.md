@@ -1,5 +1,8 @@
 # Seeds
 
+La documentación completa del proceso, hashes, decisiones y estado de PostgreSQL está en
+[`../../docs/CURRICULUM_DATA_HANDOFF.md`](../../docs/CURRICULUM_DATA_HANDOFF.md).
+
 Initial data loaded through the real curriculum import service (`commit_import`), i.e. the same
 validated path used by the admin endpoint.
 
@@ -9,17 +12,30 @@ uv run alembic upgrade head
 uv run python -m seeds.loader
 ```
 
-Re-running is safe: curricula that already exist are skipped.
+Re-running is safe: complete curricula that already exist are skipped. To upgrade an old development
+seed that has a different course count and no student progress, use:
+
+```bash
+uv run python -m seeds.loader --replace-incomplete
+```
 
 ## Data status
 
-`data/computacion_2020.json` is a **starter subset** of the Computación 2020 curriculum (9 courses
-across the early terms with representative prerequisite chains) plus the 7 non-credit graduation
-requirements from ERS §8.19. It exists to make the API usable end-to-end out of the box.
+The seed directory contains the four official FIS curricula extracted from the vector PDFs under
+`../../mallas/`:
 
-The full FIS curricula (Computación, Software, Sistemas de Información, Ciencia de Datos e IA — 48–50
-courses each with complete prerequisites) live in the source PDFs under `../../mallas/`. Transcribing
-them to JSON is a separate data task; once transcribed, drop the files in `data/` and either re-run
-the loader or upload them via `POST /api/v1/admin/curricula/import/commit`. The validation rules in
-`app/modules/academic/service.py` (unique codes, existing requirement references, credit totals) will
-guard the import.
+- Computación, Pénsum 2020: 50 credited curriculum entries.
+- Software, Pénsum 2020: 51 credited curriculum entries.
+- Sistemas de Información, Pénsum 2023: 51 credited curriculum entries.
+- Ciencia de Datos e Inteligencia Artificial, Pénsum 2023: 52 credited curriculum entries.
+
+Each curriculum has 135 credits across 9 terms. The official “Número de asignaturas” excludes the
+two credited practice activities, so the JSON entry count is two higher than that summary value.
+All four include the seven non-credit graduation requirements.
+
+Regenerate and audit the JSON from the PDFs with:
+
+```bash
+python scripts/extract_curricula.py
+python scripts/extract_curricula.py --write
+```

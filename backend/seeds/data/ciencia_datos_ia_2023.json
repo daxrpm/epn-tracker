@@ -8,15 +8,15 @@
     "acronym": "FIS"
   },
   "career": {
-    "name": "Computación",
-    "degree_title": "Ingeniero/a en Ciencias de la Computación"
+    "name": "Ciencia de Datos e Inteligencia Artificial",
+    "degree_title": "Ingeniero/a en Ciencia de Datos e Inteligencia Artificial"
   },
   "curriculum": {
-    "pensum_year": 2020,
+    "pensum_year": 2023,
     "total_terms": 9,
     "total_credits": "135",
     "total_hours": 6480,
-    "total_courses_reported": 48
+    "total_courses_reported": 50
   },
   "courses": [
     {
@@ -83,24 +83,19 @@
       ]
     },
     {
-      "code": "ICCD224",
-      "name": "Matemáticas Computacionales Y Teoría De La Computación",
-      "credits": "4",
-      "hours": 192,
-      "reference_term": 2,
-      "organization_unit": "BASIC",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD144"
-        }
-      ]
-    },
-    {
-      "code": "ICCD233",
-      "name": "Fundamentos De Electrónica Para Computación",
+      "code": "ISID223",
+      "name": "Introducción A Los Sistemas De Información",
       "credits": "3",
       "hours": 144,
+      "reference_term": 2,
+      "organization_unit": "BASIC",
+      "requirements": []
+    },
+    {
+      "code": "ISID232",
+      "name": "Fundamentos De Ciencias De La Computación",
+      "credits": "2",
+      "hours": 96,
       "reference_term": 2,
       "organization_unit": "BASIC",
       "requirements": []
@@ -120,6 +115,15 @@
       ]
     },
     {
+      "code": "ICCD332",
+      "name": "Arquitectura De Computadores",
+      "credits": "2",
+      "hours": 96,
+      "reference_term": 2,
+      "organization_unit": "BASIC",
+      "requirements": []
+    },
+    {
       "code": "CSHD211",
       "name": "Análisis Socioeconómico Y Político Del Ecuador",
       "credits": "1",
@@ -130,17 +134,12 @@
     },
     {
       "code": "MATD223",
-      "name": "Probabilidad Y Estadísticas Básicas",
+      "name": "Probabilidad Y Estadística Básicas",
       "credits": "3",
       "hours": 144,
       "reference_term": 3,
       "organization_unit": "BASIC",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "MATD123"
-        }
-      ]
+      "requirements": []
     },
     {
       "code": "ICCD323",
@@ -152,23 +151,22 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD244"
+          "course_code": "ICCD144"
+        },
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ISID223"
         }
       ]
     },
     {
-      "code": "ICCD332",
-      "name": "Arquitectura De Computadores",
-      "credits": "2",
-      "hours": 96,
+      "code": "ISWD453",
+      "name": "Fundamentos De Bases De Datos",
+      "credits": "3",
+      "hours": 144,
       "reference_term": 3,
       "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD233"
-        }
-      ]
+      "requirements": []
     },
     {
       "code": "ICCD343",
@@ -194,17 +192,17 @@
       "requirements": []
     },
     {
-      "code": "CSHD300",
-      "name": "Asignatura De Artes Y Humanidades",
-      "credits": "1",
-      "hours": 48,
-      "reference_term": 3,
+      "code": "IDSD413",
+      "name": "Fundamentos De Big Data",
+      "credits": "3",
+      "hours": 144,
+      "reference_term": 4,
       "organization_unit": "PROFESSIONAL",
       "requirements": []
     },
     {
-      "code": "ICCD412",
-      "name": "Métodos Numéricos",
+      "code": "IDSD422",
+      "name": "Estadistica Y Programación Para Ciencias De Datos I",
       "credits": "2",
       "hours": 96,
       "reference_term": 4,
@@ -212,7 +210,7 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD343"
+          "course_code": "MATD223"
         }
       ]
     },
@@ -226,25 +224,11 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD224"
+          "course_code": "ISID232"
         },
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD343"
-        }
-      ]
-    },
-    {
-      "code": "ICCD432",
-      "name": "Multiprocesamiento Y Arquitecturas Alternativas",
-      "credits": "2",
-      "hours": 96,
-      "reference_term": 4,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD323"
+          "course_code": "ISWD453"
         }
       ]
     },
@@ -263,36 +247,17 @@
       ]
     },
     {
-      "code": "ICCD453",
-      "name": "Fundamentos De Bases De Datos",
+      "code": "ISWD553",
+      "name": "Bases De Datos Distribuidas",
       "credits": "3",
       "hours": 144,
       "reference_term": 4,
       "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD343"
-        }
-      ]
+      "requirements": []
     },
     {
-      "code": "ICCD463",
-      "name": "Redes De Computadores I",
-      "credits": "3",
-      "hours": 144,
-      "reference_term": 4,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD353"
-        }
-      ]
-    },
-    {
-      "code": "CSHD400",
-      "name": "Asignatura De Economía Y Sociedad",
+      "code": "CSHD300",
+      "name": "Asignatura De Artes Y Humanidades",
       "credits": "1",
       "hours": 48,
       "reference_term": 4,
@@ -300,8 +265,31 @@
       "requirements": []
     },
     {
-      "code": "ICCD512",
-      "name": "Ingeniería De Software I",
+      "code": "PSCD202",
+      "name": "Prácticas De Servicio Comunitario",
+      "credits": "2",
+      "hours": 96,
+      "reference_term": 4,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": []
+    },
+    {
+      "code": "IDSD513",
+      "name": "Infraestructura Para Big Data",
+      "credits": "3",
+      "hours": 144,
+      "reference_term": 5,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "IDSD413"
+        }
+      ]
+    },
+    {
+      "code": "IDSD522",
+      "name": "Estadistica Y Programación Para Ciencias De Datos II",
       "credits": "2",
       "hours": 96,
       "reference_term": 5,
@@ -309,9 +297,18 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD453"
+          "course_code": "IDSD422"
         }
       ]
+    },
+    {
+      "code": "IDSD533",
+      "name": "Computación Numérica",
+      "credits": "3",
+      "hours": 144,
+      "reference_term": 5,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": []
     },
     {
       "code": "ICCD523",
@@ -324,26 +321,26 @@
         {
           "type": "PREREQUISITE",
           "course_code": "ICCD442"
-        },
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD412"
         }
       ]
     },
     {
-      "code": "ICCD533",
-      "name": "Computación Gráfica",
-      "credits": "3",
-      "hours": 144,
+      "code": "ISID432",
+      "name": "Desarrollo Y Mantenimiento De Software",
+      "credits": "2",
+      "hours": 96,
       "reference_term": 5,
       "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD432"
-        }
-      ]
+      "requirements": []
+    },
+    {
+      "code": "CSHD400",
+      "name": "Asignatura De Economía Y Sociedad",
+      "credits": "1",
+      "hours": 48,
+      "reference_term": 5,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": []
     },
     {
       "code": "ADMD511",
@@ -355,32 +352,36 @@
       "requirements": []
     },
     {
-      "code": "ISWD553",
-      "name": "Bases De Datos Distribuidas",
+      "code": "IDSD613",
+      "name": "Almacenamiento De Datos Masivos",
       "credits": "3",
       "hours": 144,
-      "reference_term": 5,
+      "reference_term": 6,
       "organization_unit": "PROFESSIONAL",
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD453"
+          "course_code": "IDSD513"
         }
       ]
     },
     {
-      "code": "ICCD563",
-      "name": "Redes De Computadores II",
+      "code": "IDSD623",
+      "name": "Computación Paralela Para Big Data",
       "credits": "3",
       "hours": 144,
-      "reference_term": 5,
+      "reference_term": 6,
       "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD463"
-        }
-      ]
+      "requirements": []
+    },
+    {
+      "code": "IDSD633",
+      "name": "Aprendizaje Automático I",
+      "credits": "3",
+      "hours": 144,
+      "reference_term": 6,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": []
     },
     {
       "code": "ISWD613",
@@ -392,35 +393,11 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD512"
-        }
-      ]
-    },
-    {
-      "code": "ICCD623",
-      "name": "Data Mining Y Machine Learning",
-      "credits": "3",
-      "hours": 144,
-      "reference_term": 6,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": [
+          "course_code": "ICCD244"
+        },
         {
           "type": "PREREQUISITE",
           "course_code": "ICCD523"
-        }
-      ]
-    },
-    {
-      "code": "ICCD632",
-      "name": "Ingeniería De Software II",
-      "credits": "2",
-      "hours": 96,
-      "reference_term": 6,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD512"
         }
       ]
     },
@@ -434,27 +411,17 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD563"
-        }
-      ]
-    },
-    {
-      "code": "ICCD654",
-      "name": "Computación Distribuida",
-      "credits": "4",
-      "hours": 192,
-      "reference_term": 6,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": [
+          "course_code": "ICCD353"
+        },
         {
           "type": "PREREQUISITE",
-          "course_code": "ISWD553"
+          "course_code": "ISID432"
         }
       ]
     },
     {
-      "code": "ISWD713",
-      "name": "Aplicaciones Móviles",
+      "code": "IDSD713",
+      "name": "Procesamiento De Datos Masivos",
       "credits": "3",
       "hours": 144,
       "reference_term": 7,
@@ -462,13 +429,22 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ISWD613"
+          "course_code": "IDSD613"
         }
       ]
     },
     {
-      "code": "ISWD723",
-      "name": "Interacción Humano Computador",
+      "code": "IDSD723",
+      "name": "Aprendizaje Automático II",
+      "credits": "3",
+      "hours": 144,
+      "reference_term": 7,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": []
+    },
+    {
+      "code": "IDSD733",
+      "name": "Minería De Datos I",
       "credits": "3",
       "hours": 144,
       "reference_term": 7,
@@ -476,73 +452,72 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD523"
+          "course_code": "IDSD633"
         }
       ]
     },
     {
-      "code": "ICCD733",
-      "name": "Seguridad Informática",
+      "code": "IDSD742",
+      "name": "Seguridad Y Privacidad De Datos",
+      "credits": "2",
+      "hours": 96,
+      "reference_term": 7,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": []
+    },
+    {
+      "code": "ISID642",
+      "name": "User Experience",
+      "credits": "2",
+      "hours": 96,
+      "reference_term": 7,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": []
+    },
+    {
+      "code": "ADMD611",
+      "name": "Gestión De Procesos Y Calidad",
+      "credits": "1",
+      "hours": 48,
+      "reference_term": 7,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": []
+    },
+    {
+      "code": "ADMD711",
+      "name": "Ingeniería Financiera",
+      "credits": "1",
+      "hours": 48,
+      "reference_term": 7,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": []
+    },
+    {
+      "code": "IDSD813",
+      "name": "Visualización De Datos",
       "credits": "3",
       "hours": 144,
-      "reference_term": 7,
+      "reference_term": 8,
       "organization_unit": "PROFESSIONAL",
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD643"
+          "course_code": "IDSD713"
         }
       ]
     },
     {
-      "code": "ISWD743",
-      "name": "Business Intelligence",
+      "code": "IDSD823",
+      "name": "Servicios En La Nube Para Big Data",
       "credits": "3",
       "hours": 144,
-      "reference_term": 7,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD623"
-        }
-      ]
-    },
-    {
-      "code": "ICCD753",
-      "name": "Recuperación De Información",
-      "credits": "3",
-      "hours": 144,
-      "reference_term": 7,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD623"
-        }
-      ]
-    },
-    {
-      "code": "ICCD814",
-      "name": "Modelos Y Simulación",
-      "credits": "4",
-      "hours": 192,
       "reference_term": 8,
       "organization_unit": "PROFESSIONAL",
       "requirements": []
     },
     {
-      "code": "ICCD823",
-      "name": "Cloud Computing",
-      "credits": "3",
-      "hours": 144,
-      "reference_term": 8,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": []
-    },
-    {
-      "code": "ICCD833",
-      "name": "Auditoría Informática",
+      "code": "IDSD833",
+      "name": "Minería De Datos II",
       "credits": "3",
       "hours": 144,
       "reference_term": 8,
@@ -550,9 +525,18 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD643"
+          "course_code": "IDSD733"
         }
       ]
+    },
+    {
+      "code": "IDSD843",
+      "name": "Analítica Avanzada",
+      "credits": "3",
+      "hours": 144,
+      "reference_term": 8,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": []
     },
     {
       "code": "ICCD842",
@@ -562,29 +546,6 @@
       "reference_term": 8,
       "organization_unit": "PROFESSIONAL",
       "requirements": []
-    },
-    {
-      "code": "ADMD711",
-      "name": "Ingeniería Financiera",
-      "credits": "1",
-      "hours": 48,
-      "reference_term": 8,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": []
-    },
-    {
-      "code": "ADMD611",
-      "name": "Gestión De Procesos Y Calidad",
-      "credits": "1",
-      "hours": 48,
-      "reference_term": 8,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ADMD511"
-        }
-      ]
     },
     {
       "code": "TITD104",
@@ -602,7 +563,16 @@
       "hours": 240,
       "reference_term": 9,
       "organization_unit": "CAPSTONE",
-      "requirements": []
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "TITD104"
+        },
+        {
+          "type": "PREREQUISITE",
+          "course_code": "IDSD813"
+        }
+      ]
     },
     {
       "code": "PRLD105",
@@ -614,31 +584,22 @@
       "requirements": []
     },
     {
-      "code": "PSCD202",
-      "name": "Prácticas De Servicio Comunitario",
-      "credits": "2",
-      "hours": 96,
+      "code": "IDSD933",
+      "name": "Aplicaciones Emergentes De Ciencia De Datos",
+      "credits": "3",
+      "hours": 144,
       "reference_term": 9,
       "organization_unit": "PROFESSIONAL",
       "requirements": []
     },
     {
-      "code": "ICCD943",
-      "name": "Gestión De Tecnologías De La Información Y Comunicación",
-      "credits": "3",
-      "hours": 144,
+      "code": "IDSD942",
+      "name": "Administración De Proyectos De Ciencia De Datos",
+      "credits": "2",
+      "hours": 96,
       "reference_term": 9,
       "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ADMD611"
-        },
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD833"
-        }
-      ]
+      "requirements": []
     }
   ],
   "graduation_requirements": [

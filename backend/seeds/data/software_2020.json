@@ -8,15 +8,15 @@
     "acronym": "FIS"
   },
   "career": {
-    "name": "Computación",
-    "degree_title": "Ingeniero/a en Ciencias de la Computación"
+    "name": "Software",
+    "degree_title": "Ingeniero/a de Software"
   },
   "curriculum": {
     "pensum_year": 2020,
     "total_terms": 9,
     "total_credits": "135",
     "total_hours": 6480,
-    "total_courses_reported": 48
+    "total_courses_reported": 49
   },
   "courses": [
     {
@@ -138,7 +138,7 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "MATD123"
+          "course_code": "MATD113"
         }
       ]
     },
@@ -152,7 +152,7 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD244"
+          "course_code": "ICCD144"
         }
       ]
     },
@@ -203,10 +203,10 @@
       "requirements": []
     },
     {
-      "code": "ICCD412",
-      "name": "Métodos Numéricos",
-      "credits": "2",
-      "hours": 96,
+      "code": "ISWD414",
+      "name": "Ingeniería De Software Y De Requerimientos",
+      "credits": "4",
+      "hours": 192,
       "reference_term": 4,
       "organization_unit": "PROFESSIONAL",
       "requirements": [
@@ -227,26 +227,17 @@
         {
           "type": "PREREQUISITE",
           "course_code": "ICCD224"
-        },
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD343"
         }
       ]
     },
     {
-      "code": "ICCD432",
-      "name": "Multiprocesamiento Y Arquitecturas Alternativas",
-      "credits": "2",
-      "hours": 96,
+      "code": "ISWD433",
+      "name": "Fundamentos De Sistemas De Información",
+      "credits": "3",
+      "hours": 144,
       "reference_term": 4,
       "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD323"
-        }
-      ]
+      "requirements": []
     },
     {
       "code": "ICCD442",
@@ -263,32 +254,13 @@
       ]
     },
     {
-      "code": "ICCD453",
+      "code": "ISWD453",
       "name": "Fundamentos De Bases De Datos",
       "credits": "3",
       "hours": 144,
       "reference_term": 4,
       "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD343"
-        }
-      ]
-    },
-    {
-      "code": "ICCD463",
-      "name": "Redes De Computadores I",
-      "credits": "3",
-      "hours": 144,
-      "reference_term": 4,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD353"
-        }
-      ]
+      "requirements": []
     },
     {
       "code": "CSHD400",
@@ -300,22 +272,17 @@
       "requirements": []
     },
     {
-      "code": "ICCD512",
-      "name": "Ingeniería De Software I",
-      "credits": "2",
-      "hours": 96,
+      "code": "ADMD511",
+      "name": "Gestión Organizacional",
+      "credits": "1",
+      "hours": 48,
       "reference_term": 5,
       "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD453"
-        }
-      ]
+      "requirements": []
     },
     {
-      "code": "ICCD523",
-      "name": "Inteligencia Artificial",
+      "code": "ISWD523",
+      "name": "Diseño De Software",
       "credits": "3",
       "hours": 144,
       "reference_term": 5,
@@ -323,11 +290,7 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD442"
-        },
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD412"
+          "course_code": "ISWD414"
         }
       ]
     },
@@ -341,22 +304,27 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD432"
+          "course_code": "ICCD442"
         }
       ]
     },
     {
-      "code": "ADMD511",
-      "name": "Gestión Organizacional",
-      "credits": "1",
-      "hours": 48,
+      "code": "ISWD543",
+      "name": "Inteligencia Artificial Y Aprendizaje Automático",
+      "credits": "3",
+      "hours": 144,
       "reference_term": 5,
       "organization_unit": "PROFESSIONAL",
-      "requirements": []
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ICCD442"
+        }
+      ]
     },
     {
       "code": "ISWD553",
-      "name": "Bases De Datos Distribuidas",
+      "name": "Bases De Datos Distribuídas",
       "credits": "3",
       "hours": 144,
       "reference_term": 5,
@@ -364,23 +332,22 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD453"
+          "course_code": "ISWD453"
+        },
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ISWD414"
         }
       ]
     },
     {
-      "code": "ICCD563",
-      "name": "Redes De Computadores II",
-      "credits": "3",
-      "hours": 144,
+      "code": "PSCD202",
+      "name": "Prácticas De Servicio Comunitario",
+      "credits": "2",
+      "hours": 96,
       "reference_term": 5,
       "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD463"
-        }
-      ]
+      "requirements": []
     },
     {
       "code": "ISWD613",
@@ -389,30 +356,11 @@
       "hours": 144,
       "reference_term": 6,
       "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD512"
-        }
-      ]
+      "requirements": []
     },
     {
-      "code": "ICCD623",
-      "name": "Data Mining Y Machine Learning",
-      "credits": "3",
-      "hours": 144,
-      "reference_term": 6,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD523"
-        }
-      ]
-    },
-    {
-      "code": "ICCD632",
-      "name": "Ingeniería De Software II",
+      "code": "ISWD622",
+      "name": "Metodologías Ágiles",
       "credits": "2",
       "hours": 96,
       "reference_term": 6,
@@ -420,7 +368,21 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD512"
+          "course_code": "ISWD523"
+        }
+      ]
+    },
+    {
+      "code": "ISWD633",
+      "name": "Construcción Y Evolución De Software",
+      "credits": "3",
+      "hours": 144,
+      "reference_term": 6,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ICCD533"
         }
       ]
     },
@@ -434,23 +396,41 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD563"
+          "course_code": "ICCD353"
         }
       ]
     },
     {
-      "code": "ICCD654",
-      "name": "Computación Distribuida",
-      "credits": "4",
-      "hours": 192,
+      "code": "ISWD652",
+      "name": "Calidad De Software",
+      "credits": "2",
+      "hours": 96,
       "reference_term": 6,
       "organization_unit": "PROFESSIONAL",
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ISWD553"
+          "course_code": "ISWD523"
         }
       ]
+    },
+    {
+      "code": "ADMD611",
+      "name": "Gestión De Procesos Y Calidad",
+      "credits": "1",
+      "hours": 48,
+      "reference_term": 6,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": []
+    },
+    {
+      "code": "ADMD711",
+      "name": "Ingeniería Financiera",
+      "credits": "1",
+      "hours": 48,
+      "reference_term": 6,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": []
     },
     {
       "code": "ISWD713",
@@ -473,26 +453,16 @@
       "hours": 144,
       "reference_term": 7,
       "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD523"
-        }
-      ]
+      "requirements": []
     },
     {
-      "code": "ICCD733",
-      "name": "Seguridad Informática",
-      "credits": "3",
-      "hours": 144,
+      "code": "ISWD732",
+      "name": "Usabilidad Y Accesibilidad",
+      "credits": "2",
+      "hours": 96,
       "reference_term": 7,
       "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD643"
-        }
-      ]
+      "requirements": []
     },
     {
       "code": "ISWD743",
@@ -504,44 +474,72 @@
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD623"
+          "course_code": "ISWD553"
         }
       ]
     },
     {
-      "code": "ICCD753",
-      "name": "Recuperación De Información",
-      "credits": "3",
-      "hours": 144,
+      "code": "ISWD752",
+      "name": "Verificación Y Validación De Software",
+      "credits": "2",
+      "hours": 96,
       "reference_term": 7,
       "organization_unit": "PROFESSIONAL",
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ICCD623"
+          "course_code": "ISWD652"
         }
       ]
     },
     {
-      "code": "ICCD814",
-      "name": "Modelos Y Simulación",
-      "credits": "4",
-      "hours": 192,
-      "reference_term": 8,
+      "code": "ISWD762",
+      "name": "Automatización De Procesos",
+      "credits": "2",
+      "hours": 96,
+      "reference_term": 7,
       "organization_unit": "PROFESSIONAL",
-      "requirements": []
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ISWD414"
+        },
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ADMD611"
+        }
+      ]
     },
     {
-      "code": "ICCD823",
-      "name": "Cloud Computing",
+      "code": "ISWD813",
+      "name": "Aplicaciones Web Avanzadas",
       "credits": "3",
       "hours": 144,
       "reference_term": 8,
       "organization_unit": "PROFESSIONAL",
-      "requirements": []
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ISWD613"
+        }
+      ]
     },
     {
-      "code": "ICCD833",
+      "code": "ISWD823",
+      "name": "Desarrollo De Juegos Interactivos",
+      "credits": "3",
+      "hours": 144,
+      "reference_term": 8,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ISWD723"
+        }
+      ]
+    },
+    {
+      "code": "ISWD833",
       "name": "Auditoría Informática",
       "credits": "3",
       "hours": 144,
@@ -564,25 +562,16 @@
       "requirements": []
     },
     {
-      "code": "ADMD711",
-      "name": "Ingeniería Financiera",
-      "credits": "1",
-      "hours": 48,
-      "reference_term": 8,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": []
-    },
-    {
-      "code": "ADMD611",
-      "name": "Gestión De Procesos Y Calidad",
-      "credits": "1",
-      "hours": 48,
+      "code": "ISWD853",
+      "name": "Desarrollo De Software Seguro",
+      "credits": "3",
+      "hours": 144,
       "reference_term": 8,
       "organization_unit": "PROFESSIONAL",
       "requirements": [
         {
           "type": "PREREQUISITE",
-          "course_code": "ADMD511"
+          "course_code": "ISWD752"
         }
       ]
     },
@@ -596,13 +585,40 @@
       "requirements": []
     },
     {
-      "code": "TITD201",
-      "name": "Trabajo De Integración Curricular/ Examen Complexivo",
-      "credits": "5",
-      "hours": 240,
+      "code": "ISWD913",
+      "name": "Sistemas Embebidos",
+      "credits": "3",
+      "hours": 144,
       "reference_term": 9,
-      "organization_unit": "CAPSTONE",
-      "requirements": []
+      "organization_unit": "PROFESSIONAL",
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ICCD442"
+        },
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ISWD813"
+        }
+      ]
+    },
+    {
+      "code": "ISWD922",
+      "name": "Gestión De Proyectos De Software",
+      "credits": "2",
+      "hours": 96,
+      "reference_term": 9,
+      "organization_unit": "PROFESSIONAL",
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ISWD633"
+        },
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ISWD823"
+        }
+      ]
     },
     {
       "code": "PRLD105",
@@ -614,31 +630,13 @@
       "requirements": []
     },
     {
-      "code": "PSCD202",
-      "name": "Prácticas De Servicio Comunitario",
-      "credits": "2",
-      "hours": 96,
+      "code": "TITD201",
+      "name": "Trabajo De Integración Curricular/ Examen Complexivo",
+      "credits": "5",
+      "hours": 240,
       "reference_term": 9,
-      "organization_unit": "PROFESSIONAL",
+      "organization_unit": "CAPSTONE",
       "requirements": []
-    },
-    {
-      "code": "ICCD943",
-      "name": "Gestión De Tecnologías De La Información Y Comunicación",
-      "credits": "3",
-      "hours": 144,
-      "reference_term": 9,
-      "organization_unit": "PROFESSIONAL",
-      "requirements": [
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ADMD611"
-        },
-        {
-          "type": "PREREQUISITE",
-          "course_code": "ICCD833"
-        }
-      ]
     }
   ],
   "graduation_requirements": [
