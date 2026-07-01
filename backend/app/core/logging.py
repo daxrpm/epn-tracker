@@ -30,6 +30,9 @@ def setup_logging() -> None:
     root.setLevel(level)
 
     logging.getLogger("uvicorn.access").handlers.clear()
+    # Silence chatty third-party loggers even when the app runs in debug.
+    for noisy in ("aiosqlite", "asyncio", "httpx", "httpcore"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     _CONFIGURED = True
 
 
