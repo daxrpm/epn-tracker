@@ -44,7 +44,7 @@ const RESULT_COPY = {
   },
   IN_PROGRESS: {
     eyebrow: "Cálculo pendiente",
-    title: "Completa ambos aportes para obtener el resultado.",
+    title: "Completa ambos bimestres para obtener el resultado.",
     tone: "text-muted-foreground",
   },
 } as const;
@@ -94,8 +94,8 @@ export function PublicCalculatorPage() {
             ¿Cuánto necesitas en el suple?
           </h1>
           <p className="mt-6 max-w-xl text-pretty text-base leading-7 text-muted-foreground sm:text-lg">
-            Ingresa las notas de tus dos aportes. Calculamos tu nota final, si puedes rendir
-            recuperación y el mínimo que necesitas según las reglas de la EPN.
+            Ingresa las notas de tu primer y segundo bimestre. Calculamos tu nota final, si puedes
+            rendir recuperación y el mínimo que necesitas según las reglas de la EPN.
           </p>
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-2">
@@ -127,13 +127,13 @@ export function PublicCalculatorPage() {
               <div className="grid grid-cols-2 gap-3">
                 <ScoreInput
                   id="aporte_1"
-                  label="Aporte 1"
+                  label="Primer bimestre"
                   error={errors.aporte_1?.message}
                   registration={register("aporte_1")}
                 />
                 <ScoreInput
                   id="aporte_2"
-                  label="Aporte 2"
+                  label="Segundo bimestre"
                   error={errors.aporte_2?.message}
                   registration={register("aporte_2")}
                 />
