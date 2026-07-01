@@ -1,0 +1,71 @@
+{
+  "institution": { "name": "Escuela Politécnica Nacional", "acronym": "EPN" },
+  "faculty": { "name": "Facultad de Ingeniería de Sistemas", "acronym": "FIS" },
+  "career": {
+    "name": "Computación",
+    "degree_title": "Ingeniero/a en Ciencias de la Computación"
+  },
+  "curriculum": {
+    "pensum_year": 2020,
+    "total_terms": 9,
+    "total_credits": "30",
+    "total_hours": 1440,
+    "total_courses_reported": 9
+  },
+  "courses": [
+    {
+      "code": "MATD113", "name": "Álgebra Lineal", "credits": "3", "hours": 144,
+      "reference_term": 1, "organization_unit": "BASIC", "requirements": []
+    },
+    {
+      "code": "MATD123", "name": "Cálculo en una Variable", "credits": "4", "hours": 192,
+      "reference_term": 1, "organization_unit": "BASIC", "requirements": []
+    },
+    {
+      "code": "ICCD113", "name": "Fundamentos de Programación", "credits": "4", "hours": 192,
+      "reference_term": 1, "organization_unit": "BASIC", "requirements": []
+    },
+    {
+      "code": "ICCD213", "name": "Programación Orientada a Objetos", "credits": "4", "hours": 192,
+      "reference_term": 2, "organization_unit": "PROFESSIONAL",
+      "requirements": [{ "type": "PREREQUISITE", "course_code": "ICCD113" }]
+    },
+    {
+      "code": "ICCD412", "name": "Estructura de Datos y Algoritmos I", "credits": "3", "hours": 144,
+      "reference_term": 4, "organization_unit": "PROFESSIONAL",
+      "requirements": [{ "type": "PREREQUISITE", "course_code": "ICCD213" }]
+    },
+    {
+      "code": "ICCD442", "name": "Estructura de Datos y Algoritmos II", "credits": "3", "hours": 144,
+      "reference_term": 4, "organization_unit": "PROFESSIONAL",
+      "requirements": [{ "type": "PREREQUISITE", "course_code": "ICCD412" }]
+    },
+    {
+      "code": "ISWD512", "name": "Ingeniería de Software I", "credits": "3", "hours": 144,
+      "reference_term": 5, "organization_unit": "PROFESSIONAL",
+      "requirements": [{ "type": "PREREQUISITE", "course_code": "ICCD213" }]
+    },
+    {
+      "code": "ICCD523", "name": "Inteligencia Artificial", "credits": "3", "hours": 144,
+      "reference_term": 5, "organization_unit": "PROFESSIONAL",
+      "requirements": [
+        { "type": "PREREQUISITE", "course_code": "ICCD412" },
+        { "type": "PREREQUISITE", "course_code": "ICCD442" }
+      ]
+    },
+    {
+      "code": "ISWD553", "name": "Bases de Datos Distribuidas", "credits": "3", "hours": 144,
+      "reference_term": 6, "organization_unit": "PROFESSIONAL",
+      "requirements": [{ "type": "PREREQUISITE", "course_code": "ICCD442" }]
+    }
+  ],
+  "graduation_requirements": [
+    { "code": "IEXD200", "name": "Nivel de Suficiencia B1 en el idioma inglés", "type": "ENGLISH" },
+    { "code": "DEPD110", "name": "Deportes", "type": "SPORTS" },
+    { "code": "SOCD210", "name": "Clubes", "type": "CLUBS" },
+    { "code": "CSHD500", "name": "Asignatura de Comunicación", "type": "SOCIAL" },
+    { "code": "ADMD700", "name": "Emprendimiento", "type": "ENTREPRENEURSHIP" },
+    { "code": "AMBD900", "name": "Ecología y Ambiente", "type": "ENVIRONMENT" },
+    { "code": "ADMD800", "name": "Formulación y Evaluación de Proyectos", "type": "PROJECTS" }
+  ]
+}
