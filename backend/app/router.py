@@ -12,6 +12,8 @@ from app.modules.academic.api import router as academic_router
 from app.modules.evaluation.api import router as evaluation_router
 from app.modules.iam.api import router as iam_router
 from app.modules.public.api import router as public_router
+from app.modules.simulation.api import public_router as simulation_public_router
+from app.modules.simulation.api import router as simulation_router
 from app.modules.student.api import router as student_router
 
 api_router = APIRouter()
@@ -28,3 +30,5 @@ api_router.include_router(academic_router)
 api_router.include_router(academic_admin_router)
 api_router.include_router(evaluation_router)
 api_router.include_router(student_router)
+api_router.include_router(simulation_router)
+api_router.include_router(simulation_public_router)
