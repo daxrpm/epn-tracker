@@ -198,6 +198,7 @@ export function OnboardingPage() {
                     stateByCourse={stateByCourse}
                     onSelect={(course) => cycleCourse(course.id)}
                     prereqWarnings={prereqWarnings}
+                    layout="wrap"
                   />
                 </div>
               )}
