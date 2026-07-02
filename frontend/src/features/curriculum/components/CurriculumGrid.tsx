@@ -93,7 +93,9 @@ function TermRow({
           </span>
           <span className="text-2xl font-semibold tabular-nums">{term}</span>
         </div>
-        <div className="flex flex-wrap gap-3 sm:p-3">{cards}</div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:p-3 lg:grid-cols-4 xl:grid-cols-5">
+          {cards}
+        </div>
       </div>
     );
   }
@@ -134,9 +136,7 @@ function CourseCard({
       onClick={() => onSelect(course)}
       className={cn(
         "group relative flex h-36 flex-col overflow-hidden rounded-lg border text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
-        fixedWidth
-          ? "w-44 shrink-0"
-          : "w-[calc(50%-0.375rem)] sm:w-44 sm:shrink-0 md:w-[calc(33.333%-0.5rem)] lg:w-44",
+        fixedWidth ? "w-44 shrink-0" : "w-full",
         stateMeta.card,
       )}
     >
