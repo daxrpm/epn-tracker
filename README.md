@@ -5,13 +5,15 @@ controlar notas, avance de malla, requisitos de graduación y simulaciones de ma
 académicas configurables.
 
 La especificación completa vive en [`ERS_EPN_Notas_Mallas.md`](./ERS_EPN_Notas_Mallas.md).
+La extracción y carga reproducible de las cuatro mallas está documentada en
+[`docs/CURRICULUM_DATA_HANDOFF.md`](./docs/CURRICULUM_DATA_HANDOFF.md).
 
 ## Estructura del monorepo
 
 ```
 EPN-system/
 ├── backend/            # API FastAPI (Python + uv) — arquitectura fba + dominio puro
-├── frontend/           # SPA Vite + React + TS — HeroUI + Aceternity UI
+├── frontend/           # SPA Vite + React + TS — shadcn, Aceternity UI y variante HeroUI
 ├── mallas/             # PDFs fuente de las mallas FIS
 ├── Silabos/            # PDFs fuente de sílabos de ejemplo
 └── ERS_EPN_Notas_Mallas.md
@@ -29,8 +31,8 @@ EPN-system/
 
 ## Arranque completo con Docker (recomendado)
 
-Con Docker instalado, un solo comando levanta Postgres + Redis + la API, aplica migraciones, carga la
-malla de arranque y crea el super admin:
+Con Docker instalado, un solo comando levanta Postgres + Redis + la API, aplica migraciones, carga
+las cuatro mallas FIS y crea el super admin:
 
 ```bash
 cp .env.dev.example .env.dev
@@ -77,7 +79,7 @@ cd backend
 uv sync
 uv run pytest -q                   # 62 tests (dominio + integración, sin DB externa)
 uv run alembic upgrade head        # migraciones (requiere Postgres)
-uv run python -m seeds.loader      # malla de arranque
+uv run python -m seeds.loader      # cuatro mallas oficiales FIS
 uv run python -m seeds.create_admin  # super admin (usa FIRST_SUPERADMIN_*)
 uv run uvicorn app.main:app --reload
 ```

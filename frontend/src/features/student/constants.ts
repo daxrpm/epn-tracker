@@ -1,4 +1,4 @@
-import type { EnglishLevel, GradRequirementState } from "./api";
+import type { EnglishLevel, GradRequirementState, GradRequirementType } from "./api";
 
 export const ENGLISH_LEVELS: { value: EnglishLevel; label: string }[] = [
   { value: "NONE", label: "Sin nivel / no iniciado" },
@@ -26,3 +26,14 @@ export const GRAD_REQ_STATE_ORDER: GradRequirementState[] = [
   "COMPLETED",
   "NOT_APPLICABLE",
 ];
+
+export const GRAD_REQ_TYPE_LABELS: Record<GradRequirementType, string> = {
+  ENGLISH: "Inglés",
+  SPORTS: "Deportes",
+  CLUBS: "Clubes",
+  SOCIAL: "Vinculación con la sociedad",
+  ENTREPRENEURSHIP: "Emprendimiento",
+  ENVIRONMENT: "Ambiente",
+  PROJECTS: "Proyectos",
+  OTHER: "Otros",
+};

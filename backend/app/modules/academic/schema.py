@@ -46,7 +46,9 @@ class CurriculumOut(BaseModel):
     name: str
     pensum_year: int
     total_credits: Decimal
+    total_hours: int
     total_terms: int
+    total_courses_reported: int | None
     status: CurriculumStatus
     model_config = {"from_attributes": True}
 
@@ -66,6 +68,7 @@ class CurriculumCourseOut(BaseModel):
     name: str
     reference_term: int
     credits: Decimal
+    hours: int
     organization_unit: OrganizationUnit
     is_required: bool
     prerequisite_codes: list[str] = []

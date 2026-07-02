@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from collections.abc import Sequence
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +17,7 @@ from app.common.enums import (
     EvaluationSchemeStatus,
     SchemeSourceType,
     SchemeVote,
+    UserRole,
     Visibility,
 )
 from app.common.exception.errors import (
@@ -31,9 +34,11 @@ from app.modules.evaluation.model import (
     EvaluationSchemeVote,
 )
 from app.modules.evaluation.schema import (
+    SchemeCopyOut,
     SchemeCreateIn,
     SchemeCreateOut,
     SchemeIssueOut,
+    SchemeSuggestionOut,
     VoteOut,
 )
 from app.modules.iam.model import User
@@ -73,7 +78,19 @@ async def create_scheme(
             details=[{"field": e.field, "message": e.message} for e in validation.errors],
         )
 
+    # Admins publish verified schemes directly; students need community approval (ERS §RF-019).
+    is_admin = user.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN)
     is_private = payload.visibility == Visibility.PRIVATE
+    if is_admin and not is_private:
+        status = EvaluationSchemeStatus.ADMIN_VERIFIED
+        source_type = SchemeSourceType.MANUAL_ADMIN
+    elif is_private:
+        status = EvaluationSchemeStatus.PERSONAL
+        source_type = SchemeSourceType.MANUAL_STUDENT
+    else:
+        status = EvaluationSchemeStatus.COMMUNITY_PENDING
+        source_type = SchemeSourceType.MANUAL_STUDENT
+
     scheme = EvaluationScheme(
         course_id=payload.course_id,
         academic_period_id=payload.academic_period_id,
@@ -81,11 +98,9 @@ async def create_scheme(
         professor_id=payload.professor_id,
         created_by_user_id=user.id,
         title=payload.title,
-        status=EvaluationSchemeStatus.PERSONAL
-        if is_private
-        else EvaluationSchemeStatus.COMMUNITY_PENDING,
+        status=status,
         visibility=payload.visibility,
-        source_type=SchemeSourceType.MANUAL_STUDENT,
+        source_type=source_type,
         context_hash=build_context_hash(
             payload.course_id, payload.academic_period_id, payload.section_id, payload.professor_id
         ),
@@ -151,3 +166,152 @@ async def vote_scheme(
     return VoteOut(
         scheme_id=scheme.id, status=scheme.status, approval_count=scheme.approval_count
     )
+
+
+async def copy_scheme_to_personal(
+    db: AsyncSession, user: User, scheme_id: uuid.UUID
+) -> SchemeCopyOut:
+    """Duplicate a scheme (and its components) as a private personal copy (ERS §17.7)."""
+    source = await crud.get_scheme(db, scheme_id)
+    if source is None or not source.is_active:
+        raise NotFoundError("Esquema no encontrado.")
+
+    copy = EvaluationScheme(
+        course_id=source.course_id,
+        academic_period_id=source.academic_period_id,
+        section_id=source.section_id,
+        professor_id=source.professor_id,
+        created_by_user_id=user.id,
+        title=source.title,
+        status=EvaluationSchemeStatus.PERSONAL,
+        visibility=Visibility.PRIVATE,
+        source_type=SchemeSourceType.MANUAL_STUDENT,
+        approval_count=0,
+        context_hash=source.context_hash,
+    )
+    db.add(copy)
+    await db.flush()
+
+    components = await crud.get_components(db, source.id)
+    for component in components:
+        db.add(
+            EvaluationComponent(
+                evaluation_scheme_id=copy.id,
+                contribution=component.contribution,
+                name=component.name,
+                evaluation_type=component.evaluation_type,
+                weight_percent=component.weight_percent,
+                score_scale=component.score_scale,
+                display_order=component.display_order,
+            )
+        )
+    await db.flush()
+
+    return SchemeCopyOut(id=copy.id, status=copy.status)
+
+
+# --- Priority suggestion (ERS §8.12) --------------------------------------------------------------
+
+
+@dataclass(slots=True)
+class SuggestContext:
+    """Query context used to rank schemes for a course."""
+
+    academic_period_id: uuid.UUID | None = None
+    section_id: uuid.UUID | None = None
+    professor_id: uuid.UUID | None = None
+
+
+_VERIFIED_STATUSES = (
+    EvaluationSchemeStatus.ADMIN_VERIFIED,
+    EvaluationSchemeStatus.COMMUNITY_VERIFIED,
+)
+_SUGGESTABLE_STATUSES = (
+    EvaluationSchemeStatus.ADMIN_VERIFIED,
+    EvaluationSchemeStatus.COMMUNITY_VERIFIED,
+    EvaluationSchemeStatus.COMMUNITY_PENDING,
+)
+
+
+def _match_kind(scheme: EvaluationScheme, ctx: SuggestContext) -> str:
+    """Classify how closely a scheme matches the requested context."""
+    is_exact = (
+        scheme.academic_period_id == ctx.academic_period_id
+        and scheme.section_id == ctx.section_id
+        and scheme.professor_id == ctx.professor_id
+    )
+    if is_exact:
+        return "EXACT"
+    if ctx.professor_id is not None and scheme.professor_id == ctx.professor_id:
+        return "PROFESSOR"
+    return "COURSE"
+
+
+def _priority_rank(status: EvaluationSchemeStatus, match: str) -> int:
+    """Lower value = higher priority (ERS §8.12)."""
+    if status == EvaluationSchemeStatus.ADMIN_VERIFIED and match == "EXACT":
+        return 1
+    if status == EvaluationSchemeStatus.COMMUNITY_VERIFIED and match == "EXACT":
+        return 2
+    if status == EvaluationSchemeStatus.ADMIN_VERIFIED and match == "PROFESSOR":
+        return 3
+    if status == EvaluationSchemeStatus.COMMUNITY_VERIFIED and match == "PROFESSOR":
+        return 4
+    if status == EvaluationSchemeStatus.COMMUNITY_PENDING and match == "EXACT":
+        return 5
+    return 6
+
+
+def _suggestion_warning(status: EvaluationSchemeStatus, match: str) -> str | None:
+    if status == EvaluationSchemeStatus.COMMUNITY_PENDING:
+        return "Esquema pendiente de verificación comunitaria."
+    if match == "COURSE":
+        return "Este esquema corresponde a otro profesor o contexto."
+    if match == "PROFESSOR":
+        return "Este esquema corresponde a otro periodo o sección."
+    return None
+
+
+def rank_schemes(
+    schemes: Sequence[EvaluationScheme], ctx: SuggestContext
+) -> list[SchemeSuggestionOut]:
+    """Pure helper: order active schemes by suggestion priority (ERS §8.12)."""
+    candidates = [s for s in schemes if s.status in _SUGGESTABLE_STATUSES]
+
+    def _sort_key(scheme: EvaluationScheme) -> tuple[int, int, str]:
+        match = _match_kind(scheme, ctx)
+        return (_priority_rank(scheme.status, match), -scheme.approval_count, scheme.title)
+
+    candidates.sort(key=_sort_key)
+    result: list[SchemeSuggestionOut] = []
+    for scheme in candidates:
+        match = _match_kind(scheme, ctx)
+        result.append(
+            SchemeSuggestionOut(
+                id=scheme.id,
+                title=scheme.title,
+                status=scheme.status,
+                approval_count=scheme.approval_count,
+                match=match,
+                warning=_suggestion_warning(scheme.status, match),
+            )
+        )
+    return result
+
+
+async def suggest_schemes(
+    db: AsyncSession,
+    *,
+    course_id: uuid.UUID,
+    academic_period_id: uuid.UUID | None = None,
+    section_id: uuid.UUID | None = None,
+    professor_id: uuid.UUID | None = None,
+) -> list[SchemeSuggestionOut]:
+    """Return active schemes for a course ordered by suggestion priority (ERS §8.12)."""
+    schemes = await crud.list_schemes(db, course_id=course_id)
+    ctx = SuggestContext(
+        academic_period_id=academic_period_id,
+        section_id=section_id,
+        professor_id=professor_id,
+    )
+    return rank_schemes(schemes, ctx)

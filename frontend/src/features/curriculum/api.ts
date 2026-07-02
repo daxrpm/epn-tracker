@@ -18,7 +18,9 @@ export interface Curriculum {
   name: string;
   pensum_year: number;
   total_credits: string;
+  total_hours?: number;
   total_terms: number;
+  total_courses_reported?: number | null;
   status: CurriculumStatus;
 }
 
@@ -29,6 +31,7 @@ export interface CurriculumCourse {
   name: string;
   reference_term: number;
   credits: string;
+  hours?: number;
   organization_unit: OrganizationUnit;
   is_required: boolean;
   prerequisite_codes: string[];

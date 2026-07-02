@@ -12,10 +12,12 @@ from app.common.exception.errors import NotFoundError
 from app.modules.evaluation import crud, service
 from app.modules.evaluation.schema import (
     ComponentOut,
+    SchemeCopyOut,
     SchemeCreateIn,
     SchemeCreateOut,
     SchemeListItem,
     SchemeOut,
+    SchemeSuggestionOut,
     VoteIn,
     VoteOut,
 )
@@ -43,6 +45,23 @@ async def list_schemes(
     return [SchemeListItem.model_validate(s) for s in schemes]
 
 
+@router.get("/suggest", response_model=list[SchemeSuggestionOut])
+async def suggest_schemes(
+    db: DbSession,
+    course_id: Annotated[uuid.UUID, Query()],
+    academic_period_id: Annotated[uuid.UUID | None, Query()] = None,
+    section_id: Annotated[uuid.UUID | None, Query()] = None,
+    professor_id: Annotated[uuid.UUID | None, Query()] = None,
+) -> list[SchemeSuggestionOut]:
+    return await service.suggest_schemes(
+        db,
+        course_id=course_id,
+        academic_period_id=academic_period_id,
+        section_id=section_id,
+        professor_id=professor_id,
+    )
+
+
 @router.get("/{scheme_id}", response_model=SchemeOut)
 async def get_scheme(scheme_id: uuid.UUID, db: DbSession) -> SchemeOut:
     scheme = await crud.get_scheme(db, scheme_id)
@@ -65,3 +84,10 @@ async def vote_scheme(
     scheme_id: uuid.UUID, payload: VoteIn, user: CurrentUser, db: DbSession
 ) -> VoteOut:
     return await service.vote_scheme(db, user, scheme_id, payload.vote)
+
+
+@router.post("/{scheme_id}/copy-to-personal", response_model=SchemeCopyOut)
+async def copy_scheme_to_personal(
+    scheme_id: uuid.UUID, user: CurrentUser, db: DbSession
+) -> SchemeCopyOut:
+    return await service.copy_scheme_to_personal(db, user, scheme_id)

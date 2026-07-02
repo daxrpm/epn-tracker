@@ -5,6 +5,7 @@ import {
   GraduationCap,
   ListChecks,
   Loader2,
+  NotebookPen,
 } from "lucide-react";
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
@@ -55,8 +56,9 @@ export function DashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Hola{greeting}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Panel académico</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Hola{greeting}</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Tu panel académico: avance de malla, materias, requisitos y simulaciones.
         </p>
       </div>
@@ -69,7 +71,7 @@ export function DashboardPage() {
         <OnboardingCta />
       ) : (
         <>
-          <Card>
+          <Card className="rounded-2xl bg-card/65">
             <CardContent className="flex flex-col gap-4 p-6">
               <div className="flex items-end justify-between">
                 <div>
@@ -100,6 +102,14 @@ export function DashboardPage() {
                 icon={<GraduationCap className="size-4 text-muted-foreground" />}
               />
             </Link>
+            <Link to="/app/notas" className="[&>div]:h-full">
+              <BentoGridItem
+                title="Gestión de notas"
+                description="Registra tus notas por bimestre y proyecta tu resultado final."
+                header={<GradientHeader icon={<NotebookPen className="size-8 text-primary" />} />}
+                icon={<NotebookPen className="size-4 text-muted-foreground" />}
+              />
+            </Link>
             <Link to="/app/requisitos" className="[&>div]:h-full">
               <BentoGridItem
                 title="Requisitos de graduación"
@@ -125,7 +135,7 @@ export function DashboardPage() {
 
 function OnboardingCta() {
   return (
-    <Card className="border-primary/30 bg-gradient-to-br from-primary/10 via-transparent to-primary/5">
+    <Card className="rounded-2xl border-border/80 bg-card/65">
       <CardContent className="flex flex-col items-start gap-4 p-8">
         <GraduationCap className="size-10 text-primary" />
         <div>
@@ -156,7 +166,7 @@ function StatItem({
   accent: string;
 }) {
   return (
-    <div className="row-span-1 flex flex-col justify-between rounded-xl border border-border bg-card p-5">
+    <div className="row-span-1 flex flex-col justify-between rounded-2xl border border-border/80 bg-card/65 p-5">
       <span className="text-sm text-muted-foreground">{label}</span>
       <span className={`text-4xl font-bold tabular-nums ${accent}`}>{value}</span>
     </div>

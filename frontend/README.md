@@ -5,11 +5,12 @@ Vite + React + TypeScript SPA for the EPN Notas Mallas system.
 ## Stack
 
 - **Vite + React 18 + TypeScript** (strict).
-- **HeroUI 2.8** for components + **Aceternity UI** (framer-motion) for subtle effects.
+- **shadcn/ui + Aceternity UI** for the main interface, with a **HeroUI 2.8** login variant at
+  `/login/hero` for visual comparison.
 - **Tailwind CSS v4** (CSS-first) via `@tailwindcss/vite`; the HeroUI plugin and themes are declared
   in `src/hero.ts` and loaded from `src/styles/index.css` (`@plugin` / `@source`).
-- **Light + dark theme** with a persisted toggle (`stores/theme.store.ts`), driven by the `light` /
-  `dark` class on `<html>` that HeroUI reads.
+- **System theme by default**, with a persisted light/dark override (`stores/theme.store.ts`), driven
+  by the `light` / `dark` class on `<html>` shared by all three UI systems.
 - **TanStack Query** for server state, **Zustand** for auth/session state.
 - **Axios** client with a single-flight silent token-refresh interceptor.
 - **React Hook Form + Zod** for typed, validated forms.

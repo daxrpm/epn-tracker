@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import uuid
+from decimal import Decimal
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.common.deps import CurrentUser, DbSession
 from app.common.exception.errors import NotFoundError
@@ -25,6 +27,7 @@ from app.modules.student.schema import (
     ProfileOut,
     ProfileUpdateIn,
     ProgressOut,
+    ProjectionOut,
 )
 
 router = APIRouter(prefix="/student", tags=["student"])
@@ -125,6 +128,17 @@ async def get_gradebook(
 async def calculate(enrollment_id: uuid.UUID, user: CurrentUser, db: DbSession) -> CalculateOut:
     profile = await service.get_or_create_profile(db, user)
     return await service.calculate(db, profile, enrollment_id)
+
+
+@router.get("/enrollments/{enrollment_id}/projection", response_model=ProjectionOut)
+async def projection(
+    enrollment_id: uuid.UUID,
+    user: CurrentUser,
+    db: DbSession,
+    target_final_40: Annotated[Decimal, Query(ge=0, le=40)] = Decimal("28"),
+) -> ProjectionOut:
+    profile = await service.get_or_create_profile(db, user)
+    return await service.project(db, profile, enrollment_id, target_final_40=target_final_40)
 
 
 @router.patch("/grade-components/{component_state_id}")

@@ -1,8 +1,25 @@
 <!doctype html>
-<html lang="es" class="light">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      try {
+        const saved = JSON.parse(localStorage.getItem("epn.theme") || "null");
+        const preference = saved?.state?.theme || "system";
+        const theme = preference === "system"
+          ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+          : preference;
+        document.documentElement.classList.add(theme);
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      } catch (_) {
+        const theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.classList.add(theme);
+        document.documentElement.dataset.theme = theme;
+      }
+    </script>
     <title>EPN Notas Mallas</title>
   </head>
   <body>
