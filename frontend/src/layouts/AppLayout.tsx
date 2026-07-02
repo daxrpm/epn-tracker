@@ -41,20 +41,6 @@ export function AppLayout() {
 
   useEffect(() => setMobileOpen(false), [location.pathname]);
 
-  // Force first-time users through onboarding until they pick a carrera + pénsum.
-  if (profileQuery.isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-  const needsOnboarding =
-    profileQuery.data != null && profileQuery.data.current_curriculum_id == null;
-  if (needsOnboarding && location.pathname !== ONBOARDING_PATH) {
-    return <Navigate to={ONBOARDING_PATH} replace />;
-  }
-
   useEffect(() => {
     if (!mobileOpen) return;
     const previousOverflow = document.body.style.overflow;
@@ -68,6 +54,21 @@ export function AppLayout() {
       window.removeEventListener("keydown", closeOnEscape);
     };
   }, [mobileOpen]);
+
+  // Force first-time users through onboarding until they pick a carrera + pénsum.
+  // (Kept after every hook so the hook order never changes between renders.)
+  if (profileQuery.isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  const needsOnboarding =
+    profileQuery.data != null && profileQuery.data.current_curriculum_id == null;
+  if (needsOnboarding && location.pathname !== ONBOARDING_PATH) {
+    return <Navigate to={ONBOARDING_PATH} replace />;
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
