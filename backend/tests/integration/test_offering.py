@@ -95,6 +95,38 @@ async def test_create_course_offering(client, db_session):
     assert any(o["id"] == offering_id for o in listed.json())
 
 
+async def test_student_find_or_create_professor_deduplicates_by_name(client, db_session):
+    admin = await _admin_token(db_session)
+    _, course_id, _ = await _seed_catalog(client, admin)
+
+    student = User(email="student2@epn.edu.ec", role=UserRole.STUDENT)
+    db_session.add(student)
+    await db_session.commit()
+    token = create_access_token(str(student.id), role=UserRole.STUDENT.value)
+
+    first = await client.post(
+        "/api/v1/professors",
+        json={"course_id": course_id, "full_name": "Enrique Mafla"},
+        headers=_auth(token),
+    )
+    assert first.status_code == 200, first.text
+    professor_id = first.json()["id"]
+    assert first.json()["full_name"] == "Enrique Mafla"
+
+    # Same name (any casing/whitespace) reuses the existing professor instead of duplicating it.
+    second = await client.post(
+        "/api/v1/professors",
+        json={"course_id": course_id, "full_name": "  enrique mafla  "},
+        headers=_auth(token),
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["id"] == professor_id
+
+    found = await client.get("/api/v1/professors/search?q=mafla")
+    assert found.status_code == 200
+    assert [p["full_name"] for p in found.json()] == ["Enrique Mafla"]
+
+
 async def test_offering_create_requires_admin(client, db_session):
     admin = await _admin_token(db_session)
     institution_id, _, _ = await _seed_catalog(client, admin)

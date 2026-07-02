@@ -7,12 +7,13 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from app.common.deps import DbSession, require_admin
+from app.common.deps import CurrentUser, DbSession, require_admin
 from app.modules.offering import crud, service
 from app.modules.offering.schema import (
     CourseOfferingCreateIn,
     CourseOfferingOut,
     ProfessorCreateIn,
+    ProfessorFindOrCreateIn,
     ProfessorOut,
     SectionCreateIn,
     SectionOut,
@@ -28,6 +29,14 @@ async def search_professors(
     db: DbSession, q: Annotated[str, Query(min_length=1)]
 ) -> list[ProfessorOut]:
     return list(await crud.search_professors(db, q))
+
+
+@router.post("/professors", response_model=ProfessorOut)
+async def find_or_create_professor(
+    payload: ProfessorFindOrCreateIn, user: CurrentUser, db: DbSession
+) -> ProfessorOut:
+    professor = await service.find_or_create_professor(db, payload)
+    return ProfessorOut.model_validate(professor)
 
 
 @router.get("/course-offerings", response_model=list[CourseOfferingOut])

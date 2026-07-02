@@ -21,6 +21,7 @@ import {
   useEnrollments,
   useGradebook,
   useProjection,
+  useScheme,
 } from "../hooks";
 
 export function GradebookPage() {
@@ -39,6 +40,7 @@ export function GradebookPage() {
   const gradebookQuery = useGradebook(enrollmentId);
   const calculateQuery = useCalculate(enrollmentId);
   const projectionQuery = useProjection(enrollmentId);
+  const schemeQuery = useScheme(enrollment?.evaluation_scheme_id ?? null);
 
   const componentsByContribution = useMemo(() => {
     const map: Record<Contribution, ComponentState[]> = { APORTE_1: [], APORTE_2: [] };
@@ -78,6 +80,12 @@ export function GradebookPage() {
         {course && (
           <p className="text-sm text-muted-foreground">
             {course.code} · Semestre {course.reference_term}
+          </p>
+        )}
+        {schemeQuery.data && (
+          <p className="text-sm text-muted-foreground">
+            Curso: <span className="font-medium text-foreground">{schemeQuery.data.title}</span>
+            {schemeQuery.data.professor_name && ` · ${schemeQuery.data.professor_name}`}
           </p>
         )}
       </div>

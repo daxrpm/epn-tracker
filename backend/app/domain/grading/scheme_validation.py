@@ -55,7 +55,7 @@ def validate_scheme(
     warnings: list[SchemeIssue] = []
 
     if not components:
-        errors.append(SchemeIssue("components", "El esquema no tiene componentes."))
+        errors.append(SchemeIssue("components", "El curso no tiene componentes."))
         return SchemeValidationResult(is_valid=False, errors=errors, warnings=warnings)
 
     by_contribution: dict[Contribution, list[SchemeComponent]] = {

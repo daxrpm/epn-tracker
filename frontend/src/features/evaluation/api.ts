@@ -11,6 +11,7 @@ export interface SchemeListItem {
   id: string;
   course_id: string;
   title: string;
+  professor_name: string | null;
   status: string;
   approval_count: number;
 }
@@ -19,6 +20,7 @@ export interface SchemeListItem {
 export interface SchemeOption {
   id: string;
   title: string;
+  professor_name: string | null;
   status: string;
   approval_count: number;
   match: string | null;
@@ -39,6 +41,7 @@ export interface SchemeDetail {
   id: string;
   course_id: string;
   title: string;
+  professor_name: string | null;
   status: string;
   visibility: SchemeVisibility;
   approval_count: number;
@@ -95,6 +98,7 @@ export async function listSchemes(params: {
 interface SchemeSuggestRaw {
   id: string;
   title: string;
+  professor_name: string | null;
   status: string;
   approval_count: number;
   match: string | null;
@@ -113,6 +117,7 @@ export async function suggestSchemes(params: SchemeSuggestParams): Promise<Schem
     return data.map((item) => ({
       id: item.id,
       title: item.title,
+      professor_name: item.professor_name ?? null,
       status: item.status,
       approval_count: item.approval_count,
       match: item.match ?? null,
@@ -128,6 +133,7 @@ export async function suggestSchemes(params: SchemeSuggestParams): Promise<Schem
       return list.map((item) => ({
         id: item.id,
         title: item.title,
+        professor_name: item.professor_name,
         status: item.status,
         approval_count: item.approval_count,
         match: null,

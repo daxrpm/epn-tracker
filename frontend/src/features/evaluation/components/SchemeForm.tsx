@@ -1,5 +1,5 @@
 import { Loader2, Plus, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { findOrCreateProfessor, type Professor } from "@/features/offering/api";
+import { useSearchProfessors } from "@/features/offering/hooks";
 import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +35,7 @@ function newRow(name = "", weight = ""): Row {
   return { key: `row-${rowCounter}`, name, weight_percent: weight, evaluation_type: "SUMMATIVE" };
 }
 
-/** Default rows so a new scheme starts with a sensible, valid-ish shape per bimestre. */
+/** Default rows so a new course starts with a sensible, valid-ish shape per bimestre. */
 function defaultRows(): Record<Contribution, Row[]> {
   return {
     APORTE_1: [newRow("Deberes", "30"), newRow("Pruebas", "35"), newRow("Examen", "35")],
@@ -51,9 +53,12 @@ export function SchemeForm({
   onCreated: (schemeId: string) => void;
 }) {
   const createScheme = useCreateScheme();
-  const [title, setTitle] = useState(defaultTitle);
+  const [code, setCode] = useState("");
+  const [professorQuery, setProfessorQuery] = useState("");
+  const [professorId, setProfessorId] = useState<string | null>(null);
   const [visibility, setVisibility] = useState<SchemeVisibility>("COMMUNITY");
   const [rows, setRows] = useState<Record<Contribution, Row[]>>(defaultRows);
+  const [resolvingProfessor, setResolvingProfessor] = useState(false);
 
   const sums = useMemo(
     () =>
@@ -67,6 +72,7 @@ export function SchemeForm({
   );
 
   const bothSumTo100 = CONTRIBUTION_ORDER.every((c) => Math.round(sums[c]) === 100);
+  const canSubmit = bothSumTo100 && code.trim() !== "" && professorQuery.trim() !== "";
 
   function updateRow(c: Contribution, key: string, patch: Partial<Row>) {
     setRows((prev) => ({
@@ -79,6 +85,16 @@ export function SchemeForm({
   }
   function removeRow(c: Contribution, key: string) {
     setRows((prev) => ({ ...prev, [c]: prev[c].filter((r) => r.key !== key) }));
+  }
+
+  function selectProfessor(professor: Professor) {
+    setProfessorId(professor.id);
+    setProfessorQuery(professor.full_name);
+  }
+
+  function changeProfessorQuery(value: string) {
+    setProfessorQuery(value);
+    setProfessorId(null);
   }
 
   async function submit() {
@@ -94,46 +110,67 @@ export function SchemeForm({
         })),
     );
     try {
+      let resolvedProfessorId = professorId;
+      if (!resolvedProfessorId) {
+        setResolvingProfessor(true);
+        const professor = await findOrCreateProfessor({
+          course_id: courseId,
+          full_name: professorQuery.trim(),
+        });
+        resolvedProfessorId = professor.id;
+      }
       const result = await createScheme.mutateAsync({
         course_id: courseId,
-        title: title.trim() || defaultTitle,
+        title: code.trim() || defaultTitle,
+        professor_id: resolvedProfessorId,
         visibility,
         components,
       });
       if (result.warnings.length > 0) {
         toast.warning(result.warnings[0].message);
       }
-      toast.success("Esquema creado.");
+      toast.success("Curso creado.");
       onCreated(result.id);
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : "No se pudo crear el esquema.");
+      toast.error(error instanceof ApiError ? error.message : "No se pudo crear el curso.");
+    } finally {
+      setResolvingProfessor(false);
     }
   }
+
+  const submitting = createScheme.isPending || resolvingProfessor;
 
   return (
     <div className="flex flex-col gap-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="scheme-title">Nombre del esquema</Label>
+          <Label htmlFor="scheme-code">Código del curso</Label>
           <Input
-            id="scheme-title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ej. GR1 · Ing. Pérez · 2026-A"
+            id="scheme-code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="Ej. GRCC1"
           />
         </div>
-        <div className="flex flex-col gap-1.5">
-          <Label>Visibilidad</Label>
-          <Select value={visibility} onValueChange={(v) => setVisibility(v as SchemeVisibility)}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="COMMUNITY">Comunidad (requiere 3 aprobaciones)</SelectItem>
-              <SelectItem value="PRIVATE">Privado (solo para ti)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <ProfessorField
+          query={professorQuery}
+          professorId={professorId}
+          onQueryChange={changeProfessorQuery}
+          onSelect={selectProfessor}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label>Visibilidad</Label>
+        <Select value={visibility} onValueChange={(v) => setVisibility(v as SchemeVisibility)}>
+          <SelectTrigger className="w-full sm:w-64">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="COMMUNITY">Comunidad (requiere 3 aprobaciones)</SelectItem>
+            <SelectItem value="PRIVATE">Privado (solo para ti)</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Tabs defaultValue="APORTE_1">
@@ -209,16 +246,79 @@ export function SchemeForm({
       </Tabs>
 
       <div className="flex items-center justify-end gap-3">
-        {!bothSumTo100 && (
+        {!canSubmit && (
           <span className="text-xs text-muted-foreground">
-            Cada bimestre debe sumar 100%.
+            {bothSumTo100
+              ? "Ingresa el código del curso y el profesor."
+              : "Cada bimestre debe sumar 100%."}
           </span>
         )}
-        <Button onClick={() => void submit()} disabled={!bothSumTo100 || createScheme.isPending}>
-          {createScheme.isPending && <Loader2 className="size-4 animate-spin" />}
-          Crear esquema
+        <Button onClick={() => void submit()} disabled={!canSubmit || submitting}>
+          {submitting && <Loader2 className="size-4 animate-spin" />}
+          Crear curso
         </Button>
       </div>
+    </div>
+  );
+}
+
+function ProfessorField({
+  query,
+  professorId,
+  onQueryChange,
+  onSelect,
+}: {
+  query: string;
+  professorId: string | null;
+  onQueryChange: (value: string) => void;
+  onSelect: (professor: Professor) => void;
+}) {
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedQuery(query), 250);
+    return () => clearTimeout(timeout);
+  }, [query]);
+
+  const searchQuery = useSearchProfessors(debouncedQuery);
+  const suggestions = professorId ? [] : (searchQuery.data ?? []);
+
+  return (
+    <div className="relative flex flex-col gap-1.5">
+      <Label htmlFor="scheme-professor">Profesor</Label>
+      <Input
+        id="scheme-professor"
+        value={query}
+        onChange={(e) => onQueryChange(e.target.value)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder="Ej. Enrique Mafla"
+        autoComplete="off"
+      />
+      {open && suggestions.length > 0 && (
+        <div className="absolute top-full z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
+          {suggestions.map((professor) => (
+            <button
+              key={professor.id}
+              type="button"
+              className="block w-full px-3 py-2 text-left text-sm hover:bg-accent"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onSelect(professor);
+                setOpen(false);
+              }}
+            >
+              {professor.full_name}
+            </button>
+          ))}
+        </div>
+      )}
+      {!professorId && query.trim() !== "" && !open && (
+        <p className="text-[11px] text-muted-foreground">
+          Se registrará como un profesor nuevo si no existe todavía.
+        </p>
+      )}
     </div>
   );
 }

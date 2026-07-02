@@ -21,6 +21,7 @@ from app.modules.offering.model import (
 from app.modules.offering.schema import (
     CourseOfferingCreateIn,
     ProfessorCreateIn,
+    ProfessorFindOrCreateIn,
     SectionCreateIn,
     SectionProfessorCreateIn,
 )
@@ -34,6 +35,26 @@ async def create_professor(db: AsyncSession, payload: ProfessorCreateIn) -> Prof
         full_name=payload.full_name,
         email=payload.email,
     )
+    db.add(professor)
+    await db.flush()
+    return professor
+
+
+async def find_or_create_professor(
+    db: AsyncSession, payload: ProfessorFindOrCreateIn
+) -> Professor:
+    """Any authenticated user can register a professor while creating a course scheme.
+
+    Scoped to the course's institution and de-duplicated by name so students typing
+    "Enrique Mafla" twice reuse the same professor instead of creating near-duplicates.
+    """
+    course = await db.get(Course, payload.course_id)
+    if course is None:
+        raise NotFoundError("Materia no encontrada.")
+    existing = await crud.get_professor_by_name(db, course.institution_id, payload.full_name)
+    if existing is not None:
+        return existing
+    professor = Professor(institution_id=course.institution_id, full_name=payload.full_name.strip())
     db.add(professor)
     await db.flush()
     return professor

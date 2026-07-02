@@ -42,6 +42,7 @@ from app.modules.evaluation.schema import (
     VoteOut,
 )
 from app.modules.iam.model import User
+from app.modules.offering import crud as offering_crud
 
 COMMUNITY_VERIFICATION_THRESHOLD = 3
 
@@ -74,7 +75,7 @@ async def create_scheme(
     )
     if not validation.is_valid:
         raise ValidationAppError(
-            "El esquema de evaluación no es válido.",
+            "El curso no es válido.",
             details=[{"field": e.field, "message": e.message} for e in validation.errors],
         )
 
@@ -136,14 +137,14 @@ async def vote_scheme(
     """Register a community vote; auto-verify at three external approvals (ERS §8.11)."""
     scheme = await crud.get_scheme(db, scheme_id)
     if scheme is None or not scheme.is_active:
-        raise NotFoundError("Esquema no encontrado.")
+        raise NotFoundError("Curso no encontrado.")
     if not user.is_verified:
         raise ForbiddenError("Debes verificar tu correo para votar.")
     if scheme.created_by_user_id == user.id:
         # The creator does not count as an external approval (ERS §8.11).
-        raise ForbiddenError("No puedes votar tu propio esquema.")
+        raise ForbiddenError("No puedes votar tu propio curso.")
     if await crud.get_user_vote(db, scheme_id, user.id) is not None:
-        raise ConflictError("Ya votaste este esquema.")
+        raise ConflictError("Ya votaste este curso.")
 
     db.add(
         EvaluationSchemeVote(
@@ -174,7 +175,7 @@ async def copy_scheme_to_personal(
     """Duplicate a scheme (and its components) as a private personal copy (ERS §17.7)."""
     source = await crud.get_scheme(db, scheme_id)
     if source is None or not source.is_active:
-        raise NotFoundError("Esquema no encontrado.")
+        raise NotFoundError("Curso no encontrado.")
 
     copy = EvaluationScheme(
         course_id=source.course_id,
@@ -264,18 +265,21 @@ def _priority_rank(status: EvaluationSchemeStatus, match: str) -> int:
 
 def _suggestion_warning(status: EvaluationSchemeStatus, match: str) -> str | None:
     if status == EvaluationSchemeStatus.COMMUNITY_PENDING:
-        return "Esquema pendiente de verificación comunitaria."
+        return "Curso pendiente de verificación comunitaria."
     if match == "COURSE":
-        return "Este esquema corresponde a otro profesor o contexto."
+        return "Este curso corresponde a otro profesor o contexto."
     if match == "PROFESSOR":
-        return "Este esquema corresponde a otro periodo o sección."
+        return "Este curso corresponde a otro periodo o sección."
     return None
 
 
 def rank_schemes(
-    schemes: Sequence[EvaluationScheme], ctx: SuggestContext
+    schemes: Sequence[EvaluationScheme],
+    ctx: SuggestContext,
+    professor_names: dict[uuid.UUID, str] | None = None,
 ) -> list[SchemeSuggestionOut]:
     """Pure helper: order active schemes by suggestion priority (ERS §8.12)."""
+    names = professor_names or {}
     candidates = [s for s in schemes if s.status in _SUGGESTABLE_STATUSES]
 
     def _sort_key(scheme: EvaluationScheme) -> tuple[int, int, str]:
@@ -290,6 +294,7 @@ def rank_schemes(
             SchemeSuggestionOut(
                 id=scheme.id,
                 title=scheme.title,
+                professor_name=names.get(scheme.professor_id) if scheme.professor_id else None,
                 status=scheme.status,
                 approval_count=scheme.approval_count,
                 match=match,
@@ -309,9 +314,12 @@ async def suggest_schemes(
 ) -> list[SchemeSuggestionOut]:
     """Return active schemes for a course ordered by suggestion priority (ERS §8.12)."""
     schemes = await crud.list_schemes(db, course_id=course_id)
+    professor_ids = {s.professor_id for s in schemes if s.professor_id is not None}
+    professors = await offering_crud.get_professors_by_ids(db, list(professor_ids))
+    professor_names = {p.id: p.full_name for p in professors}
     ctx = SuggestContext(
         academic_period_id=academic_period_id,
         section_id=section_id,
         professor_id=professor_id,
     )
-    return rank_schemes(schemes, ctx)
+    return rank_schemes(schemes, ctx, professor_names)

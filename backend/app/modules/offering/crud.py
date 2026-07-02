@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.offering.model import (
@@ -31,6 +31,26 @@ async def search_professors(
 
 async def get_professor(db: AsyncSession, professor_id: uuid.UUID) -> Professor | None:
     return await db.get(Professor, professor_id)
+
+
+async def get_professor_by_name(
+    db: AsyncSession, institution_id: uuid.UUID, full_name: str
+) -> Professor | None:
+    """Case-insensitive exact match, scoped to an institution (avoids near-duplicate rows)."""
+    stmt = select(Professor).where(
+        Professor.institution_id == institution_id,
+        func.lower(Professor.full_name) == full_name.strip().lower(),
+    )
+    return (await db.execute(stmt)).scalar_one_or_none()
+
+
+async def get_professors_by_ids(
+    db: AsyncSession, professor_ids: Sequence[uuid.UUID]
+) -> Sequence[Professor]:
+    if not professor_ids:
+        return []
+    stmt = select(Professor).where(Professor.id.in_(professor_ids))
+    return (await db.execute(stmt)).scalars().all()
 
 
 async def get_course_offering(

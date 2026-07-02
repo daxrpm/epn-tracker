@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
 from typing import Annotated
 
 from fastapi import APIRouter, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.deps import CurrentUser, DbSession
 from app.common.exception.errors import NotFoundError
@@ -21,6 +23,7 @@ from app.modules.evaluation.schema import (
     VoteIn,
     VoteOut,
 )
+from app.modules.offering import crud as offering_crud
 
 router = APIRouter(prefix="/evaluation-schemes", tags=["evaluation"])
 
@@ -42,7 +45,27 @@ async def list_schemes(
     schemes = await crud.list_schemes(
         db, course_id=course_id, professor_id=professor_id, section_id=section_id
     )
-    return [SchemeListItem.model_validate(s) for s in schemes]
+    names = await _professor_names(db, (s.professor_id for s in schemes))
+    return [
+        SchemeListItem(
+            id=s.id,
+            course_id=s.course_id,
+            title=s.title,
+            professor_name=names.get(s.professor_id),
+            status=s.status,
+            approval_count=s.approval_count,
+        )
+        for s in schemes
+    ]
+
+
+async def _professor_names(
+    db: AsyncSession, professor_ids: Iterable[uuid.UUID | None]
+) -> dict[uuid.UUID, str]:
+    """Resolve professor ids to names in one query (no ORM relationship on EvaluationScheme)."""
+    ids = {pid for pid in professor_ids if pid is not None}
+    professors = await offering_crud.get_professors_by_ids(db, list(ids))
+    return {p.id: p.full_name for p in professors}
 
 
 @router.get("/suggest", response_model=list[SchemeSuggestionOut])
@@ -66,12 +89,14 @@ async def suggest_schemes(
 async def get_scheme(scheme_id: uuid.UUID, db: DbSession) -> SchemeOut:
     scheme = await crud.get_scheme(db, scheme_id)
     if scheme is None or not scheme.is_active:
-        raise NotFoundError("Esquema no encontrado.")
+        raise NotFoundError("Curso no encontrado.")
     components = await crud.get_components(db, scheme_id)
+    names = await _professor_names(db, [scheme.professor_id])
     return SchemeOut(
         id=scheme.id,
         course_id=scheme.course_id,
         title=scheme.title,
+        professor_name=names.get(scheme.professor_id) if scheme.professor_id else None,
         status=scheme.status,
         visibility=scheme.visibility,
         approval_count=scheme.approval_count,

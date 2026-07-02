@@ -26,6 +26,13 @@ class ProfessorCreateIn(BaseModel):
     email: str | None = None
 
 
+class ProfessorFindOrCreateIn(BaseModel):
+    """Lets any authenticated user register a professor while creating a course (ERS §17.7)."""
+
+    course_id: uuid.UUID
+    full_name: str = Field(min_length=1, max_length=255)
+
+
 # --- Course offerings -----------------------------------------------------------------------------
 
 

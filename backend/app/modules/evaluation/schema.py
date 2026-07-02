@@ -50,6 +50,7 @@ class SchemeOut(BaseModel):
     id: uuid.UUID
     course_id: uuid.UUID
     title: str
+    professor_name: str | None = None
     status: EvaluationSchemeStatus
     visibility: Visibility
     approval_count: int
@@ -61,6 +62,7 @@ class SchemeListItem(BaseModel):
     id: uuid.UUID
     course_id: uuid.UUID
     title: str
+    professor_name: str | None = None
     status: EvaluationSchemeStatus
     approval_count: int
     model_config = {"from_attributes": True}
@@ -99,6 +101,7 @@ class SchemeCopyOut(BaseModel):
 class SchemeSuggestionOut(BaseModel):
     id: uuid.UUID
     title: str
+    professor_name: str | None = None
     status: EvaluationSchemeStatus
     approval_count: int
     match: str  # "EXACT" | "PROFESSOR" | "COURSE"
