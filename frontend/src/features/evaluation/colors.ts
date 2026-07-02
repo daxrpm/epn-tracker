@@ -7,18 +7,26 @@ export interface ScoreTone {
   text: string;
   bg: string;
   border: string;
+  /** Solid background, for progress bars and other filled indicators. */
+  indicator: string;
 }
 
 const NO_SCORE: ScoreTone = {
   text: "text-muted-foreground",
   bg: "bg-muted",
   border: "border-border",
+  indicator: "bg-muted-foreground/40",
 };
 
 const BANDS: { max: number; tone: ScoreTone }[] = [
   {
     max: 10, // < 5/10
-    tone: { text: "text-red-700 dark:text-red-400", bg: "bg-red-500/15", border: "border-red-500/40" },
+    tone: {
+      text: "text-red-700 dark:text-red-400",
+      bg: "bg-red-500/15",
+      border: "border-red-500/40",
+      indicator: "bg-red-600",
+    },
   },
   {
     max: 14, // 5-7/10
@@ -26,6 +34,7 @@ const BANDS: { max: number; tone: ScoreTone }[] = [
       text: "text-[#e0532f] dark:text-[#ff8566]",
       bg: "bg-[#ff6347]/15",
       border: "border-[#ff6347]/40",
+      indicator: "bg-[#ff6347]",
     },
   },
   {
@@ -34,6 +43,7 @@ const BANDS: { max: number; tone: ScoreTone }[] = [
       text: "text-amber-600 dark:text-amber-400",
       bg: "bg-amber-500/15",
       border: "border-amber-500/40",
+      indicator: "bg-amber-500",
     },
   },
   {
@@ -42,6 +52,7 @@ const BANDS: { max: number; tone: ScoreTone }[] = [
       text: "text-green-700 dark:text-green-400",
       bg: "bg-green-600/15",
       border: "border-green-600/40",
+      indicator: "bg-green-600",
     },
   },
 ];
@@ -51,6 +62,7 @@ const TOP_TONE: ScoreTone = {
   text: "text-emerald-600 dark:text-emerald-400",
   bg: "bg-emerald-500/15",
   border: "border-emerald-500/40",
+  indicator: "bg-emerald-500",
 };
 
 export function scoreTone(score20: number | null): ScoreTone {

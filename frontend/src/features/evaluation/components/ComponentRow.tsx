@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { formatScore } from "@/features/calculators/format";
+import { formatDecimal } from "@/features/calculators/format";
 import { cn } from "@/lib/utils";
 
 import { scoreTone } from "../colors";
@@ -118,7 +118,7 @@ export function ComponentRow({
               tone.border,
             )}
           >
-            {component.calculated_score ? formatScore(component.calculated_score) : "—"}
+            {formatDecimal(component.calculated_score)}
           </span>
         </TableCell>
       </TableRow>
@@ -275,7 +275,7 @@ function ItemRow({
           tone.border,
         )}
       >
-        {normalized20 !== null ? normalized20.toFixed(2) : "—"}
+        {formatDecimal(normalized20)}
       </span>
       <Button
         type="button"

@@ -1,22 +1,23 @@
-import { ArrowLeft, Loader2, Target } from "lucide-react";
+import { ArrowLeft, Award, BookOpen, GraduationCap, Loader2, Target } from "lucide-react";
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatScore } from "@/features/calculators/format";
+import { formatDecimal } from "@/features/calculators/format";
 import { useCurriculumCourses } from "@/features/curriculum/hooks";
 import { useProfile } from "@/features/student/hooks";
 import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 import type { Contribution } from "../api";
+import { scoreTone } from "../colors";
 import { ComponentRow } from "../components/ComponentRow";
 import { SchemePicker } from "../components/SchemePicker";
-import { scoreTone } from "../colors";
 import { CONTRIBUTION_LABELS, CONTRIBUTION_ORDER, FINAL_STATUS_META } from "../constants";
 import type { ComponentState } from "../gradebook";
 import {
@@ -27,6 +28,11 @@ import {
   useProjection,
   useScheme,
 } from "../hooks";
+
+const CONTRIBUTION_ICON: Record<Contribution, typeof BookOpen> = {
+  APORTE_1: BookOpen,
+  APORTE_2: GraduationCap,
+};
 
 export function GradebookPage() {
   const { curriculumCourseId = "" } = useParams();
@@ -112,39 +118,144 @@ export function GradebookPage() {
       ) : gradebookQuery.isLoading ? (
         <PageLoader />
       ) : (
-        <Tabs defaultValue="APORTE_1">
-          <TabsList>
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-3 sm:grid-cols-3">
             {CONTRIBUTION_ORDER.map((contribution) => {
               const result =
                 calculateQuery.data?.[contribution === "APORTE_1" ? "aporte_1" : "aporte_2"];
               return (
-                <TabsTrigger key={contribution} value={contribution} className="gap-2">
-                  {CONTRIBUTION_LABELS[contribution]}
-                  {result && (
-                    <span className="text-xs tabular-nums text-muted-foreground">
-                      {formatScore(result.score_20)}/20
-                    </span>
-                  )}
-                </TabsTrigger>
+                <BimestreCard
+                  key={contribution}
+                  icon={CONTRIBUTION_ICON[contribution]}
+                  label={CONTRIBUTION_LABELS[contribution]}
+                  score20={result ? Number(result.score_20) : null}
+                />
               );
             })}
-          </TabsList>
+            <FinalGradeCard calculate={calculateQuery.data} />
+          </div>
 
-          {CONTRIBUTION_ORDER.map((contribution) => (
-            <TabsContent key={contribution} value={contribution} className="mt-4 flex flex-col gap-4">
-              {/* The final grade only matters once the second bimestre is in play. */}
-              {contribution === "APORTE_2" && (
-                <FinalSummary calculate={calculateQuery.data} projection={projectionQuery.data} />
-              )}
+          <ProjectionNotice projection={projectionQuery.data} />
 
-              <ComponentsTable
-                components={componentsByContribution[contribution]}
-                enrollmentId={enrollment.id}
-              />
-            </TabsContent>
-          ))}
-        </Tabs>
+          <Tabs defaultValue="APORTE_1">
+            <TabsList>
+              {CONTRIBUTION_ORDER.map((contribution) => (
+                <TabsTrigger key={contribution} value={contribution}>
+                  {CONTRIBUTION_LABELS[contribution]}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            {CONTRIBUTION_ORDER.map((contribution) => (
+              <TabsContent key={contribution} value={contribution} className="mt-4">
+                <ComponentsTable
+                  components={componentsByContribution[contribution]}
+                  enrollmentId={enrollment.id}
+                />
+              </TabsContent>
+            ))}
+          </Tabs>
+        </div>
       )}
+    </div>
+  );
+}
+
+function BimestreCard({
+  icon: Icon,
+  label,
+  score20,
+}: {
+  icon: typeof BookOpen;
+  label: string;
+  score20: number | null;
+}) {
+  const tone = scoreTone(score20);
+  const percent = score20 !== null ? Math.min(100, Math.max(0, (score20 / 20) * 100)) : 0;
+
+  return (
+    <Card className={cn("rounded-2xl border", tone.border, tone.bg)}>
+      <CardContent className="flex flex-col gap-3 p-5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            {label}
+          </span>
+          <Icon className={cn("size-4", tone.text)} />
+        </div>
+        <div className="flex items-baseline gap-1.5">
+          <strong className={cn("text-3xl font-semibold tabular-nums tracking-[-0.03em]", tone.text)}>
+            {score20 !== null ? formatDecimal(score20) : "—"}
+          </strong>
+          <span className="text-sm text-muted-foreground">/20</span>
+        </div>
+        <Progress value={percent} indicatorClassName={tone.indicator} />
+      </CardContent>
+    </Card>
+  );
+}
+
+function FinalGradeCard({ calculate }: { calculate: ReturnType<typeof useCalculate>["data"] }) {
+  const final20 = calculate ? Number(calculate.final_20) : null;
+  const tone = scoreTone(final20);
+  const percent = final20 !== null ? Math.min(100, Math.max(0, (final20 / 20) * 100)) : 0;
+  const status = calculate ? FINAL_STATUS_META[calculate.status] : null;
+
+  return (
+    <Card className={cn("rounded-2xl border", tone.border, tone.bg)}>
+      <CardContent className="flex flex-col gap-3 p-5">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            Nota final
+          </span>
+          <Award className={cn("size-4", tone.text)} />
+        </div>
+        <div className="flex items-baseline gap-1.5">
+          <strong className={cn("text-3xl font-semibold tabular-nums tracking-[-0.03em]", tone.text)}>
+            {calculate ? formatDecimal(calculate.final_40) : "—"}
+          </strong>
+          <span className="text-sm text-muted-foreground">/40</span>
+        </div>
+        <Progress value={percent} indicatorClassName={tone.indicator} />
+        {status && (
+          <Badge variant="outline" className={cn("w-fit border-current bg-background/50", status.tone)}>
+            {status.label}
+          </Badge>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProjectionNotice({
+  projection,
+}: {
+  projection: ReturnType<typeof useProjection>["data"];
+}) {
+  if (!projection || projection.already_reached || !projection.required_avg_score_20) return null;
+
+  return (
+    <div
+      className={cn(
+        "flex items-start gap-2.5 rounded-lg border p-3 text-sm",
+        projection.is_reachable
+          ? "border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300"
+          : "border-destructive/40 bg-destructive/10 text-destructive",
+      )}
+    >
+      <Target className="mt-0.5 size-4 shrink-0" />
+      <p>
+        {projection.is_reachable ? (
+          <>
+            Necesitas un promedio de{" "}
+            <span className="font-semibold tabular-nums">
+              {formatDecimal(projection.required_avg_score_20)}/20
+            </span>{" "}
+            en lo que te falta para aprobar (28/40).
+          </>
+        ) : (
+          <>Ya no es posible alcanzar 28/40 con lo que resta.</>
+        )}
+      </p>
     </div>
   );
 }
@@ -181,88 +292,6 @@ function ComponentsTable({
         </TableBody>
       </Table>
     </div>
-  );
-}
-
-function FinalSummary({
-  calculate,
-  projection,
-}: {
-  calculate: ReturnType<typeof useCalculate>["data"];
-  projection: ReturnType<typeof useProjection>["data"];
-}) {
-  const status = calculate ? FINAL_STATUS_META[calculate.status] : null;
-  // final_20 is already the grade on a /20 scale (final_40 / 2).
-  const tone = calculate ? scoreTone(Number(calculate.final_20)) : null;
-
-  return (
-    <Card className="rounded-2xl bg-card/70">
-      <CardContent className="flex flex-col gap-4 p-6">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-              Nota final
-            </p>
-            <div className="mt-1 flex items-baseline gap-2">
-              <strong
-                className={cn(
-                  "text-4xl font-semibold tabular-nums tracking-[-0.04em]",
-                  tone?.text,
-                )}
-              >
-                {calculate ? formatScore(calculate.final_40) : "—"}
-              </strong>
-              <span className="text-sm text-muted-foreground">/40</span>
-              {calculate && (
-                <span className="text-sm text-muted-foreground">
-                  · {formatScore(calculate.display_final_20)}/20
-                </span>
-              )}
-            </div>
-          </div>
-          {status && (
-            <Badge variant="outline" className={cn("border-current bg-background/50", status.tone)}>
-              {status.label}
-            </Badge>
-          )}
-        </div>
-
-        {projection && !projection.already_reached && projection.required_avg_score_20 && (
-          <div
-            className={cn(
-              "flex items-start gap-2.5 rounded-lg border p-3 text-sm",
-              projection.is_reachable
-                ? "border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-300"
-                : "border-destructive/40 bg-destructive/10 text-destructive",
-            )}
-          >
-            <Target className="mt-0.5 size-4 shrink-0" />
-            <p>
-              {projection.is_reachable ? (
-                <>
-                  Necesitas un promedio de{" "}
-                  <span className="font-semibold tabular-nums">
-                    {formatScore(projection.required_avg_score_20 ?? "0")}/20
-                  </span>{" "}
-                  en lo que te falta para aprobar (28/40).
-                </>
-              ) : (
-                <>Ya no es posible alcanzar 28/40 con lo que resta.</>
-              )}
-            </p>
-          </div>
-        )}
-
-        {calculate?.required_recovery_score_40 && (
-          <p className="text-sm text-muted-foreground">
-            Nota mínima en el suple:{" "}
-            <span className="font-semibold text-foreground tabular-nums">
-              {formatScore(calculate.required_recovery_score_40)}/40
-            </span>
-          </p>
-        )}
-      </CardContent>
-    </Card>
   );
 }
 
