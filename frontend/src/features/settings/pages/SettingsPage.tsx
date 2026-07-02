@@ -43,6 +43,13 @@ export function SettingsPage() {
     [curriculaQuery.data, careerId],
   );
 
+  // Auto-select the only pénsum of a career so a one-option dropdown isn't a blocker.
+  useEffect(() => {
+    if (curriculaForCareer.length === 1 && curriculumId !== curriculaForCareer[0].id) {
+      setCurriculumId(curriculaForCareer[0].id);
+    }
+  }, [curriculaForCareer, curriculumId]);
+
   const changed = curriculumId !== "" && curriculumId !== currentCurriculumId;
 
   async function save() {

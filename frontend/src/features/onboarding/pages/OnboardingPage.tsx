@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -55,6 +55,14 @@ export function OnboardingPage() {
     () => (curriculaQuery.data ?? []).filter((c) => c.career_id === careerId),
     [curriculaQuery.data, careerId],
   );
+
+  // When a career has a single pénsum, select it automatically so the student
+  // isn't blocked on a one-option dropdown that's easy to leave untouched.
+  useEffect(() => {
+    if (curriculaForCareer.length === 1 && curriculumId !== curriculaForCareer[0].id) {
+      setCurriculumId(curriculaForCareer[0].id);
+    }
+  }, [curriculaForCareer, curriculumId]);
 
   const stateByCourse = useMemo(
     () => new Map<string, CourseState>(Object.entries(courseStates)),
