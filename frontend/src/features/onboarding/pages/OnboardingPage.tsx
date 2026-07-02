@@ -1,9 +1,8 @@
-import { ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCircle2, Loader2, PlayCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -15,7 +14,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CurriculumGrid } from "@/features/curriculum/components/CurriculumGrid";
-import { COURSE_STATE_META } from "@/features/curriculum/constants";
 import { useCareers, useCurricula, useCurriculumCourses } from "@/features/curriculum/hooks";
 import { coursesWithUnmetPrereqs } from "@/features/curriculum/prerequisites";
 import type { CourseState, EnglishLevel } from "@/features/student/api";
@@ -26,14 +24,13 @@ import { cn } from "@/lib/utils";
 
 const STEPS = ["Carrera y pénsum", "Tus materias", "Nivel de inglés"];
 
-/** Click a course to cycle: sin tomar → aprobada → cursando → sin tomar. */
-const CYCLE: Record<string, CourseState> = {
-  NOT_TAKEN: "PASSED",
-  PASSED: "IN_PROGRESS",
-  IN_PROGRESS: "NOT_TAKEN",
-  FAILED: "NOT_TAKEN",
-  ANNULLED: "NOT_TAKEN",
-};
+/** The two states a student can paint onto a course during onboarding. */
+type PickMode = "PASSED" | "IN_PROGRESS";
+
+const PICK_MODES: { value: PickMode; label: string; icon: typeof CheckCircle2; classes: string }[] = [
+  { value: "PASSED", label: "Aprobada", icon: CheckCircle2, classes: "bg-emerald-500 text-white" },
+  { value: "IN_PROGRESS", label: "Cursando", icon: PlayCircle, classes: "bg-sky-500 text-white" },
+];
 
 export function OnboardingPage() {
   const navigate = useNavigate();
@@ -47,6 +44,7 @@ export function OnboardingPage() {
   const [careerId, setCareerId] = useState("");
   const [curriculumId, setCurriculumId] = useState("");
   const [courseStates, setCourseStates] = useState<Record<string, CourseState>>({});
+  const [pickMode, setPickMode] = useState<PickMode>("PASSED");
   const [englishLevel, setEnglishLevel] = useState<EnglishLevel>("NONE");
 
   const coursesQuery = useCurriculumCourses(step >= 1 ? curriculumId : null);
@@ -76,12 +74,25 @@ export function OnboardingPage() {
 
   const submitting = updateProfile.isPending || bulkStates.isPending;
 
-  function cycleCourse(id: string) {
+  /** Tap a course to paint it with the active mode; tap again to unmark it. */
+  function applyMode(id: string) {
     setCourseStates((prev) => {
       const next = { ...prev };
-      const target = CYCLE[prev[id] ?? "NOT_TAKEN"];
-      if (target === "NOT_TAKEN") delete next[id];
-      else next[id] = target;
+      if (prev[id] === pickMode) delete next[id];
+      else next[id] = pickMode;
+      return next;
+    });
+  }
+
+  /** Paint (or clear, if all already match) every course of a semester with the active mode. */
+  function applyModeToTerm(courseIds: string[]) {
+    setCourseStates((prev) => {
+      const next = { ...prev };
+      const allMatch = courseIds.every((id) => prev[id] === pickMode);
+      for (const id of courseIds) {
+        if (allMatch) delete next[id];
+        else next[id] = pickMode;
+      }
       return next;
     });
   }
@@ -177,14 +188,12 @@ export function OnboardingPage() {
 
           {step === 1 && (
             <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3">
                 <p className="text-sm text-muted-foreground">
-                  Toca una materia para marcarla. Primero las que{" "}
-                  <span className="font-medium text-foreground">ya aprobaste</span>, luego las que
-                  estás <span className="font-medium text-foreground">cursando</span> ahora. Puedes
-                  ajustarlo después en tu malla.
+                  Elige qué estás marcando y toca las materias correspondientes. Cambia de modo
+                  cuando termines con un grupo. Puedes ajustarlo después en tu malla.
                 </p>
-                <CycleLegend />
+                <ModePicker mode={pickMode} onChange={setPickMode} />
               </div>
               {coursesQuery.isLoading && (
                 <div className="flex justify-center py-8">
@@ -196,9 +205,25 @@ export function OnboardingPage() {
                   <CurriculumGrid
                     courses={coursesQuery.data}
                     stateByCourse={stateByCourse}
-                    onSelect={(course) => cycleCourse(course.id)}
+                    onSelect={(course) => applyMode(course.id)}
                     prereqWarnings={prereqWarnings}
                     layout="wrap"
+                    renderTermExtra={(_term, courseIds) => {
+                      const activeMode = PICK_MODES.find((m) => m.value === pickMode)!;
+                      const allMarked = courseIds.every((id) => courseStates[id] === pickMode);
+                      return (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1.5 px-2.5 text-xs"
+                          onClick={() => applyModeToTerm(courseIds)}
+                        >
+                          <activeMode.icon className="size-3.5" />
+                          {allMarked ? `Quitar ${activeMode.label.toLowerCase()}` : `Marcar semestre`}
+                        </Button>
+                      );
+                    }}
                   />
                 </div>
               )}
@@ -258,15 +283,26 @@ export function OnboardingPage() {
   );
 }
 
-function CycleLegend() {
+/** Segmented "brush" control: choose what tapping a course will mark it as. */
+function ModePicker({ mode, onChange }: { mode: PickMode; onChange: (mode: PickMode) => void }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {(["PASSED", "IN_PROGRESS", "NOT_TAKEN"] as const).map((state) => {
-        const meta = COURSE_STATE_META[state];
+    <div className="inline-flex w-fit gap-1 rounded-lg border border-border bg-muted/40 p-1">
+      {PICK_MODES.map((option) => {
+        const active = option.value === mode;
         return (
-          <Badge key={state} variant="outline" className="gap-1.5 bg-background/50 font-normal">
-            <span className={cn("size-1.5 rounded-full", meta.dot)} /> {meta.label}
-          </Badge>
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={active}
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              active ? cn(option.classes, "shadow-sm") : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <option.icon className="size-4" />
+            Marcando: {option.label}
+          </button>
         );
       })}
     </div>

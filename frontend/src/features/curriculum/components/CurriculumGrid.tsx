@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { Check, Play } from "lucide-react";
+import { useMemo, type ReactNode } from "react";
 
 import type { CourseState } from "@/features/student/api";
 import { cn } from "@/lib/utils";
@@ -9,13 +10,14 @@ import { COURSE_STATE_META, UNIT_META, courseHours } from "../constants";
 /**
  * Interactive semester grid of curriculum courses. Each course is a card button
  * whose color reflects its academic state. Shared by the malla and onboarding —
- * the parent decides what happens on click (open a dialog, cycle the state, …).
+ * the parent decides what happens on click (open a dialog, apply a "brush" mode, …).
  *
  * `layout="scroll"` (default) is the dense malla view: cards sit in a single
- * horizontally-scrolling row per semester. `layout="wrap"` instead lets cards
- * flow onto multiple lines so nothing needs horizontal scrolling — used by
- * onboarding, where scanning every course top-to-bottom matters more than
- * density.
+ * horizontally-scrolling row per semester, styled to show the organization unit.
+ * `layout="wrap"` instead lays cards out in a fixed-column grid (always several
+ * rows, never a single wide line) with a bolder, icon-based state indicator —
+ * used by onboarding, where telling "aprobada" apart from "cursando" at a glance
+ * matters more than density or unit info.
  */
 export function CurriculumGrid({
   courses,
@@ -23,6 +25,7 @@ export function CurriculumGrid({
   onSelect,
   prereqWarnings,
   layout = "scroll",
+  renderTermExtra,
 }: {
   courses: CurriculumCourse[];
   stateByCourse: Map<string, CourseState>;
@@ -30,6 +33,8 @@ export function CurriculumGrid({
   /** Optional set of curriculum_course ids with unmet prerequisites. */
   prereqWarnings?: Set<string>;
   layout?: "scroll" | "wrap";
+  /** Wrap layout only: slot next to the semester title, e.g. a "select whole term" action. */
+  renderTermExtra?: (term: number, courseIds: string[]) => ReactNode;
 }) {
   const terms = useMemo(() => {
     const grouped = new Map<number, CurriculumCourse[]>();
@@ -52,6 +57,7 @@ export function CurriculumGrid({
           onSelect={onSelect}
           prereqWarnings={prereqWarnings}
           layout={layout}
+          renderTermExtra={renderTermExtra}
         />
       ))}
     </div>
@@ -65,6 +71,7 @@ function TermRow({
   onSelect,
   prereqWarnings,
   layout,
+  renderTermExtra,
 }: {
   term: number;
   courses: CurriculumCourse[];
@@ -72,7 +79,9 @@ function TermRow({
   onSelect: (course: CurriculumCourse) => void;
   prereqWarnings?: Set<string>;
   layout: "scroll" | "wrap";
+  renderTermExtra?: (term: number, courseIds: string[]) => ReactNode;
 }) {
+  const variant = layout === "scroll" ? "browse" : "pick";
   const cards = courses.map((course) => (
     <CourseCard
       key={course.id}
@@ -80,20 +89,26 @@ function TermRow({
       state={stateByCourse.get(course.id) ?? "NOT_TAKEN"}
       hasPrereqWarning={prereqWarnings?.has(course.id) ?? false}
       onSelect={onSelect}
-      fixedWidth={layout === "scroll"}
+      variant={variant}
     />
   ));
 
   if (layout === "wrap") {
     return (
-      <div className="flex flex-col gap-3 bg-background/25 p-4 sm:grid sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:gap-0 sm:p-0">
-        <div className="flex items-center gap-2 sm:flex-col sm:items-center sm:justify-center sm:border-r sm:border-border/70 sm:px-2 sm:py-5">
-          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            Sem
-          </span>
-          <span className="text-2xl font-semibold tabular-nums">{term}</span>
+      <div className="flex flex-col gap-3 bg-background/25 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-baseline gap-2">
+            <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Semestre
+            </span>
+            <span className="text-lg font-semibold tabular-nums">{term}</span>
+          </div>
+          {renderTermExtra?.(
+            term,
+            courses.map((c) => c.id),
+          )}
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:p-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {cards}
         </div>
       </div>
@@ -115,19 +130,79 @@ function TermRow({
   );
 }
 
+/** Icon + solid accent classes for the bold "pick" badge, keyed by state. */
+const PICK_BADGE_META: Partial<Record<CourseState, { icon: typeof Check; classes: string }>> = {
+  PASSED: { icon: Check, classes: "bg-emerald-500 text-white" },
+  IN_PROGRESS: { icon: Play, classes: "bg-sky-500 text-white" },
+};
+
+/** Card border/background per state, bold enough to read without relying on the badge. */
+const PICK_CARD_META: Record<CourseState, string> = {
+  PASSED: "border-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/15",
+  IN_PROGRESS: "border-sky-500 bg-sky-500/10 hover:bg-sky-500/15",
+  FAILED: "border-red-500 bg-red-500/10 hover:bg-red-500/15",
+  ANNULLED: "border-amber-500 bg-amber-500/10 hover:bg-amber-500/15",
+  NOT_TAKEN: "border-dashed border-border bg-card hover:border-primary/50 hover:bg-accent",
+};
+
 function CourseCard({
   course,
   state,
   hasPrereqWarning,
   onSelect,
-  fixedWidth,
+  variant,
 }: {
   course: CurriculumCourse;
   state: CourseState;
   hasPrereqWarning: boolean;
   onSelect: (course: CurriculumCourse) => void;
-  fixedWidth: boolean;
+  variant: "browse" | "pick";
 }) {
+  if (variant === "pick") {
+    const stateMeta = COURSE_STATE_META[state];
+    const badge = PICK_BADGE_META[state];
+    return (
+      <button
+        type="button"
+        onClick={() => onSelect(course)}
+        aria-pressed={state !== "NOT_TAKEN"}
+        className={cn(
+          "group relative flex h-32 flex-col justify-between rounded-xl border-2 p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
+          PICK_CARD_META[state],
+        )}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {course.code}
+          </span>
+          <span
+            className={cn(
+              "grid size-6 shrink-0 place-items-center rounded-full border-2 border-current/20 text-transparent transition-colors",
+              badge?.classes,
+            )}
+          >
+            {badge && <badge.icon className="size-3.5" strokeWidth={3} />}
+          </span>
+        </div>
+        <span className="line-clamp-2 text-xs font-semibold uppercase leading-snug">
+          {course.name}
+        </span>
+        <div className="flex items-center justify-between gap-2 text-[10px]">
+          <span className="text-muted-foreground">{Number(course.credits)} créditos</span>
+          <span
+            className={cn(
+              "font-semibold",
+              state === "NOT_TAKEN" ? "text-muted-foreground/70" : undefined,
+              hasPrereqWarning && "text-amber-600 dark:text-amber-400",
+            )}
+          >
+            {hasPrereqWarning ? "Falta req." : stateMeta.label}
+          </span>
+        </div>
+      </button>
+    );
+  }
+
   const stateMeta = COURSE_STATE_META[state];
   const unitMeta = UNIT_META[course.organization_unit];
   return (
@@ -135,8 +210,7 @@ function CourseCard({
       type="button"
       onClick={() => onSelect(course)}
       className={cn(
-        "group relative flex h-36 flex-col overflow-hidden rounded-lg border text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
-        fixedWidth ? "w-44 shrink-0" : "w-full",
+        "group relative flex h-36 w-44 shrink-0 flex-col overflow-hidden rounded-lg border text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
         stateMeta.card,
       )}
     >
