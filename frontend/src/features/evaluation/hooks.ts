@@ -125,11 +125,13 @@ export function usePatchComponent(enrollmentId: string) {
       componentStateId,
       mode,
       direct_score,
+      direct_score_scale,
     }: {
       componentStateId: string;
       mode?: GradeComponentMode;
       direct_score?: string | null;
-    }) => patchComponent(componentStateId, { mode, direct_score }),
+      direct_score_scale?: string | null;
+    }) => patchComponent(componentStateId, { mode, direct_score, direct_score_scale }),
     onSuccess: invalidate,
   });
 }
@@ -141,13 +143,15 @@ export function useAddItem(enrollmentId: string) {
       componentStateId,
       name,
       score,
+      score_scale,
       internal_weight_percent,
     }: {
       componentStateId: string;
       name: string;
       score?: string | null;
+      score_scale?: string;
       internal_weight_percent?: string | null;
-    }) => addItem(componentStateId, { name, score, internal_weight_percent }),
+    }) => addItem(componentStateId, { name, score, score_scale, internal_weight_percent }),
     onSuccess: invalidate,
   });
 }
@@ -162,6 +166,7 @@ export function usePatchItem(enrollmentId: string) {
       itemId: string;
       name?: string;
       score?: string | null;
+      score_scale?: string;
       internal_weight_percent?: string | null;
     }) => patchItem(itemId, payload),
     onSuccess: invalidate,

@@ -98,6 +98,7 @@ class GradeItemOut(BaseModel):
     id: uuid.UUID
     name: str
     score: Decimal | None
+    score_scale: Decimal
     internal_weight_percent: Decimal | None
     model_config = {"from_attributes": True}
 
@@ -110,6 +111,7 @@ class ComponentStateOut(BaseModel):
     weight_percent: Decimal
     mode: GradeComponentMode
     direct_score: Decimal | None
+    direct_score_scale: Decimal
     calculated_score: Decimal | None
     items: list[GradeItemOut]
 
@@ -122,17 +124,22 @@ class GradebookOut(BaseModel):
 class ComponentPatchIn(BaseModel):
     mode: GradeComponentMode | None = None
     direct_score: Decimal | None = None
+    # The scale the student entered direct_score on (e.g. 8/10); defaults to /10 (ERS §17.6).
+    direct_score_scale: Decimal | None = None
 
 
 class ItemCreateIn(BaseModel):
     name: str
     score: Decimal | None = None
+    # Scale the raw score was entered on (e.g. 8/10, 14/24); defaults to /10, not /20.
+    score_scale: Decimal = Decimal("10")
     internal_weight_percent: Decimal | None = None
 
 
 class ItemPatchIn(BaseModel):
     name: str | None = None
     score: Decimal | None = None
+    score_scale: Decimal | None = None
     internal_weight_percent: Decimal | None = None
 
 

@@ -58,6 +58,41 @@ def test_float_is_rejected():
         calculate_component_score(GradeComponentMode.DIRECT_SCORE, 14.75, [])  # type: ignore[arg-type]
 
 
+# --- Custom score scales (e.g. 8/10, 14/24) --------------------------------------------------------
+
+
+def test_direct_score_normalizes_from_custom_scale():
+    # 8/10 == 16/20
+    score = calculate_component_score(
+        GradeComponentMode.DIRECT_SCORE, "8", [], direct_score_scale="10"
+    )
+    assert score == Decimal("16")
+
+
+def test_direct_score_without_scale_assumes_20():
+    score = calculate_component_score(GradeComponentMode.DIRECT_SCORE, "14", [])
+    assert score == Decimal("14")
+
+
+def test_equal_average_normalizes_mixed_scales():
+    # 8/10 -> 16/20 ; 18/20 stays 18/20 -> average 17
+    items = [ItemInput(score="8", score_scale="10"), ItemInput(score="18", score_scale="20")]
+    score = calculate_component_score(GradeComponentMode.EQUAL_AVERAGE, None, items)
+    assert score == Decimal("17")
+
+
+def test_custom_weights_normalizes_arbitrary_scale():
+    # 14/24 -> 11.6666.../20 @40% ; 18/20 @60%
+    items = [
+        ItemInput(score="14", internal_weight_percent="40", score_scale="24"),
+        ItemInput(score="18", internal_weight_percent="60", score_scale="20"),
+    ]
+    score = calculate_component_score(GradeComponentMode.CUSTOM_WEIGHTS, None, items)
+    expected = (Decimal("14") * 20 / 24) * Decimal("40") / 100 + Decimal("18") * Decimal("60") / 100
+    expected = expected * 100 / 100
+    assert score == expected
+
+
 # ERS §24.2 — final grade test cases
 @pytest.mark.parametrize(
     ("a1", "a2", "final_40", "status"),

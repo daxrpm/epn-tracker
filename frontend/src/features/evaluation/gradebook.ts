@@ -30,6 +30,7 @@ export interface GradeItem {
   id: string;
   name: string;
   score: string | null;
+  score_scale: string;
   internal_weight_percent: string | null;
 }
 
@@ -41,6 +42,7 @@ export interface ComponentState {
   weight_percent: string;
   mode: GradeComponentMode;
   direct_score: string | null;
+  direct_score_scale: string;
   calculated_score: string | null;
   items: GradeItem[];
 }
@@ -115,7 +117,11 @@ export async function projection(
 
 export async function patchComponent(
   componentStateId: string,
-  payload: { mode?: GradeComponentMode; direct_score?: string | null },
+  payload: {
+    mode?: GradeComponentMode;
+    direct_score?: string | null;
+    direct_score_scale?: string | null;
+  },
 ): Promise<{ id: string; calculated_score: string }> {
   const { data } = await apiClient.patch<{ id: string; calculated_score: string }>(
     `/student/grade-components/${componentStateId}`,
@@ -126,7 +132,12 @@ export async function patchComponent(
 
 export async function addItem(
   componentStateId: string,
-  payload: { name: string; score?: string | null; internal_weight_percent?: string | null },
+  payload: {
+    name: string;
+    score?: string | null;
+    score_scale?: string;
+    internal_weight_percent?: string | null;
+  },
 ): Promise<GradeItem> {
   const { data } = await apiClient.post<GradeItem>(
     `/student/grade-components/${componentStateId}/items`,
@@ -137,7 +148,12 @@ export async function addItem(
 
 export async function patchItem(
   itemId: string,
-  payload: { name?: string; score?: string | null; internal_weight_percent?: string | null },
+  payload: {
+    name?: string;
+    score?: string | null;
+    score_scale?: string;
+    internal_weight_percent?: string | null;
+  },
 ): Promise<GradeItem> {
   const { data } = await apiClient.patch<GradeItem>(`/student/grade-items/${itemId}`, payload);
   return data;

@@ -5,14 +5,18 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatScore } from "@/features/calculators/format";
 import { useCurriculumCourses } from "@/features/curriculum/hooks";
 import { useProfile } from "@/features/student/hooks";
 import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 import type { Contribution } from "../api";
-import { GradeComponentCard } from "../components/GradeComponentCard";
+import { ComponentRow } from "../components/ComponentRow";
 import { SchemePicker } from "../components/SchemePicker";
+import { scoreTone } from "../colors";
 import { CONTRIBUTION_LABELS, CONTRIBUTION_ORDER, FINAL_STATUS_META } from "../constants";
 import type { ComponentState } from "../gradebook";
 import {
@@ -108,51 +112,74 @@ export function GradebookPage() {
       ) : gradebookQuery.isLoading ? (
         <PageLoader />
       ) : (
-        <div className="flex flex-col gap-6">
-          <FinalSummary
-            calculate={calculateQuery.data}
-            projection={projectionQuery.data}
-            loading={calculateQuery.isLoading}
-          />
-
-          {CONTRIBUTION_ORDER.map((contribution) => {
-            const components = componentsByContribution[contribution];
-            const result = calculateQuery.data?.[contribution === "APORTE_1" ? "aporte_1" : "aporte_2"];
-            return (
-              <section key={contribution} className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                    {CONTRIBUTION_LABELS[contribution]}
-                  </h2>
+        <Tabs defaultValue="APORTE_1">
+          <TabsList>
+            {CONTRIBUTION_ORDER.map((contribution) => {
+              const result =
+                calculateQuery.data?.[contribution === "APORTE_1" ? "aporte_1" : "aporte_2"];
+              return (
+                <TabsTrigger key={contribution} value={contribution} className="gap-2">
+                  {CONTRIBUTION_LABELS[contribution]}
                   {result && (
-                    <span className="text-sm tabular-nums text-muted-foreground">
-                      Subtotal:{" "}
-                      <span className="font-semibold text-foreground">
-                        {Number(result.score_20).toFixed(2)}/20
-                      </span>
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      {formatScore(result.score_20)}/20
                     </span>
                   )}
-                </div>
-                {components.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Este bimestre no tiene componentes.
-                  </p>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    {components.map((component) => (
-                      <GradeComponentCard
-                        key={component.id}
-                        component={component}
-                        enrollmentId={enrollment.id}
-                      />
-                    ))}
-                  </div>
-                )}
-              </section>
-            );
-          })}
-        </div>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+
+          {CONTRIBUTION_ORDER.map((contribution) => (
+            <TabsContent key={contribution} value={contribution} className="mt-4 flex flex-col gap-4">
+              {/* The final grade only matters once the second bimestre is in play. */}
+              {contribution === "APORTE_2" && (
+                <FinalSummary calculate={calculateQuery.data} projection={projectionQuery.data} />
+              )}
+
+              <ComponentsTable
+                components={componentsByContribution[contribution]}
+                enrollmentId={enrollment.id}
+              />
+            </TabsContent>
+          ))}
+        </Tabs>
       )}
+    </div>
+  );
+}
+
+function ComponentsTable({
+  components,
+  enrollmentId,
+}: {
+  components: ComponentState[];
+  enrollmentId: string;
+}) {
+  if (components.length === 0) {
+    return (
+      <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+        Este bimestre no tiene componentes.
+      </p>
+    );
+  }
+  return (
+    <div className="overflow-hidden rounded-xl border border-border/80">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead>Componente</TableHead>
+            <TableHead>Modo</TableHead>
+            <TableHead>Entrada</TableHead>
+            <TableHead>Nota /20</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {components.map((component) => (
+            <ComponentRow key={component.id} component={component} enrollmentId={enrollmentId} />
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -160,13 +187,14 @@ export function GradebookPage() {
 function FinalSummary({
   calculate,
   projection,
-  loading,
 }: {
   calculate: ReturnType<typeof useCalculate>["data"];
   projection: ReturnType<typeof useProjection>["data"];
-  loading: boolean;
 }) {
   const status = calculate ? FINAL_STATUS_META[calculate.status] : null;
+  // final_20 is already the grade on a /20 scale (final_40 / 2).
+  const tone = calculate ? scoreTone(Number(calculate.final_20)) : null;
+
   return (
     <Card className="rounded-2xl bg-card/70">
       <CardContent className="flex flex-col gap-4 p-6">
@@ -176,22 +204,24 @@ function FinalSummary({
               Nota final
             </p>
             <div className="mt-1 flex items-baseline gap-2">
-              <strong className="text-4xl font-semibold tabular-nums tracking-[-0.04em]">
-                {loading ? "—" : calculate ? Number(calculate.final_40).toFixed(2) : "—"}
+              <strong
+                className={cn(
+                  "text-4xl font-semibold tabular-nums tracking-[-0.04em]",
+                  tone?.text,
+                )}
+              >
+                {calculate ? formatScore(calculate.final_40) : "—"}
               </strong>
               <span className="text-sm text-muted-foreground">/40</span>
               {calculate && (
                 <span className="text-sm text-muted-foreground">
-                  · {calculate.display_final_20}/20
+                  · {formatScore(calculate.display_final_20)}/20
                 </span>
               )}
             </div>
           </div>
           {status && (
-            <Badge
-              variant="outline"
-              className={cn("border-current bg-background/50", status.tone)}
-            >
+            <Badge variant="outline" className={cn("border-current bg-background/50", status.tone)}>
               {status.label}
             </Badge>
           )}
@@ -212,7 +242,7 @@ function FinalSummary({
                 <>
                   Necesitas un promedio de{" "}
                   <span className="font-semibold tabular-nums">
-                    {Number(projection.required_avg_score_20).toFixed(2)}/20
+                    {formatScore(projection.required_avg_score_20 ?? "0")}/20
                   </span>{" "}
                   en lo que te falta para aprobar (28/40).
                 </>
@@ -227,7 +257,7 @@ function FinalSummary({
           <p className="text-sm text-muted-foreground">
             Nota mínima en el suple:{" "}
             <span className="font-semibold text-foreground tabular-nums">
-              {Number(calculate.required_recovery_score_40).toFixed(2)}/40
+              {formatScore(calculate.required_recovery_score_40)}/40
             </span>
           </p>
         )}

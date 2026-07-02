@@ -14,14 +14,25 @@ from app.domain.numeric import ZERO, to_decimal
 APPROVED_THRESHOLD_40 = Decimal("28")
 RECOVERY_FLOOR_40 = Decimal("18")
 FULL_WEIGHT = Decimal("100")
+STANDARD_SCALE = Decimal("20")
+
+
+def _normalize_to_20(score: Decimal | str | None, scale: Decimal | str | None) -> Decimal | None:
+    """Rescale a raw score (e.g. 14/24) to the standard /20 scale used internally."""
+    raw = to_decimal(score)
+    if raw is None:
+        return None
+    return raw * STANDARD_SCALE / (to_decimal(scale) or STANDARD_SCALE)
 
 
 @dataclass(slots=True)
 class ItemInput:
-    """An internal item within a component (e.g. Homework 1)."""
+    """An internal item within a component (e.g. Homework 1). ``score`` is on ``score_scale``
+    (e.g. 8/10), not necessarily /20 — it gets normalized before being combined."""
 
     score: Decimal | str | None = None
     internal_weight_percent: Decimal | str | None = None
+    score_scale: Decimal | str | None = None
 
 
 @dataclass(slots=True)
@@ -31,11 +42,14 @@ class ComponentInput:
     weight_percent: Decimal | str
     mode: GradeComponentMode = GradeComponentMode.EQUAL_AVERAGE
     direct_score: Decimal | str | None = None
+    direct_score_scale: Decimal | str | None = None
     items: list[ItemInput] = field(default_factory=list)
 
     @property
     def calculated_score(self) -> Decimal | None:
-        return calculate_component_score(self.mode, self.direct_score, self.items)
+        return calculate_component_score(
+            self.mode, self.direct_score, self.items, self.direct_score_scale
+        )
 
 
 @dataclass(slots=True)
@@ -57,17 +71,25 @@ def calculate_component_score(
     mode: GradeComponentMode,
     direct_score: Decimal | str | None,
     items: list[ItemInput],
+    direct_score_scale: Decimal | str | None = None,
 ) -> Decimal | None:
-    """Score of a single component (scale 20) according to its mode (ERS §8.8, §16.1)."""
+    """Score of a single component, normalized to /20, according to its mode (ERS §8.8, §16.1).
+
+    Students may enter a direct score or an item's score on any scale (e.g. 8/10, 14/24); each
+    is rescaled to /20 here before being averaged or weighted, so the rest of the pipeline can
+    keep assuming everything is already /20.
+    """
     if mode == GradeComponentMode.DIRECT_SCORE:
-        return to_decimal(direct_score)
+        return _normalize_to_20(direct_score, direct_score_scale)
 
     valid = [it for it in items if to_decimal(it.score) is not None]
     if not valid:
         return None
 
+    normalized = [_normalize_to_20(it.score, it.score_scale) for it in valid]
+
     if mode == GradeComponentMode.EQUAL_AVERAGE:
-        total = sum((to_decimal(it.score) for it in valid), start=ZERO)
+        total = sum(normalized, start=ZERO)
         return total / Decimal(len(valid))
 
     if mode == GradeComponentMode.CUSTOM_WEIGHTS:
@@ -77,9 +99,9 @@ def calculate_component_score(
         if total_weight == ZERO:
             return None
         weighted = ZERO
-        for it in valid:
+        for it, score_20 in zip(valid, normalized, strict=True):
             item_weight = to_decimal(it.internal_weight_percent) or ZERO
-            weighted += to_decimal(it.score) * item_weight / FULL_WEIGHT
+            weighted += score_20 * item_weight / FULL_WEIGHT
         # Normalise by the registered weight to support partially filled items.
         return weighted * FULL_WEIGHT / total_weight
 

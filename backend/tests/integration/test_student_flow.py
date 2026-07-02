@@ -125,6 +125,52 @@ async def test_gradebook_calculate_flow(client, db_session):
     assert body["is_complete"] is True
 
 
+async def test_gradebook_accepts_scores_on_custom_scales(client, db_session):
+    """Students can enter 7/10 instead of being forced onto /20 (ERS §17.6)."""
+    course_id, curriculum_course_id = await _seed_course(client, db_session)
+    student = await _make_user(db_session, "scales@epn.edu.ec")
+
+    scheme = await client.post(
+        "/api/v1/evaluation-schemes", json=_four_component_scheme(course_id), headers=_auth(student)
+    )
+    scheme_id = scheme.json()["id"]
+    enrollment = await client.post(
+        "/api/v1/student/enrollments",
+        json={"curriculum_course_id": curriculum_course_id, "evaluation_scheme_id": scheme_id},
+        headers=_auth(student),
+    )
+    enrollment_id = enrollment.json()["id"]
+    components = (
+        await client.get(
+            f"/api/v1/student/enrollments/{enrollment_id}/gradebook", headers=_auth(student)
+        )
+    ).json()["components"]
+
+    # A direct score of 7/10 normalizes to 14/20.
+    direct = await client.patch(
+        f"/api/v1/student/grade-components/{components[0]['id']}",
+        json={"mode": "DIRECT_SCORE", "direct_score": "7", "direct_score_scale": "10"},
+        headers=_auth(student),
+    )
+    assert direct.status_code == 200, direct.text
+    assert Decimal(direct.json()["calculated_score"]) == Decimal("14")
+
+    # An item scored 9/10 (the new default scale) also normalizes to 18/20.
+    item = await client.post(
+        f"/api/v1/student/grade-components/{components[1]['id']}/items",
+        json={"name": "Deber 1", "score": "9"},
+        headers=_auth(student),
+    )
+    assert item.status_code == 200, item.text
+    assert item.json()["score_scale"] == "10"
+
+    gradebook = await client.get(
+        f"/api/v1/student/enrollments/{enrollment_id}/gradebook", headers=_auth(student)
+    )
+    updated = gradebook.json()["components"][1]
+    assert Decimal(updated["calculated_score"]) == Decimal("18")
+
+
 async def test_community_verification_at_three_votes(client, db_session):
     course_id, _ = await _seed_course(client, db_session)
     creator = await _make_user(db_session, "creator@epn.edu.ec")

@@ -8,6 +8,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
+from app.common.decimal_utils import display_str
 from app.common.deps import CurrentUser, DbSession
 from app.common.exception.errors import NotFoundError
 from app.modules.student import crud, service
@@ -147,9 +148,14 @@ async def patch_component(
 ) -> dict[str, str]:
     profile = await service.get_or_create_profile(db, user)
     state = await service.patch_component(
-        db, profile, component_state_id, mode=payload.mode, direct_score=payload.direct_score
+        db,
+        profile,
+        component_state_id,
+        mode=payload.mode,
+        direct_score=payload.direct_score,
+        direct_score_scale=payload.direct_score_scale,
     )
-    return {"id": str(state.id), "calculated_score": str(state.calculated_score)}
+    return {"id": str(state.id), "calculated_score": display_str(state.calculated_score) or "0.00"}
 
 
 @router.post("/grade-components/{component_state_id}/items", response_model=GradeItemOut)
@@ -163,6 +169,7 @@ async def add_item(
         component_state_id,
         name=payload.name,
         score=payload.score,
+        score_scale=payload.score_scale,
         internal_weight_percent=payload.internal_weight_percent,
     )
     return GradeItemOut.model_validate(item)

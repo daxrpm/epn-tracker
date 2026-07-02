@@ -12,7 +12,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.common.decimal_utils import ZERO, display_str
+from app.common.decimal_utils import ZERO, display_round, display_str
 from app.common.enums import CourseState, CourseStateSource, GradeComponentMode
 from app.common.exception.errors import ForbiddenError, NotFoundError, ValidationAppError
 from app.domain.grading.grade_calculation import (
@@ -235,9 +235,14 @@ async def _owned_component_state(
 async def _recompute_component(db: AsyncSession, state: GradeComponentState) -> None:
     items = await crud.get_items(db, state.id)
     item_inputs = [
-        ItemInput(score=i.score, internal_weight_percent=i.internal_weight_percent) for i in items
+        ItemInput(
+            score=i.score, internal_weight_percent=i.internal_weight_percent, score_scale=i.score_scale
+        )
+        for i in items
     ]
-    state.calculated_score = calculate_component_score(state.mode, state.direct_score, item_inputs)
+    state.calculated_score = calculate_component_score(
+        state.mode, state.direct_score, item_inputs, state.score_scale
+    )
 
 
 async def get_gradebook(
@@ -257,7 +262,8 @@ async def get_gradebook(
             weight_percent=components[state.evaluation_component_id].weight_percent,
             mode=state.mode,
             direct_score=state.direct_score,
-            calculated_score=state.calculated_score,
+            direct_score_scale=state.score_scale,
+            calculated_score=display_round(state.calculated_score),
             items=[GradeItemOut.model_validate(i) for i in items_by_state.get(state.id, [])],
         )
         for state in states
@@ -296,12 +302,15 @@ async def patch_component(
     *,
     mode: GradeComponentMode | None,
     direct_score,  # noqa: ANN001 - Decimal | None
+    direct_score_scale: Decimal | None = None,
 ) -> GradeComponentState:
     state = await _owned_component_state(db, profile, component_state_id)
     if mode is not None:
         state.mode = mode
     if direct_score is not None or mode == GradeComponentMode.DIRECT_SCORE:
         state.direct_score = direct_score
+    if direct_score_scale is not None:
+        state.score_scale = direct_score_scale
     await _recompute_component(db, state)
     await db.flush()
     return state
@@ -314,6 +323,7 @@ async def add_item(
     *,
     name: str,
     score,  # noqa: ANN001
+    score_scale: Decimal,
     internal_weight_percent,  # noqa: ANN001
 ) -> GradeItem:
     state = await _owned_component_state(db, profile, component_state_id)
@@ -321,6 +331,7 @@ async def add_item(
         grade_component_state_id=state.id,
         name=name,
         score=score,
+        score_scale=score_scale,
         internal_weight_percent=internal_weight_percent,
     )
     db.add(item)
@@ -369,11 +380,15 @@ async def calculate(
     for state in states:
         component = components[state.evaluation_component_id]
         item_inputs = [
-            ItemInput(score=i.score, internal_weight_percent=i.internal_weight_percent)
+            ItemInput(
+                score=i.score,
+                internal_weight_percent=i.internal_weight_percent,
+                score_scale=i.score_scale,
+            )
             for i in items_by_state.get(state.id, [])
         ]
         state.calculated_score = calculate_component_score(
-            state.mode, state.direct_score, item_inputs
+            state.mode, state.direct_score, item_inputs, state.score_scale
         )
         grouped[component.contribution.value].append(
             ComponentInput(
@@ -393,20 +408,20 @@ async def calculate(
     return CalculateOut(
         aporte_1=_contribution_out("APORTE_1", a1),
         aporte_2=_contribution_out("APORTE_2", a2),
-        final_40=str(final.final_40),
+        final_40=display_str(final.final_40) or "0.00",
         final_20=str(final.final_20),
         display_final_20=display_str(final.final_20) or "0.00",
         status=final.status,
         is_complete=is_complete,
-        required_recovery_score_40=None if required is None else str(required),
+        required_recovery_score_40=display_str(required) if required is not None else None,
     )
 
 
 def _contribution_out(contribution: str, result) -> ContributionOut:  # noqa: ANN001
     return ContributionOut(
         contribution=contribution,
-        score_20=str(result.score_20),
-        evaluated_weight_percent=str(result.evaluated_weight_percent),
+        score_20=display_str(result.score_20) or "0.00",
+        evaluated_weight_percent=display_str(result.evaluated_weight_percent) or "0",
         is_complete=result.is_complete,
     )
 
@@ -428,11 +443,15 @@ async def project(
     for state in states:
         component = components[state.evaluation_component_id]
         item_inputs = [
-            ItemInput(score=i.score, internal_weight_percent=i.internal_weight_percent)
+            ItemInput(
+                score=i.score,
+                internal_weight_percent=i.internal_weight_percent,
+                score_scale=i.score_scale,
+            )
             for i in items_by_state.get(state.id, [])
         ]
         state.calculated_score = calculate_component_score(
-            state.mode, state.direct_score, item_inputs
+            state.mode, state.direct_score, item_inputs, state.score_scale
         )
         projection_components.append(
             ProjectionComponent(
@@ -445,13 +464,11 @@ async def project(
 
     result = project_target(projection_components, target_final_40=target)
     return ProjectionOut(
-        target_final_40=str(result.target_final_40),
-        current_points_40=str(result.current_points_40),
-        evaluated_weight_percent=str(result.evaluated_weight_percent),
-        remaining_weight_percent=str(result.remaining_weight_percent),
-        required_avg_score_20=(
-            None if result.required_avg_score_20 is None else str(result.required_avg_score_20)
-        ),
+        target_final_40=display_str(result.target_final_40) or "0.00",
+        current_points_40=display_str(result.current_points_40) or "0.00",
+        evaluated_weight_percent=display_str(result.evaluated_weight_percent) or "0",
+        remaining_weight_percent=display_str(result.remaining_weight_percent) or "0",
+        required_avg_score_20=display_str(result.required_avg_score_20),
         already_reached=result.already_reached,
         is_reachable=result.is_reachable,
     )
