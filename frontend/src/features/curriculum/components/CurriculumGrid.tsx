@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 import type { CurriculumCourse } from "../api";
 import { COURSE_STATE_META, UNIT_META, courseHours } from "../constants";
+import { subjectIcon } from "../subjectIcons";
 
 /**
  * Interactive semester grid of curriculum courses. Each course is a card button
@@ -161,6 +162,7 @@ function CourseCard({
   if (variant === "pick") {
     const stateMeta = COURSE_STATE_META[state];
     const badge = PICK_BADGE_META[state];
+    const Icon = subjectIcon(course.name, course.organization_unit);
     return (
       <button
         type="button"
@@ -184,8 +186,11 @@ function CourseCard({
             {badge && <badge.icon className="size-3.5" strokeWidth={3} />}
           </span>
         </div>
-        <span className="line-clamp-2 text-xs font-semibold uppercase leading-snug">
-          {course.name}
+        <span className="flex items-start gap-1.5">
+          <Icon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
+          <span className="line-clamp-2 text-xs font-semibold uppercase leading-snug">
+            {course.name}
+          </span>
         </span>
         <div className="flex items-center justify-between gap-2 text-[10px]">
           <span className="text-muted-foreground">{Number(course.credits)} créditos</span>
@@ -205,6 +210,7 @@ function CourseCard({
 
   const stateMeta = COURSE_STATE_META[state];
   const unitMeta = UNIT_META[course.organization_unit];
+  const Icon = subjectIcon(course.name, course.organization_unit);
   return (
     <button
       type="button"
@@ -218,7 +224,8 @@ function CourseCard({
         <span>{Number(course.credits)} créditos</span>
         <span>{courseHours(course)} h</span>
       </div>
-      <div className="flex flex-1 flex-col px-3 py-2.5">
+      <div className="flex flex-1 flex-col gap-1 px-3 py-2.5">
+        <Icon className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="line-clamp-3 text-xs font-semibold uppercase leading-[1.35]">
           {course.name}
         </span>

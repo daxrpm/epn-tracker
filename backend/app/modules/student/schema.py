@@ -91,7 +91,19 @@ class EnrollmentOut(BaseModel):
     id: uuid.UUID
     curriculum_course_id: uuid.UUID
     evaluation_scheme_id: uuid.UUID | None
+    aporte_1_override_score: Decimal | None
+    aporte_1_override_scale: Decimal | None
+    aporte_2_override_score: Decimal | None
+    aporte_2_override_scale: Decimal | None
     model_config = {"from_attributes": True}
+
+
+class BimestreOverrideIn(BaseModel):
+    """Sets (or clears, with score=None) a bimestre's total directly, skipping components."""
+
+    contribution: Contribution
+    score: Decimal | None = None
+    score_scale: Decimal | None = None
 
 
 class GradeItemOut(BaseModel):

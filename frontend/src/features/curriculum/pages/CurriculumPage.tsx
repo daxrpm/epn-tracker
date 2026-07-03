@@ -41,6 +41,7 @@ import { CurriculumGrid } from "../components/CurriculumGrid";
 import { COURSE_STATE_META, COURSE_STATE_ORDER, UNIT_META, courseHours } from "../constants";
 import { useCareers, useCurricula, useCurriculumCourses } from "../hooks";
 import { buildCodeStateMap, coursesWithUnmetPrereqs, unmetPrerequisites } from "../prerequisites";
+import { subjectIcon } from "../subjectIcons";
 
 export function CurriculumPage() {
   const profileQuery = useProfile();
@@ -228,13 +229,17 @@ function CourseDialog({
   onClose: () => void;
   onChange: (course: CurriculumCourse, state: CourseState) => Promise<void>;
 }) {
+  const Icon = course ? subjectIcon(course.name, course.organization_unit) : null;
   return (
     <Dialog open={course !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
-        {course && (
+        {course && Icon && (
           <>
             <DialogHeader>
-              <DialogTitle>{course.name}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Icon className="size-4.5 shrink-0 text-muted-foreground" />
+                {course.name}
+              </DialogTitle>
               <DialogDescription>
                 {course.code} · Semestre {course.reference_term} · {Number(course.credits)} créditos · {courseHours(course)} horas
               </DialogDescription>

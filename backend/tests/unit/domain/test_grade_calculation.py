@@ -25,7 +25,7 @@ def test_equal_average():  # ERS §8.8
     assert score == Decimal("18")
 
 
-def test_custom_weights(): # ERS §8.8: 15*0.4 + 18*0.6 = 16.8
+def test_custom_weights():  # ERS §8.8: 15*0.4 + 18*0.6 = 16.8
     items = [
         ItemInput(score="15", internal_weight_percent="40"),
         ItemInput(score="18", internal_weight_percent="60"),
@@ -58,7 +58,7 @@ def test_float_is_rejected():
         calculate_component_score(GradeComponentMode.DIRECT_SCORE, 14.75, [])  # type: ignore[arg-type]
 
 
-# --- Custom score scales (e.g. 8/10, 14/24) --------------------------------------------------------
+# --- Custom score scales (e.g. 8/10, 14/24) ---------------------------------------------------
 
 
 def test_direct_score_normalizes_from_custom_scale():

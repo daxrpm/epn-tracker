@@ -13,6 +13,7 @@ from app.common.deps import CurrentUser, DbSession
 from app.common.exception.errors import NotFoundError
 from app.modules.student import crud, service
 from app.modules.student.schema import (
+    BimestreOverrideIn,
     CalculateOut,
     ComponentPatchIn,
     CourseStateBulkIn,
@@ -114,6 +115,15 @@ async def create_enrollment(
 ) -> EnrollmentOut:
     profile = await service.get_or_create_profile(db, user)
     enrollment = await service.create_enrollment(db, profile, payload)
+    return EnrollmentOut.model_validate(enrollment)
+
+
+@router.patch("/enrollments/{enrollment_id}/bimestre-override", response_model=EnrollmentOut)
+async def set_bimestre_override(
+    enrollment_id: uuid.UUID, payload: BimestreOverrideIn, user: CurrentUser, db: DbSession
+) -> EnrollmentOut:
+    profile = await service.get_or_create_profile(db, user)
+    enrollment = await service.set_bimestre_override(db, profile, enrollment_id, payload)
     return EnrollmentOut.model_validate(enrollment)
 
 

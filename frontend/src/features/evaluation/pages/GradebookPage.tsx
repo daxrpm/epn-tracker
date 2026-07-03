@@ -1,15 +1,18 @@
-import { ArrowLeft, Award, BookOpen, GraduationCap, Loader2, Target } from "lucide-react";
-import { useMemo } from "react";
+import { ArrowLeft, Award, BookOpen, GraduationCap, Loader2, Pencil, Target } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDecimal } from "@/features/calculators/format";
 import { useCurriculumCourses } from "@/features/curriculum/hooks";
+import { subjectIcon } from "@/features/curriculum/subjectIcons";
 import { useProfile } from "@/features/student/hooks";
 import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
@@ -19,7 +22,7 @@ import { scoreTone } from "../colors";
 import { ComponentRow } from "../components/ComponentRow";
 import { SchemePicker } from "../components/SchemePicker";
 import { CONTRIBUTION_LABELS, CONTRIBUTION_ORDER, FINAL_STATUS_META } from "../constants";
-import type { ComponentState } from "../gradebook";
+import type { ComponentState, ContributionResult } from "../gradebook";
 import {
   useCalculate,
   useCreateEnrollment,
@@ -27,12 +30,42 @@ import {
   useGradebook,
   useProjection,
   useScheme,
+  useSetBimestreOverride,
 } from "../hooks";
+import { formatScoreScale, parseScoreInput } from "../scoreInput";
 
 const CONTRIBUTION_ICON: Record<Contribution, typeof BookOpen> = {
   APORTE_1: BookOpen,
   APORTE_2: GraduationCap,
 };
+
+/** Persists whether the student has marked bimestre 1 as done, so Segundo/Nota final stay
+ * hidden (too noisy) until then. Scoped per enrollment via localStorage. */
+function useFirstBimestreDone(enrollmentId: string | null) {
+  const key = enrollmentId ? `epn-notas.bim1-done.${enrollmentId}` : null;
+  const [done, setDone] = useState(() => Boolean(key && localStorage.getItem(key) === "true"));
+
+  useEffect(() => {
+    setDone(Boolean(key && localStorage.getItem(key) === "true"));
+  }, [key]);
+
+  function toggle() {
+    if (!key) return;
+    setDone((prev) => {
+      const next = !prev;
+      localStorage.setItem(key, String(next));
+      return next;
+    });
+  }
+
+  return [done, toggle] as const;
+}
+
+/** null when nothing has been graded yet, so cards read as neutral instead of failing-red. */
+function scoreOrNull(result: ContributionResult | undefined): number | null {
+  if (!result || Number(result.evaluated_weight_percent) === 0) return null;
+  return Number(result.score_20);
+}
 
 export function GradebookPage() {
   const { curriculumCourseId = "" } = useParams();
@@ -51,6 +84,7 @@ export function GradebookPage() {
   const calculateQuery = useCalculate(enrollmentId);
   const projectionQuery = useProjection(enrollmentId);
   const schemeQuery = useScheme(enrollment?.evaluation_scheme_id ?? null);
+  const [firstBimestreDone, toggleFirstBimestreDone] = useFirstBimestreDone(enrollmentId);
 
   const componentsByContribution = useMemo(() => {
     const map: Record<Contribution, ComponentState[]> = { APORTE_1: [], APORTE_2: [] };
@@ -74,6 +108,7 @@ export function GradebookPage() {
 
   const loading =
     profileQuery.isLoading || coursesQuery.isLoading || enrollmentsQuery.isLoading;
+  const CourseIcon = course ? subjectIcon(course.name, course.organization_unit) : BookOpen;
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
@@ -84,7 +119,8 @@ export function GradebookPage() {
         >
           <ArrowLeft className="size-4" /> Mis materias
         </Link>
-        <h1 className="text-3xl font-semibold tracking-[-0.04em]">
+        <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-[-0.04em]">
+          {course && <CourseIcon className="size-6 shrink-0 text-muted-foreground" />}
           {course ? course.name : "Notas"}
         </h1>
         {course && (
@@ -118,24 +154,34 @@ export function GradebookPage() {
       ) : gradebookQuery.isLoading ? (
         <PageLoader />
       ) : (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-5">
           <div className="grid gap-3 sm:grid-cols-3">
-            {CONTRIBUTION_ORDER.map((contribution) => {
-              const result =
-                calculateQuery.data?.[contribution === "APORTE_1" ? "aporte_1" : "aporte_2"];
-              return (
+            <BimestreCard
+              icon={CONTRIBUTION_ICON.APORTE_1}
+              label={CONTRIBUTION_LABELS.APORTE_1}
+              score20={scoreOrNull(calculateQuery.data?.aporte_1)}
+            />
+            {firstBimestreDone && (
+              <>
                 <BimestreCard
-                  key={contribution}
-                  icon={CONTRIBUTION_ICON[contribution]}
-                  label={CONTRIBUTION_LABELS[contribution]}
-                  score20={result ? Number(result.score_20) : null}
+                  icon={CONTRIBUTION_ICON.APORTE_2}
+                  label={CONTRIBUTION_LABELS.APORTE_2}
+                  score20={scoreOrNull(calculateQuery.data?.aporte_2)}
                 />
-              );
-            })}
-            <FinalGradeCard calculate={calculateQuery.data} />
+                <FinalGradeCard calculate={calculateQuery.data} />
+              </>
+            )}
           </div>
 
-          <ProjectionNotice projection={projectionQuery.data} />
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" size="sm" onClick={toggleFirstBimestreDone}>
+              {firstBimestreDone
+                ? "Ocultar nota final y segundo bimestre"
+                : "Marcar primer bimestre como finalizado"}
+            </Button>
+          </div>
+
+          {firstBimestreDone && <ProjectionNotice projection={projectionQuery.data} />}
 
           <Tabs defaultValue="APORTE_1">
             <TabsList>
@@ -146,17 +192,142 @@ export function GradebookPage() {
               ))}
             </TabsList>
 
-            {CONTRIBUTION_ORDER.map((contribution) => (
-              <TabsContent key={contribution} value={contribution} className="mt-4">
-                <ComponentsTable
-                  components={componentsByContribution[contribution]}
-                  enrollmentId={enrollment.id}
-                />
-              </TabsContent>
-            ))}
+            {CONTRIBUTION_ORDER.map((contribution) => {
+              const overrideScore =
+                contribution === "APORTE_1"
+                  ? enrollment.aporte_1_override_score
+                  : enrollment.aporte_2_override_score;
+              const overrideScale =
+                contribution === "APORTE_1"
+                  ? enrollment.aporte_1_override_scale
+                  : enrollment.aporte_2_override_scale;
+              return (
+                <TabsContent
+                  key={contribution}
+                  value={contribution}
+                  className="mt-4 flex flex-col gap-3"
+                >
+                  <BimestreOverrideControl
+                    enrollmentId={enrollment.id}
+                    contribution={contribution}
+                    overrideScore={overrideScore}
+                    overrideScale={overrideScale}
+                  />
+                  {overrideScore === null && (
+                    <ComponentsTable
+                      components={componentsByContribution[contribution]}
+                      enrollmentId={enrollment.id}
+                    />
+                  )}
+                </TabsContent>
+              );
+            })}
           </Tabs>
         </div>
       )}
+    </div>
+  );
+}
+
+function BimestreOverrideControl({
+  enrollmentId,
+  contribution,
+  overrideScore,
+  overrideScale,
+}: {
+  enrollmentId: string;
+  contribution: Contribution;
+  overrideScore: string | null;
+  overrideScale: string | null;
+}) {
+  const setOverride = useSetBimestreOverride(enrollmentId);
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(formatScoreScale(overrideScore, overrideScale));
+
+  useEffect(() => {
+    setText(formatScoreScale(overrideScore, overrideScale));
+  }, [overrideScore, overrideScale]);
+
+  async function commit() {
+    const parsed = parseScoreInput(text);
+    if (!parsed) {
+      toast.error("Ingresa una nota válida, ej. 16/20.");
+      return;
+    }
+    try {
+      await setOverride.mutateAsync({
+        contribution,
+        score: parsed.score,
+        score_scale: parsed.scale,
+      });
+      toast.success("Nota del bimestre guardada.");
+      setEditing(false);
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "No se pudo guardar la nota.");
+    }
+  }
+
+  async function clear() {
+    try {
+      await setOverride.mutateAsync({ contribution, score: null });
+      toast.success("Se volvió a calcular por ponderaciones.");
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "No se pudo actualizar.");
+    }
+  }
+
+  if (overrideScore !== null) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sky-500/40 bg-sky-500/10 p-3 text-sm">
+        <p>
+          Nota del bimestre ingresada directamente:{" "}
+          <span className="font-semibold tabular-nums">
+            {formatScoreScale(overrideScore, overrideScale)}
+          </span>
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => void clear()}
+          disabled={setOverride.isPending}
+        >
+          Volver a ponderaciones
+        </Button>
+      </div>
+    );
+  }
+
+  if (!editing) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-fit"
+        onClick={() => setEditing(true)}
+      >
+        <Pencil className="size-3.5" /> Poner nota total del bimestre directamente
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Input
+        autoFocus
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Ej. 16/20"
+        className="h-9 w-28 tabular-nums"
+      />
+      <Button type="button" size="sm" onClick={() => void commit()} disabled={setOverride.isPending}>
+        {setOverride.isPending && <Loader2 className="size-3.5 animate-spin" />}
+        Guardar
+      </Button>
+      <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(false)}>
+        Cancelar
+      </Button>
     </div>
   );
 }
@@ -174,19 +345,19 @@ function BimestreCard({
   const percent = score20 !== null ? Math.min(100, Math.max(0, (score20 / 20) * 100)) : 0;
 
   return (
-    <Card className={cn("rounded-2xl border", tone.border, tone.bg)}>
-      <CardContent className="flex flex-col gap-3 p-5">
+    <Card className={cn("rounded-xl border", tone.border, tone.bg)}>
+      <CardContent className="flex flex-col gap-2 p-3.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+          <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
             {label}
           </span>
-          <Icon className={cn("size-4", tone.text)} />
+          <Icon className={cn("size-3.5", tone.text)} />
         </div>
-        <div className="flex items-baseline gap-1.5">
-          <strong className={cn("text-3xl font-semibold tabular-nums tracking-[-0.03em]", tone.text)}>
+        <div className="flex items-baseline gap-1">
+          <strong className={cn("text-xl font-semibold tabular-nums tracking-[-0.02em]", tone.text)}>
             {score20 !== null ? formatDecimal(score20) : "—"}
           </strong>
-          <span className="text-sm text-muted-foreground">/20</span>
+          <span className="text-xs text-muted-foreground">/20</span>
         </div>
         <Progress value={percent} indicatorClassName={tone.indicator} />
       </CardContent>
@@ -195,29 +366,36 @@ function BimestreCard({
 }
 
 function FinalGradeCard({ calculate }: { calculate: ReturnType<typeof useCalculate>["data"] }) {
-  const final20 = calculate ? Number(calculate.final_20) : null;
+  const hasAnyData =
+    calculate &&
+    (Number(calculate.aporte_1.evaluated_weight_percent) > 0 ||
+      Number(calculate.aporte_2.evaluated_weight_percent) > 0);
+  const final20 = hasAnyData ? Number(calculate.final_20) : null;
   const tone = scoreTone(final20);
   const percent = final20 !== null ? Math.min(100, Math.max(0, (final20 / 20) * 100)) : 0;
   const status = calculate ? FINAL_STATUS_META[calculate.status] : null;
 
   return (
-    <Card className={cn("rounded-2xl border", tone.border, tone.bg)}>
-      <CardContent className="flex flex-col gap-3 p-5">
+    <Card className={cn("rounded-xl border", tone.border, tone.bg)}>
+      <CardContent className="flex flex-col gap-2 p-3.5">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+          <span className="text-[10px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
             Nota final
           </span>
-          <Award className={cn("size-4", tone.text)} />
+          <Award className={cn("size-3.5", tone.text)} />
         </div>
-        <div className="flex items-baseline gap-1.5">
-          <strong className={cn("text-3xl font-semibold tabular-nums tracking-[-0.03em]", tone.text)}>
-            {calculate ? formatDecimal(calculate.final_40) : "—"}
+        <div className="flex items-baseline gap-1">
+          <strong className={cn("text-xl font-semibold tabular-nums tracking-[-0.02em]", tone.text)}>
+            {final20 !== null && calculate ? formatDecimal(calculate.final_40) : "—"}
           </strong>
-          <span className="text-sm text-muted-foreground">/40</span>
+          <span className="text-xs text-muted-foreground">/40</span>
         </div>
         <Progress value={percent} indicatorClassName={tone.indicator} />
         {status && (
-          <Badge variant="outline" className={cn("w-fit border-current bg-background/50", status.tone)}>
+          <Badge
+            variant="outline"
+            className={cn("w-fit border-current bg-background/50 text-[10px]", status.tone)}
+          >
             {status.label}
           </Badge>
         )}

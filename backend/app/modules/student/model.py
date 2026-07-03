@@ -84,6 +84,12 @@ class StudentEnrollment(UUIDMixin, TimestampMixin, Base):
     state: Mapped[EnrollmentState] = mapped_column(
         enum_column(EnrollmentState), default=EnrollmentState.ACTIVE
     )
+    # A student can skip the component breakdown and enter a bimestre's total directly
+    # (e.g. "16/20"); when set, it overrides the components' weighted sum (ERS §17.6).
+    aporte_1_override_score: Mapped[Decimal | None] = mapped_column(Score, nullable=True)
+    aporte_1_override_scale: Mapped[Decimal | None] = mapped_column(Score, nullable=True)
+    aporte_2_override_score: Mapped[Decimal | None] = mapped_column(Score, nullable=True)
+    aporte_2_override_scale: Mapped[Decimal | None] = mapped_column(Score, nullable=True)
 
 
 class GradeComponentState(UUIDMixin, TimestampMixin, Base):

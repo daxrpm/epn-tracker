@@ -13,14 +13,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.decimal_utils import ZERO, display_round, display_str
-from app.common.enums import CourseState, CourseStateSource, GradeComponentMode
+from app.common.enums import Contribution, CourseState, CourseStateSource, GradeComponentMode
 from app.common.exception.errors import ForbiddenError, NotFoundError, ValidationAppError
 from app.domain.grading.grade_calculation import (
     ComponentInput,
+    ContributionResult,
     ItemInput,
     calculate_component_score,
     calculate_contribution,
     calculate_final,
+    normalize_score,
 )
 from app.domain.grading.projection import (
     DEFAULT_TARGET_FINAL_40,
@@ -41,6 +43,7 @@ from app.modules.student.model import (
     StudentProfile,
 )
 from app.modules.student.schema import (
+    BimestreOverrideIn,
     CalculateOut,
     ComponentStateOut,
     ContributionOut,
@@ -64,9 +67,7 @@ async def get_or_create_profile(db: AsyncSession, user: User) -> StudentProfile:
     return profile
 
 
-async def update_profile(
-    db: AsyncSession, user: User, payload: ProfileUpdateIn
-) -> StudentProfile:
+async def update_profile(db: AsyncSession, user: User, payload: ProfileUpdateIn) -> StudentProfile:
     profile = await get_or_create_profile(db, user)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(profile, field, value)
@@ -76,9 +77,7 @@ async def update_profile(
     return profile
 
 
-async def provision_graduation_requirements(
-    db: AsyncSession, profile: StudentProfile
-) -> None:
+async def provision_graduation_requirements(db: AsyncSession, profile: StudentProfile) -> None:
     """Seed missing graduation-requirement states for the student's curriculum (idempotent)."""
     if profile.current_curriculum_id is None:
         return
@@ -128,9 +127,7 @@ async def get_progress(db: AsyncSession, profile: StudentProfile) -> ProgressOut
         term_totals[cc.reference_term] = term_totals.get(cc.reference_term, ZERO) + credits
         if state == CourseState.PASSED:
             approved_credits += credits
-            term_approved[cc.reference_term] = (
-                term_approved.get(cc.reference_term, ZERO) + credits
-            )
+            term_approved[cc.reference_term] = term_approved.get(cc.reference_term, ZERO) + credits
 
     percent = ZERO if total_credits == ZERO else approved_credits / total_credits * Decimal("100")
 
@@ -192,12 +189,16 @@ async def create_enrollment(
     await db.flush()
 
     components = (
-        await db.execute(
-            select(EvaluationComponent).where(
-                EvaluationComponent.evaluation_scheme_id == scheme.id
+        (
+            await db.execute(
+                select(EvaluationComponent).where(
+                    EvaluationComponent.evaluation_scheme_id == scheme.id
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     for component in components:
         db.add(
             GradeComponentState(
@@ -222,6 +223,25 @@ async def _owned_enrollment(
     return enrollment
 
 
+async def set_bimestre_override(
+    db: AsyncSession,
+    profile: StudentProfile,
+    enrollment_id: uuid.UUID,
+    payload: BimestreOverrideIn,
+) -> StudentEnrollment:
+    """Set (or clear, with ``score=None``) a bimestre's total directly, skipping components."""
+    enrollment = await _owned_enrollment(db, profile, enrollment_id)
+    prefix = "aporte_1" if payload.contribution == Contribution.APORTE_1 else "aporte_2"
+    if payload.score is None:
+        setattr(enrollment, f"{prefix}_override_score", None)
+        setattr(enrollment, f"{prefix}_override_scale", None)
+    else:
+        setattr(enrollment, f"{prefix}_override_score", payload.score)
+        setattr(enrollment, f"{prefix}_override_scale", payload.score_scale or Decimal("10"))
+    await db.flush()
+    return enrollment
+
+
 async def _owned_component_state(
     db: AsyncSession, profile: StudentProfile, component_state_id: uuid.UUID
 ) -> GradeComponentState:
@@ -236,7 +256,9 @@ async def _recompute_component(db: AsyncSession, state: GradeComponentState) -> 
     items = await crud.get_items(db, state.id)
     item_inputs = [
         ItemInput(
-            score=i.score, internal_weight_percent=i.internal_weight_percent, score_scale=i.score_scale
+            score=i.score,
+            internal_weight_percent=i.internal_weight_percent,
+            score_scale=i.score_scale,
         )
         for i in items
     ]
@@ -278,10 +300,14 @@ async def _load_components(
     if not component_ids:
         return {}
     rows = (
-        await db.execute(
-            select(EvaluationComponent).where(EvaluationComponent.id.in_(component_ids))
+        (
+            await db.execute(
+                select(EvaluationComponent).where(EvaluationComponent.id.in_(component_ids))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return {c.id: c for c in rows}
 
 
@@ -399,8 +425,8 @@ async def calculate(
         )
     await db.flush()
 
-    a1 = calculate_contribution(grouped["APORTE_1"])
-    a2 = calculate_contribution(grouped["APORTE_2"])
+    a1 = _contribution_result(enrollment, "aporte_1", grouped["APORTE_1"])
+    a2 = _contribution_result(enrollment, "aporte_2", grouped["APORTE_2"])
     is_complete = a1.is_complete and a2.is_complete
     final = calculate_final(a1.score_20, a2.score_20, is_complete=is_complete)
     required = required_recovery_score(final.final_40) if is_complete else None
@@ -426,6 +452,21 @@ def _contribution_out(contribution: str, result) -> ContributionOut:  # noqa: AN
     )
 
 
+def _contribution_result(
+    enrollment: StudentEnrollment, prefix: str, components: list[ComponentInput]
+) -> ContributionResult:
+    """A bimestre's total: the student's direct override if set, else the weighted components."""
+    override_score = getattr(enrollment, f"{prefix}_override_score")
+    if override_score is None:
+        return calculate_contribution(components)
+    override_scale = getattr(enrollment, f"{prefix}_override_scale") or Decimal("10")
+    return ContributionResult(
+        score_20=normalize_score(override_score, override_scale) or ZERO,
+        evaluated_weight_percent=Decimal("100"),
+        is_complete=True,
+    )
+
+
 async def project(
     db: AsyncSession,
     profile: StudentProfile,
@@ -439,9 +480,17 @@ async def project(
     components = await _load_components(db, states)
     items_by_state = await _load_items_by_state(db, states)
 
+    overridden = {
+        "APORTE_1": enrollment.aporte_1_override_score is not None,
+        "APORTE_2": enrollment.aporte_2_override_score is not None,
+    }
+
     projection_components: list[ProjectionComponent] = []
     for state in states:
         component = components[state.evaluation_component_id]
+        if overridden[component.contribution.value]:
+            # This bimestre's total was entered directly; its components don't count individually.
+            continue
         item_inputs = [
             ItemInput(
                 score=i.score,
@@ -461,6 +510,21 @@ async def project(
             )
         )
     await db.flush()
+
+    for prefix, contribution in (
+        ("aporte_1", Contribution.APORTE_1),
+        ("aporte_2", Contribution.APORTE_2),
+    ):
+        override_score = getattr(enrollment, f"{prefix}_override_score")
+        if override_score is not None:
+            override_scale = getattr(enrollment, f"{prefix}_override_scale") or Decimal("10")
+            projection_components.append(
+                ProjectionComponent(
+                    contribution=contribution,
+                    weight_percent=Decimal("100"),
+                    calculated_score=normalize_score(override_score, override_scale),
+                )
+            )
 
     result = project_target(projection_components, target_final_40=target)
     return ProjectionOut(

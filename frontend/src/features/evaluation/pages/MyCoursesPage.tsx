@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useCurriculumCourses } from "@/features/curriculum/hooks";
+import { subjectIcon } from "@/features/curriculum/subjectIcons";
 import { useCourseStates, useProfile } from "@/features/student/hooks";
 
 export function MyCoursesPage() {
@@ -57,14 +58,21 @@ export function MyCoursesPage() {
         </Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {inProgress.map((course) => (
+          {inProgress.map((course) => {
+            const Icon = subjectIcon(course.name, course.organization_unit);
+            return (
             <Card key={course.id} className="bg-card/65 transition-colors hover:bg-card">
               <CardContent className="flex items-center justify-between gap-3 p-5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{course.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {course.code} · Semestre {course.reference_term}
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted">
+                    <Icon className="size-4 text-muted-foreground" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{course.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {course.code} · Semestre {course.reference_term}
+                    </p>
+                  </div>
                 </div>
                 <Button asChild size="sm">
                   <Link to={`/app/notas/${course.id}`}>
@@ -73,7 +81,8 @@ export function MyCoursesPage() {
                 </Button>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

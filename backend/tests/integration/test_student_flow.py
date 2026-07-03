@@ -171,6 +171,54 @@ async def test_gradebook_accepts_scores_on_custom_scales(client, db_session):
     assert Decimal(updated["calculated_score"]) == Decimal("18")
 
 
+async def test_bimestre_override_skips_component_breakdown(client, db_session):
+    """A student can enter a bimestre's total directly instead of per-component (ERS §17.6)."""
+    course_id, curriculum_course_id = await _seed_course(client, db_session)
+    student = await _make_user(db_session, "override@epn.edu.ec")
+
+    scheme = await client.post(
+        "/api/v1/evaluation-schemes", json=_four_component_scheme(course_id), headers=_auth(student)
+    )
+    scheme_id = scheme.json()["id"]
+    enrollment = await client.post(
+        "/api/v1/student/enrollments",
+        json={"curriculum_course_id": curriculum_course_id, "evaluation_scheme_id": scheme_id},
+        headers=_auth(student),
+    )
+    enrollment_id = enrollment.json()["id"]
+
+    # Set aporte 1's total directly to 8/10 (== 16/20) without touching any component.
+    override = await client.patch(
+        f"/api/v1/student/enrollments/{enrollment_id}/bimestre-override",
+        json={"contribution": "APORTE_1", "score": "8", "score_scale": "10"},
+        headers=_auth(student),
+    )
+    assert override.status_code == 200, override.text
+    assert Decimal(override.json()["aporte_1_override_score"]) == Decimal("8")
+
+    result = await client.post(
+        f"/api/v1/student/enrollments/{enrollment_id}/calculate", headers=_auth(student)
+    )
+    assert result.status_code == 200, result.text
+    body = result.json()
+    assert Decimal(body["aporte_1"]["score_20"]) == Decimal("16")
+    assert body["aporte_1"]["is_complete"] is True
+
+    # Clearing the override reverts to the (still empty) component breakdown.
+    cleared = await client.patch(
+        f"/api/v1/student/enrollments/{enrollment_id}/bimestre-override",
+        json={"contribution": "APORTE_1", "score": None},
+        headers=_auth(student),
+    )
+    assert cleared.status_code == 200, cleared.text
+    assert cleared.json()["aporte_1_override_score"] is None
+
+    result_after_clear = await client.post(
+        f"/api/v1/student/enrollments/{enrollment_id}/calculate", headers=_auth(student)
+    )
+    assert Decimal(result_after_clear.json()["aporte_1"]["score_20"]) == Decimal("0")
+
+
 async def test_community_verification_at_three_votes(client, db_session):
     course_id, _ = await _seed_course(client, db_session)
     creator = await _make_user(db_session, "creator@epn.edu.ec")

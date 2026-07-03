@@ -4,6 +4,7 @@ import {
   copySchemeToPersonal,
   createScheme,
   getScheme,
+  type Contribution,
   type SchemeCreateInput,
   type SchemeSuggestParams,
   suggestSchemes,
@@ -21,6 +22,7 @@ import {
   patchComponent,
   patchItem,
   projection,
+  setBimestreOverride,
 } from "./gradebook";
 
 export const evaluationKeys = {
@@ -178,5 +180,25 @@ export function useDeleteItem(enrollmentId: string) {
   return useMutation({
     mutationFn: (itemId: string) => deleteItem(itemId),
     onSuccess: invalidate,
+  });
+}
+
+export function useSetBimestreOverride(enrollmentId: string) {
+  const queryClient = useQueryClient();
+  const invalidate = useGradebookInvalidator(enrollmentId);
+  return useMutation({
+    mutationFn: ({
+      contribution,
+      score,
+      score_scale,
+    }: {
+      contribution: Contribution;
+      score: string | null;
+      score_scale?: string | null;
+    }) => setBimestreOverride(enrollmentId, { contribution, score, score_scale }),
+    onSuccess: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: evaluationKeys.enrollments });
+    },
   });
 }

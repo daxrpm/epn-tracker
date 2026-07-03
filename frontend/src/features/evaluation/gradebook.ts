@@ -16,6 +16,10 @@ export interface Enrollment {
   id: string;
   curriculum_course_id: string;
   evaluation_scheme_id: string | null;
+  aporte_1_override_score: string | null;
+  aporte_1_override_scale: string | null;
+  aporte_2_override_score: string | null;
+  aporte_2_override_scale: string | null;
 }
 
 export interface EnrollmentCreateInput {
@@ -161,4 +165,16 @@ export async function patchItem(
 
 export async function deleteItem(itemId: string): Promise<void> {
   await apiClient.delete(`/student/grade-items/${itemId}`);
+}
+
+/** Sets (or clears, with score=null) a bimestre's total directly, skipping components. */
+export async function setBimestreOverride(
+  enrollmentId: string,
+  payload: { contribution: Contribution; score: string | null; score_scale?: string | null },
+): Promise<Enrollment> {
+  const { data } = await apiClient.patch<Enrollment>(
+    `/student/enrollments/${enrollmentId}/bimestre-override`,
+    payload,
+  );
+  return data;
 }

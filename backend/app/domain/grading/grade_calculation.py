@@ -17,7 +17,7 @@ FULL_WEIGHT = Decimal("100")
 STANDARD_SCALE = Decimal("20")
 
 
-def _normalize_to_20(score: Decimal | str | None, scale: Decimal | str | None) -> Decimal | None:
+def normalize_score(score: Decimal | str | None, scale: Decimal | str | None) -> Decimal | None:
     """Rescale a raw score (e.g. 14/24) to the standard /20 scale used internally."""
     raw = to_decimal(score)
     if raw is None:
@@ -80,13 +80,13 @@ def calculate_component_score(
     keep assuming everything is already /20.
     """
     if mode == GradeComponentMode.DIRECT_SCORE:
-        return _normalize_to_20(direct_score, direct_score_scale)
+        return normalize_score(direct_score, direct_score_scale)
 
     valid = [it for it in items if to_decimal(it.score) is not None]
     if not valid:
         return None
 
-    normalized = [_normalize_to_20(it.score, it.score_scale) for it in valid]
+    normalized = [normalize_score(it.score, it.score_scale) for it in valid]
 
     if mode == GradeComponentMode.EQUAL_AVERAGE:
         total = sum(normalized, start=ZERO)
