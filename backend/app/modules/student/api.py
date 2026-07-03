@@ -10,7 +10,6 @@ from fastapi import APIRouter, Query
 
 from app.common.decimal_utils import display_str
 from app.common.deps import CurrentUser, DbSession
-from app.common.exception.errors import NotFoundError
 from app.modules.student import crud, service
 from app.modules.student.schema import (
     BimestreOverrideIn,
@@ -91,12 +90,18 @@ async def update_grad_requirement(
     state_id: uuid.UUID, payload: GradReqStateUpdateIn, user: CurrentUser, db: DbSession
 ) -> GradReqStateOut:
     profile = await service.get_or_create_profile(db, user)
-    state = await crud.get_grad_req_state(db, state_id)
-    if state is None or state.student_profile_id != profile.id:
-        raise NotFoundError("Requisito no encontrado.")
-    state.state = payload.state
-    await db.flush()
-    return GradReqStateOut.model_validate(state)
+    state, requirement = await service.update_grad_requirement(
+        db, profile, state_id, payload.state
+    )
+    # code/name/type live on the joined GraduationRequirement, not on the state row itself.
+    return GradReqStateOut(
+        id=state.id,
+        graduation_requirement_id=state.graduation_requirement_id,
+        code=requirement.code,
+        name=requirement.name,
+        requirement_type=requirement.requirement_type,
+        state=state.state,
+    )
 
 
 # --- Enrollments and gradebook --------------------------------------------------------------------

@@ -13,7 +13,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.decimal_utils import ZERO, display_round, display_str
-from app.common.enums import Contribution, CourseState, CourseStateSource, GradeComponentMode
+from app.common.enums import (
+    Contribution,
+    CourseState,
+    CourseStateSource,
+    EnglishLevel,
+    GradeComponentMode,
+    GraduationRequirementState,
+    GraduationRequirementType,
+)
 from app.common.exception.errors import ForbiddenError, NotFoundError, ValidationAppError
 from app.domain.grading.grade_calculation import (
     ComponentInput,
@@ -31,6 +39,7 @@ from app.domain.grading.projection import (
 )
 from app.domain.grading.recovery import required_recovery_score
 from app.modules.academic import crud as academic_crud
+from app.modules.academic.model import GraduationRequirement
 from app.modules.evaluation.model import EvaluationComponent, EvaluationScheme
 from app.modules.iam.model import User
 from app.modules.student import crud
@@ -69,8 +78,14 @@ async def get_or_create_profile(db: AsyncSession, user: User) -> StudentProfile:
 
 async def update_profile(db: AsyncSession, user: User, payload: ProfileUpdateIn) -> StudentProfile:
     profile = await get_or_create_profile(db, user)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    fields = payload.model_dump(exclude_unset=True)
+    for field, value in fields.items():
         setattr(profile, field, value)
+    # SUFFICIENCY_B1 *is* having met the English requirement — keep the boolean flag the
+    # simulator's credit-limit rule reads (english_sufficiency) in sync with the level, unless
+    # the caller set it explicitly in this same request (ERS §8.18).
+    if "english_level" in fields and "english_sufficiency" not in fields:
+        profile.english_sufficiency = fields["english_level"] == EnglishLevel.SUFFICIENCY_B1
     await db.flush()
     if profile.current_curriculum_id is not None:
         await provision_graduation_requirements(db, profile)
@@ -100,6 +115,35 @@ async def provision_graduation_requirements(db: AsyncSession, profile: StudentPr
         created = True
     if created:
         await db.flush()
+
+
+async def update_grad_requirement(
+    db: AsyncSession,
+    profile: StudentProfile,
+    state_id: uuid.UUID,
+    new_state: GraduationRequirementState,
+) -> tuple[StudentGraduationRequirementState, GraduationRequirement]:
+    """Update a graduation-requirement state, returning it with its joined requirement.
+
+    Completing the ENGLISH requirement *is* meeting the English sufficiency (ERS §8.18) — keep
+    the profile's ``english_sufficiency``/``english_level`` in sync so the simulator's credit
+    limit reflects it immediately, without the student having to also touch the level selector.
+    """
+    state = await crud.get_grad_req_state(db, state_id)
+    if state is None or state.student_profile_id != profile.id:
+        raise NotFoundError("Requisito no encontrado.")
+    requirement = await crud.get_graduation_requirement(db, state.graduation_requirement_id)
+    if requirement is None:
+        raise NotFoundError("Requisito no encontrado.")
+
+    state.state = new_state
+    if requirement.requirement_type == GraduationRequirementType.ENGLISH:
+        is_completed = new_state == GraduationRequirementState.COMPLETED
+        profile.english_sufficiency = is_completed
+        if is_completed:
+            profile.english_level = EnglishLevel.SUFFICIENCY_B1
+    await db.flush()
+    return state, requirement
 
 
 async def get_progress(db: AsyncSession, profile: StudentProfile) -> ProgressOut:

@@ -126,3 +126,9 @@ async def get_grad_req_state(
     db: AsyncSession, state_id: uuid.UUID
 ) -> StudentGraduationRequirementState | None:
     return await db.get(StudentGraduationRequirementState, state_id)
+
+
+async def get_graduation_requirement(
+    db: AsyncSession, requirement_id: uuid.UUID
+) -> GraduationRequirement | None:
+    return await db.get(GraduationRequirement, requirement_id)

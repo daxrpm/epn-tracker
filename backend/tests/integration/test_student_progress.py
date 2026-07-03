@@ -119,3 +119,35 @@ async def test_setting_curriculum_seeds_graduation_requirements(client, db_sessi
     )
     again = await client.get("/api/v1/student/graduation-requirements", headers=_auth(student))
     assert len(again.json()) == 1
+
+
+async def test_updating_a_graduation_requirement_returns_full_details(client, db_session):
+    curriculum_id, _ = await _seed_malla(client, db_session)
+    student = await _make_user(db_session, "student3@epn.edu.ec")
+    await client.put(
+        "/api/v1/student/profile",
+        json={"current_curriculum_id": curriculum_id},
+        headers=_auth(student),
+    )
+
+    listed = await client.get("/api/v1/student/graduation-requirements", headers=_auth(student))
+    state_id = listed.json()[0]["id"]
+
+    updated = await client.put(
+        f"/api/v1/student/graduation-requirements/{state_id}",
+        json={"state": "COMPLETED"},
+        headers=_auth(student),
+    )
+    assert updated.status_code == 200, updated.text
+    body = updated.json()
+    assert body["state"] == "COMPLETED"
+    # code/name/type come from the joined requirement (regression: used to 500).
+    assert body["code"] == "IEXD200"
+    assert body["name"] == "Suficiencia B1 inglés"
+    assert body["requirement_type"] == "ENGLISH"
+
+    # Completing the ENGLISH requirement syncs the profile's sufficiency flag, since that's what
+    # the simulator's credit-limit rule actually reads (ERS §8.18) — not the requirement state.
+    profile = await client.get("/api/v1/student/profile", headers=_auth(student))
+    assert profile.json()["english_sufficiency"] is True
+    assert profile.json()["english_level"] == "SUFFICIENCY_B1"
