@@ -12,6 +12,7 @@ import { MyCoursesPage } from "@/features/evaluation/pages/MyCoursesPage";
 import { OnboardingPage } from "@/features/onboarding/pages/OnboardingPage";
 import { RequirementsPage } from "@/features/requirements/pages/RequirementsPage";
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
+import { SimulationPage } from "@/features/simulation/pages/SimulationPage";
 import { AppLayout } from "@/layouts/AppLayout";
 import { AuthLayout } from "@/layouts/AuthLayout";
 
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
           { path: "dashboard", element: <DashboardPage /> },
           { path: "onboarding", element: <OnboardingPage /> },
           { path: "curriculum", element: <CurriculumPage /> },
+          { path: "simulacion", element: <SimulationPage /> },
           { path: "notas", element: <MyCoursesPage /> },
           { path: "notas/:curriculumCourseId", element: <GradebookPage /> },
           { path: "requisitos", element: <RequirementsPage /> },

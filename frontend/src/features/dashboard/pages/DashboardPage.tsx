@@ -2,6 +2,7 @@ import {
   ArrowRight,
   BookOpen,
   Calculator,
+  GitBranch,
   GraduationCap,
   ListChecks,
   Loader2,
@@ -100,6 +101,14 @@ export function DashboardPage() {
                 description="Explora tu pénsum por semestre y actualiza tus materias."
                 header={<GradientHeader icon={<GraduationCap className="size-8 text-primary" />} />}
                 icon={<GraduationCap className="size-4 text-muted-foreground" />}
+              />
+            </Link>
+            <Link to="/app/simulacion" className="[&>div]:h-full">
+              <BentoGridItem
+                title="Simulador de matrícula"
+                description="Proyecta tus materias y arma tu próximo semestre según las reglas EPN."
+                header={<GradientHeader icon={<GitBranch className="size-8 text-primary" />} />}
+                icon={<GitBranch className="size-4 text-muted-foreground" />}
               />
             </Link>
             <Link to="/app/notas" className="[&>div]:h-full">

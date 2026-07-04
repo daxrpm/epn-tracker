@@ -1,5 +1,6 @@
 import {
   Calculator,
+  GitBranch,
   LayoutDashboard,
   ListChecks,
   Loader2,
@@ -24,6 +25,7 @@ import { cn } from "@/lib/utils";
 const NAV_LINKS = [
   { label: "Inicio", href: "/app/dashboard", icon: LayoutDashboard },
   { label: "Malla", href: "/app/curriculum", icon: Network },
+  { label: "Simulador", href: "/app/simulacion", icon: GitBranch },
   { label: "Notas", href: "/app/notas", icon: NotebookPen },
   { label: "Requisitos", href: "/app/requisitos", icon: ListChecks },
   { label: "Calculadora", href: "/app/calculadora", icon: Calculator },

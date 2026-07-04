@@ -20,6 +20,7 @@ from app.modules.offering.api import router as offering_router
 from app.modules.public.api import router as public_router
 from app.modules.simulation.api import public_router as simulation_public_router
 from app.modules.simulation.api import router as simulation_router
+from app.modules.simulation.api import student_router as simulation_student_router
 from app.modules.student.api import router as student_router
 
 api_router = APIRouter()
@@ -49,4 +50,5 @@ api_router.include_router(offering_admin_router)
 api_router.include_router(evaluation_router)
 api_router.include_router(student_router)
 api_router.include_router(simulation_router)
+api_router.include_router(simulation_student_router)
 api_router.include_router(simulation_public_router)
