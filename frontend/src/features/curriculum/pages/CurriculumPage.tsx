@@ -131,7 +131,7 @@ export function CurriculumPage() {
             {career?.name ?? "Tu malla académica"}
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Explora las materias por semestre y selecciona una para actualizar tu progreso.
+            Toca una materia para resaltar sus prerrequisitos; tócala de nuevo para cambiar su estado.
           </p>
         </div>
         <Button asChild variant="outline" className="w-fit bg-background/60">

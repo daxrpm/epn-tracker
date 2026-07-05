@@ -12,8 +12,12 @@ import { subjectIcon } from "../subjectIcons";
  * overlay that draws the prerequisite (blue) and corequisite (orange) connectors between cards,
  * mirroring the official EPN malla. Arrows are recomputed from live DOM measurements so they track
  * the real card positions on resize.
+ *
+ * Clicking a course "focuses" it: the course and its whole prerequisite chain stay in color while
+ * everything else dims, so the student can see at a glance what a subject depends on. Clicking the
+ * focused course again opens its state dialog; clicking the empty background clears the focus.
  */
-type Edge = { key: string; d: string; kind: "prereq" | "coreq" };
+type Edge = { key: string; d: string; kind: "prereq" | "coreq"; from: string; to: string };
 
 export function CurriculumMap({
   courses,
@@ -44,9 +48,29 @@ export function CurriculumMap({
   const cardRefs = useRef(new Map<string, HTMLElement>());
   const [edges, setEdges] = useState<Edge[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const [focusedCode, setFocusedCode] = useState<string | null>(null);
 
   // Only draw an arrow when the target course is present (search may filter cards out).
   const present = useMemo(() => new Set(courses.map((c) => c.code)), [courses]);
+
+  // The focused course plus its transitive prerequisites (the "keep in color" set). Null = no focus.
+  const chain = useMemo(() => {
+    if (!focusedCode || !present.has(focusedCode)) return null;
+    const byCode = new Map(courses.map((c) => [c.code, c]));
+    const keep = new Set<string>([focusedCode]);
+    const stack = [focusedCode];
+    while (stack.length > 0) {
+      const current = byCode.get(stack.pop() as string);
+      if (!current) continue;
+      for (const code of current.prerequisite_codes) {
+        if (!keep.has(code)) {
+          keep.add(code);
+          stack.push(code);
+        }
+      }
+    }
+    return keep;
+  }, [focusedCode, courses, present]);
 
   const recompute = useCallback(() => {
     const container = containerRef.current;
@@ -71,6 +95,8 @@ export function CurriculumMap({
           key: `${kind}:${fromCode}->${course.code}`,
           d: `M ${fx} ${fy} C ${fx} ${midY}, ${tx} ${midY}, ${tx} ${ty}`,
           kind,
+          from: fromCode,
+          to: course.code,
         });
       };
       course.prerequisite_codes.forEach((c) => draw(c, "prereq"));
@@ -93,8 +119,16 @@ export function CurriculumMap({
     };
   }, [recompute]);
 
+  function activate(course: CurriculumCourse) {
+    if (focusedCode === course.code) onSelect(course);
+    else setFocusedCode(course.code);
+  }
+
   return (
-    <div className="overflow-x-auto p-3 scrollbar-thin sm:p-4">
+    <div
+      className="overflow-x-auto p-3 scrollbar-thin sm:p-4"
+      onClick={() => setFocusedCode(null)}
+    >
       <div ref={containerRef} className="relative min-w-max">
         <svg
           className="pointer-events-none absolute inset-0"
@@ -126,16 +160,20 @@ export function CurriculumMap({
               <path d="M0,0 L8,4 L0,8 z" fill="#f59e0b" />
             </marker>
           </defs>
-          {edges.map((edge) => (
-            <path
-              key={edge.key}
-              d={edge.d}
-              stroke={edge.kind === "prereq" ? "#3b82f6" : "#f59e0b"}
-              strokeWidth={1.5}
-              strokeOpacity={0.55}
-              markerEnd={`url(#malla-arrow-${edge.kind})`}
-            />
-          ))}
+          {edges.map((edge) => {
+            const active = !chain || (chain.has(edge.from) && chain.has(edge.to));
+            return (
+              <path
+                key={edge.key}
+                d={edge.d}
+                stroke={edge.kind === "prereq" ? "#3b82f6" : "#f59e0b"}
+                strokeWidth={active && chain ? 2 : 1.5}
+                strokeOpacity={0.7}
+                opacity={active ? 1 : 0.08}
+                markerEnd={`url(#malla-arrow-${edge.kind})`}
+              />
+            );
+          })}
         </svg>
 
         <div className="relative flex flex-col gap-6">
@@ -157,7 +195,9 @@ export function CurriculumMap({
                     course={course}
                     state={stateByCourse.get(course.id) ?? "NOT_TAKEN"}
                     hasPrereqWarning={prereqWarnings?.has(course.id) ?? false}
-                    onSelect={onSelect}
+                    dimmed={chain !== null && !chain.has(course.code)}
+                    focused={focusedCode === course.code}
+                    onActivate={activate}
                     registerRef={(el) => {
                       if (el) cardRefs.current.set(course.code, el);
                       else cardRefs.current.delete(course.code);
@@ -177,13 +217,17 @@ function MapCard({
   course,
   state,
   hasPrereqWarning,
-  onSelect,
+  dimmed,
+  focused,
+  onActivate,
   registerRef,
 }: {
   course: CurriculumCourse;
   state: CourseState;
   hasPrereqWarning: boolean;
-  onSelect: (course: CurriculumCourse) => void;
+  dimmed: boolean;
+  focused: boolean;
+  onActivate: (course: CurriculumCourse) => void;
   registerRef: (el: HTMLElement | null) => void;
 }) {
   const stateMeta = COURSE_STATE_META[state];
@@ -193,11 +237,22 @@ function MapCard({
     <button
       ref={registerRef}
       type="button"
-      onClick={() => onSelect(course)}
-      title={hasPrereqWarning ? "Te faltan prerrequisitos para esta materia" : stateMeta.label}
+      onClick={(event) => {
+        event.stopPropagation();
+        onActivate(course);
+      }}
+      title={
+        focused
+          ? "Toca de nuevo para cambiar el estado"
+          : hasPrereqWarning
+            ? "Te faltan prerrequisitos para esta materia"
+            : stateMeta.label
+      }
       className={cn(
-        "group relative z-10 flex min-h-36 flex-col overflow-hidden rounded-lg border text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
+        "group relative z-10 flex min-h-36 flex-col overflow-hidden rounded-lg border text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
         stateMeta.card,
+        dimmed && "opacity-30 grayscale",
+        focused && "ring-2 ring-primary ring-offset-1 ring-offset-background",
       )}
     >
       <div className="flex shrink-0 items-center justify-between border-b border-current/10 px-2.5 py-1.5 text-[10px] text-muted-foreground">
