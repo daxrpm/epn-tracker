@@ -9,6 +9,7 @@ import {
   Network,
   NotebookPen,
   Settings2,
+  ShieldCheck,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -22,13 +23,21 @@ import { useProfile } from "@/features/student/hooks";
 import { useAuthStore } from "@/stores/auth.store";
 import { cn } from "@/lib/utils";
 
-const NAV_LINKS = [
+type NavItem = {
+  label: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  roles?: string[];
+};
+
+const NAV_LINKS: NavItem[] = [
   { label: "Inicio", href: "/app/dashboard", icon: LayoutDashboard },
   { label: "Malla", href: "/app/curriculum", icon: Network },
   { label: "Simulador", href: "/app/simulacion", icon: GitBranch },
   { label: "Notas", href: "/app/notas", icon: NotebookPen },
   { label: "Requisitos", href: "/app/requisitos", icon: ListChecks },
   { label: "Calculadora", href: "/app/calculadora", icon: Calculator },
+  { label: "Usuarios", href: "/app/admin/usuarios", icon: ShieldCheck, roles: ["SUPER_ADMIN"] },
   { label: "Ajustes", href: "/app/ajustes", icon: Settings2 },
 ];
 
@@ -75,7 +84,7 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-border/70 bg-background/90 backdrop-blur-xl md:block">
-        <SidebarContent email={user?.email} onLogout={() => void logout()} />
+        <SidebarContent email={user?.email} role={user?.role} onLogout={() => void logout()} />
       </aside>
 
       <AnimatePresence>
@@ -106,7 +115,7 @@ export function AppLayout() {
               >
                 <X className="size-5" />
               </button>
-              <SidebarContent email={user?.email} onLogout={() => void logout()} />
+              <SidebarContent email={user?.email} role={user?.role} onLogout={() => void logout()} />
             </motion.aside>
           </>
         )}
@@ -145,7 +154,16 @@ export function AppLayout() {
   );
 }
 
-function SidebarContent({ email, onLogout }: { email?: string; onLogout: () => void }) {
+function SidebarContent({
+  email,
+  role,
+  onLogout,
+}: {
+  email?: string;
+  role?: string;
+  onLogout: () => void;
+}) {
+  const links = NAV_LINKS.filter((link) => !link.roles || (role != null && link.roles.includes(role)));
   return (
     <div className="relative flex h-full flex-col overflow-hidden p-4">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,color-mix(in_oklch,var(--foreground)_6%,transparent),transparent_34%)]" />
@@ -158,7 +176,7 @@ function SidebarContent({ email, onLogout }: { email?: string; onLogout: () => v
       </Link>
 
       <nav className="relative mt-7 space-y-1" aria-label="Principal">
-        {NAV_LINKS.map(({ label, href, icon: Icon }) => (
+        {links.map(({ label, href, icon: Icon }) => (
           <NavLink
             key={href}
             to={href}

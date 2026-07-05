@@ -1,17 +1,23 @@
-"""Authentication endpoints (ERS §17.1)."""
+"""Authentication endpoints (ERS §17.1) and superadmin user management (ERS §5.4)."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+import uuid
 
-from app.common.deps import CurrentUser, DbSession
-from app.modules.iam import service
+from fastapi import APIRouter, Depends
+
+from app.common.deps import CurrentUser, DbSession, require_super_admin
+from app.modules.iam import admin_service, service
 from app.modules.iam.schema import (
+    AdminUserCreateIn,
+    AdminUserOut,
     LoginIn,
     LogoutIn,
     MessageOut,
     RefreshIn,
     RequestCodeIn,
+    RoleUpdateIn,
+    StatusUpdateIn,
     TokenOut,
     UserOut,
     VerifyCodeIn,
@@ -53,3 +59,51 @@ async def logout(payload: LogoutIn) -> MessageOut:
 @router.get("/me", response_model=UserOut)
 async def me(user: CurrentUser) -> UserOut:
     return UserOut.model_validate(user)
+
+
+# --- Superadmin: user & role management ---------------------------------------------------------
+# The whole router requires SUPER_ADMIN; the service enforces self-protection and last-superadmin.
+
+admin_users_router = APIRouter(
+    prefix="/admin/users",
+    tags=["admin-users"],
+    dependencies=[Depends(require_super_admin)],
+)
+
+
+@admin_users_router.get("", response_model=list[AdminUserOut])
+async def list_users(db: DbSession) -> list[AdminUserOut]:
+    return [AdminUserOut.model_validate(u) for u in await admin_service.list_users(db)]
+
+
+@admin_users_router.post("", response_model=AdminUserOut)
+async def create_user(
+    payload: AdminUserCreateIn, actor: CurrentUser, db: DbSession
+) -> AdminUserOut:
+    return AdminUserOut.model_validate(await admin_service.create_user(db, actor, payload))
+
+
+@admin_users_router.patch("/{user_id}/role", response_model=AdminUserOut)
+async def update_role(
+    user_id: uuid.UUID, payload: RoleUpdateIn, actor: CurrentUser, db: DbSession
+) -> AdminUserOut:
+    return AdminUserOut.model_validate(
+        await admin_service.update_role(db, actor, user_id, payload.role)
+    )
+
+
+@admin_users_router.patch("/{user_id}/status", response_model=AdminUserOut)
+async def update_status(
+    user_id: uuid.UUID, payload: StatusUpdateIn, actor: CurrentUser, db: DbSession
+) -> AdminUserOut:
+    return AdminUserOut.model_validate(
+        await admin_service.update_status(db, actor, user_id, payload.status)
+    )
+
+
+@admin_users_router.delete("/{user_id}")
+async def delete_user(
+    user_id: uuid.UUID, actor: CurrentUser, db: DbSession
+) -> dict[str, bool]:
+    await admin_service.delete_user(db, actor, user_id)
+    return {"deleted": True}

@@ -13,6 +13,7 @@ import { OnboardingPage } from "@/features/onboarding/pages/OnboardingPage";
 import { RequirementsPage } from "@/features/requirements/pages/RequirementsPage";
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
 import { SimulationPage } from "@/features/simulation/pages/SimulationPage";
+import { UsersPage } from "@/features/admin/pages/UsersPage";
 import { AppLayout } from "@/layouts/AppLayout";
 import { AuthLayout } from "@/layouts/AuthLayout";
 
@@ -47,6 +48,7 @@ export const router = createBrowserRouter([
           { path: "notas/:curriculumCourseId", element: <GradebookPage /> },
           { path: "requisitos", element: <RequirementsPage /> },
           { path: "calculadora", element: <CalculatorPage /> },
+          { path: "admin/usuarios", element: <UsersPage /> },
           { path: "ajustes", element: <SettingsPage /> },
         ],
       },

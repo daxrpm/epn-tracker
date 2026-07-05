@@ -14,6 +14,7 @@ from app.modules.academic.api import admin_router as academic_admin_router
 from app.modules.academic.api import period_admin_router as academic_period_admin_router
 from app.modules.academic.api import router as academic_router
 from app.modules.evaluation.api import router as evaluation_router
+from app.modules.iam.api import admin_users_router
 from app.modules.iam.api import router as iam_router
 from app.modules.offering.api import admin_router as offering_admin_router
 from app.modules.offering.api import router as offering_router
@@ -41,6 +42,7 @@ async def readiness(db: DbSession) -> dict[str, str]:
 
 
 api_router.include_router(iam_router)
+api_router.include_router(admin_users_router)
 api_router.include_router(public_router)
 api_router.include_router(academic_router)
 api_router.include_router(academic_admin_router)

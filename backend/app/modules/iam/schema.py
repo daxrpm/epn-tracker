@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from app.common.enums import UserRole
+from app.common.enums import UserRole, UserStatus
 from app.core.conf import settings
 
 
@@ -73,3 +74,43 @@ class UserOut(BaseModel):
     is_verified: bool
 
     model_config = {"from_attributes": True}
+
+
+# --- Superadmin: user & role management (ERS §5.4) ----------------------------------------------
+
+
+class AdminUserOut(BaseModel):
+    id: uuid.UUID
+    email: str
+    role: UserRole
+    status: UserStatus
+    is_verified: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AdminUserCreateIn(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    role: UserRole = UserRole.ADMIN
+
+    @field_validator("email")
+    @classmethod
+    def _domain(cls, v: str) -> str:
+        return _validate_epn_domain(v)
+
+
+class RoleUpdateIn(BaseModel):
+    role: UserRole
+
+
+class StatusUpdateIn(BaseModel):
+    status: UserStatus = Field(description="ACTIVE o SUSPENDED")
+
+    @field_validator("status")
+    @classmethod
+    def _not_deleted(cls, v: UserStatus) -> UserStatus:
+        if v == UserStatus.DELETED:
+            raise ValueError("Usa el endpoint DELETE para eliminar una cuenta.")
+        return v
