@@ -37,7 +37,7 @@ const NAV_LINKS: NavItem[] = [
   { label: "Notas", href: "/app/notas", icon: NotebookPen },
   { label: "Requisitos", href: "/app/requisitos", icon: ListChecks },
   { label: "Calculadora", href: "/app/calculadora", icon: Calculator },
-  { label: "Usuarios", href: "/app/admin/usuarios", icon: ShieldCheck, roles: ["SUPER_ADMIN"] },
+  { label: "Consola", href: "/app/admin", icon: ShieldCheck, roles: ["ADMIN", "SUPER_ADMIN"] },
   { label: "Ajustes", href: "/app/ajustes", icon: Settings2 },
 ];
 

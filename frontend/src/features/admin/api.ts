@@ -46,3 +46,38 @@ export async function updateUserStatus(
 export async function deleteUser(id: string): Promise<void> {
   await apiClient.delete(`/admin/users/${id}`);
 }
+
+// --- Admin content editing (courses, mallas, requisitos) ----------------------------------------
+
+export interface CurriculumCourseUpdate {
+  reference_term?: number;
+  credits?: string;
+  hours?: number;
+  is_required?: boolean;
+}
+
+export interface RequirementCreate {
+  curriculum_course_id: string;
+  required_curriculum_course_id: string;
+  requirement_type: "PREREQUISITE" | "COREQUISITE";
+}
+
+export async function updateCurriculumCourse(
+  id: string,
+  patch: CurriculumCourseUpdate,
+): Promise<void> {
+  await apiClient.patch(`/admin/curriculum-courses/${id}`, patch);
+}
+
+export async function updateCourseName(courseId: string, name: string): Promise<void> {
+  await apiClient.patch(`/admin/courses/${courseId}`, { name });
+}
+
+export async function addRequirement(payload: RequirementCreate): Promise<{ id: string }> {
+  const { data } = await apiClient.post<{ id: string }>("/admin/course-requirements", payload);
+  return data;
+}
+
+export async function removeRequirement(id: string): Promise<void> {
+  await apiClient.delete(`/admin/course-requirements/${id}`);
+}

@@ -36,6 +36,9 @@ import { useBulkCourseStates, useCourseStates, useProfile } from "@/features/stu
 import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
+import { AdminCourseEditor } from "@/features/admin/components/AdminCourseEditor";
+import { useAuthStore } from "@/stores/auth.store";
+
 import type { CurriculumCourse } from "../api";
 import { CurriculumMap } from "../components/CurriculumMap";
 import { COURSE_STATE_META, COURSE_STATE_ORDER, UNIT_META, courseHours } from "../constants";
@@ -51,6 +54,8 @@ export function CurriculumPage() {
   const careersQuery = useCareers();
   const statesQuery = useCourseStates();
   const bulkStates = useBulkCourseStates();
+  const role = useAuthStore((state) => state.user?.role);
+  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
 
   const [selected, setSelected] = useState<CurriculumCourse | null>(null);
   const [search, setSearch] = useState("");
@@ -180,6 +185,7 @@ export function CurriculumPage() {
         state={selected ? stateByCourse.get(selected.id) ?? "NOT_TAKEN" : "NOT_TAKEN"}
         missingPrereqs={missingPrereqs}
         pending={bulkStates.isPending}
+        isAdmin={isAdmin}
         onClose={() => setSelected(null)}
         onChange={changeState}
       />
@@ -229,6 +235,7 @@ function CourseDialog({
   state,
   missingPrereqs,
   pending,
+  isAdmin,
   onClose,
   onChange,
 }: {
@@ -236,6 +243,7 @@ function CourseDialog({
   state: CourseState;
   missingPrereqs: string[];
   pending: boolean;
+  isAdmin: boolean;
   onClose: () => void;
   onChange: (course: CurriculumCourse, state: CourseState) => Promise<void>;
 }) {
@@ -289,6 +297,7 @@ function CourseDialog({
                   </Link>
                 </Button>
               )}
+              {isAdmin && <AdminCourseEditor course={course} onDone={onClose} />}
             </div>
           </>
         )}
