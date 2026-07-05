@@ -260,7 +260,12 @@
       "hours": 144,
       "reference_term": 4,
       "organization_unit": "PROFESSIONAL",
-      "requirements": []
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ICCD343"
+        }
+      ]
     },
     {
       "code": "CSHD400",
@@ -356,7 +361,12 @@
       "hours": 144,
       "reference_term": 6,
       "organization_unit": "PROFESSIONAL",
-      "requirements": []
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ISWD523"
+        }
+      ]
     },
     {
       "code": "ISWD622",
@@ -636,7 +646,12 @@
       "hours": 240,
       "reference_term": 9,
       "organization_unit": "CAPSTONE",
-      "requirements": []
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "TITD104"
+        }
+      ]
     }
   ],
   "graduation_requirements": [

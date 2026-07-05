@@ -148,7 +148,12 @@
       "hours": 144,
       "reference_term": 3,
       "organization_unit": "BASIC",
-      "requirements": []
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "MATD123"
+        }
+      ]
     },
     {
       "code": "ICCD323",
@@ -157,7 +162,12 @@
       "hours": 144,
       "reference_term": 3,
       "organization_unit": "PROFESSIONAL",
-      "requirements": []
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ICCD244"
+        }
+      ]
     },
     {
       "code": "ICCD343",

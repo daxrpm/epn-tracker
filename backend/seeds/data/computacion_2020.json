@@ -191,7 +191,12 @@
       "hours": 144,
       "reference_term": 3,
       "organization_unit": "PROFESSIONAL",
-      "requirements": []
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ICCD233"
+        }
+      ]
     },
     {
       "code": "CSHD300",
@@ -529,7 +534,12 @@
       "hours": 192,
       "reference_term": 8,
       "organization_unit": "PROFESSIONAL",
-      "requirements": []
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ISWD743"
+        }
+      ]
     },
     {
       "code": "ICCD823",
@@ -538,7 +548,12 @@
       "hours": 144,
       "reference_term": 8,
       "organization_unit": "PROFESSIONAL",
-      "requirements": []
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "ICCD654"
+        }
+      ]
     },
     {
       "code": "ICCD833",
@@ -602,7 +617,12 @@
       "hours": 240,
       "reference_term": 9,
       "organization_unit": "CAPSTONE",
-      "requirements": []
+      "requirements": [
+        {
+          "type": "PREREQUISITE",
+          "course_code": "TITD104"
+        }
+      ]
     },
     {
       "code": "PRLD105",

@@ -37,7 +37,7 @@ import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 import type { CurriculumCourse } from "../api";
-import { CurriculumGrid } from "../components/CurriculumGrid";
+import { CurriculumMap } from "../components/CurriculumMap";
 import { COURSE_STATE_META, COURSE_STATE_ORDER, UNIT_META, courseHours } from "../constants";
 import { useCareers, useCurricula, useCurriculumCourses } from "../hooks";
 import { buildCodeStateMap, coursesWithUnmetPrereqs, unmetPrerequisites } from "../prerequisites";
@@ -156,7 +156,7 @@ export function CurriculumPage() {
               className="h-10 bg-background/70 pl-9"
             />
           </div>
-          <Legend />
+          <Legend showArrows />
         </div>
 
         {coursesQuery.isLoading ? (
@@ -166,7 +166,7 @@ export function CurriculumPage() {
             No encontramos materias con esa búsqueda.
           </div>
         ) : (
-          <CurriculumGrid
+          <CurriculumMap
             courses={filteredCourses}
             stateByCourse={stateByCourse}
             onSelect={setSelected}
@@ -199,7 +199,7 @@ function SummaryCard({ icon: Icon, label, value }: { icon: typeof BookOpen; labe
   );
 }
 
-function Legend() {
+function Legend({ showArrows = false }: { showArrows?: boolean }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {COURSE_STATE_ORDER.slice(0, 3).map((state) => {
@@ -210,6 +210,16 @@ function Legend() {
           </Badge>
         );
       })}
+      {showArrows && (
+        <>
+          <Badge variant="outline" className="gap-1.5 bg-background/50 font-normal">
+            <span className="h-0.5 w-4 rounded-full bg-blue-500" /> Prerrequisito
+          </Badge>
+          <Badge variant="outline" className="gap-1.5 bg-background/50 font-normal">
+            <span className="h-0.5 w-4 rounded-full bg-amber-500" /> Correquisito
+          </Badge>
+        </>
+      )}
     </div>
   );
 }

@@ -19,6 +19,7 @@ from app.database.models import Base  # noqa: F401  (registers every model)
 from app.modules.academic import service as academic_service
 from app.modules.academic.model import (
     Career,
+    Course,
     CourseRequirement,
     Curriculum,
     CurriculumCourse,
@@ -152,13 +153,87 @@ async def replace_incomplete_curriculum(session, payload: CurriculumImportIn) ->
     return True
 
 
-async def main(*, replace_incomplete: bool = False) -> None:
+async def sync_requirements(session, payload: CurriculumImportIn) -> int | None:
+    """Re-apply only the prerequisite/corequisite edges of an existing curriculum.
+
+    Unlike ``replace_incomplete_curriculum`` this never deletes curriculum courses, so it is safe
+    to run when students already have progress or enrollments: it rewrites ``course_requirements``
+    (matched by course code) while every ``curriculum_courses`` row — and the student states that
+    reference them — stays in place. Returns the number of requirement edges written, or ``None``
+    when the curriculum does not exist.
+    """
+    curriculum = (
+        await session.execute(
+            select(Curriculum)
+            .join(Career, Career.id == Curriculum.career_id)
+            .join(Faculty, Faculty.id == Career.faculty_id)
+            .join(Institution, Institution.id == Faculty.institution_id)
+            .where(
+                Institution.acronym == payload.institution.acronym,
+                Career.name == payload.career.name,
+                Curriculum.pensum_year == payload.curriculum.pensum_year,
+            )
+        )
+    ).scalar_one_or_none()
+    if curriculum is None:
+        return None
+
+    rows = (
+        await session.execute(
+            select(Course.code, CurriculumCourse)
+            .join(Course, Course.id == CurriculumCourse.course_id)
+            .where(CurriculumCourse.curriculum_id == curriculum.id)
+        )
+    ).all()
+    code_to_cc = dict(rows)
+
+    missing = {
+        req.course_code
+        for course in payload.courses
+        for req in course.requirements
+        if req.course_code not in code_to_cc
+    } | {course.code for course in payload.courses if course.code not in code_to_cc}
+    if missing:
+        raise ValidationAppError(
+            f"El seed referencia códigos que no existen en la malla cargada: {sorted(missing)}"
+        )
+
+    await session.execute(
+        delete(CourseRequirement).where(
+            CourseRequirement.curriculum_course_id.in_([cc.id for cc in code_to_cc.values()])
+        )
+    )
+    await session.flush()
+    academic_service._link_requirements(session, code_to_cc, payload)  # noqa: SLF001
+    await session.flush()
+    return sum(len(course.requirements) for course in payload.courses)
+
+
+async def sync_requirements_file(path: pathlib.Path) -> None:
+    payload = CurriculumImportIn.model_validate_json(path.read_text(encoding="utf-8"))
+    async with async_session_factory() as session:
+        try:
+            count = await sync_requirements(session, payload)
+            if count is None:
+                print(f"Skipped {path.name}: curriculum not found (import it first)")
+                return
+            await session.commit()
+            print(f"Synced {path.name}: {count} prerequisite/corequisite edges re-applied")
+        except ValidationAppError as exc:
+            await session.rollback()
+            print(f"Skipped {path.name}: {exc.message}")
+
+
+async def main(*, replace_incomplete: bool = False, sync_reqs: bool = False) -> None:
     files = sorted(DATA_DIR.glob("*.json"))
     if not files:
         print("No seed files found in", DATA_DIR)
         return
     for path in files:
-        await load_file(path, replace_incomplete=replace_incomplete)
+        if sync_reqs:
+            await sync_requirements_file(path)
+        else:
+            await load_file(path, replace_incomplete=replace_incomplete)
 
 
 if __name__ == "__main__":
@@ -168,5 +243,12 @@ if __name__ == "__main__":
         action="store_true",
         help="replace count-mismatched development seeds when they have no student progress",
     )
+    parser.add_argument(
+        "--sync-requirements",
+        action="store_true",
+        help="re-apply only prerequisite/corequisite edges to existing curricula (keeps progress)",
+    )
     args = parser.parse_args()
-    asyncio.run(main(replace_incomplete=args.replace_incomplete))
+    asyncio.run(
+        main(replace_incomplete=args.replace_incomplete, sync_reqs=args.sync_requirements)
+    )

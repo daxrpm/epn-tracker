@@ -1,6 +1,6 @@
 # Continuidad: extracción, seeds y carga de mallas FIS
 
-Estado verificado: **2026-07-01**.
+Estado verificado: **2026-07-04**.
 
 Este documento permite retomar el trabajo sin depender del historial de conversación. Describe qué
 se extrajo, cómo se extrajo, qué quedó cargado en PostgreSQL, cómo reconstruirlo y qué conviene
@@ -12,10 +12,13 @@ Las cuatro carreras están creadas en la base local y sus pénsums están activo
 
 | Carrera | Pénsum | Entradas curriculares | Créditos | Prerrequisitos |
 |---|---:|---:|---:|---:|
-| Computación | 2020 | 50 | 135 | 35 |
-| Software | 2020 | 51 | 135 | 33 |
-| Sistemas de Información | 2023 | 51 | 135 | 24 |
-| Ciencia de Datos e Inteligencia Artificial | 2023 | 52 | 135 | 24 |
+| Computación | 2020 | 50 | 135 | 39 |
+| Software | 2020 | 51 | 135 | 36 |
+| Sistemas de Información | 2023 | 51 | 135 | 26 |
+| Ciencia de Datos e Inteligencia Artificial | 2023 | 52 | 135 | 27 |
+
+> Las cifras de prerrequisitos subieron respecto a la extracción vectorial inicial tras la
+> **corrección manual del grafo** (ver sección “Corrección del grafo de prerrequisitos”).
 
 Todas tienen:
 
@@ -114,6 +117,44 @@ Esta es la principal revisión de datos pendiente: los colores de las franjas de
 clasificación más fina y conviene contrastarla materia por materia antes de usar la unidad
 curricular para reglas de negocio críticas.
 
+## Corrección del grafo de prerrequisitos
+
+La extracción puramente vectorial es incompleta: en mallas con muchas líneas que se cruzan, los
+extremos de las flechas caen lejos del centro de las tarjetas y varias aristas se pierden (por eso
+materias de 8.º/9.º quedaban sin prerrequisito y el simulador las habilitaba de más). El grafo se
+revisó y corrigió a mano contra las **imágenes oficiales de cada malla**:
+
+- **Computación 2020** y **Software 2020**: verificadas flecha por flecha contra las fotos provistas
+  por el usuario. Se rellenaron los vacíos confirmados (p. ej. `ICCD814` Modelos y Simulación ←
+  `ISWD743` Business Intelligence, que estaba vacío).
+- **Sistemas de Información 2023** y **Ciencia de Datos e IA 2023**: corregidas desde los PDFs
+  vectoriales renderizados a alta resolución. Se añadieron con alta confianza: (a) la secuencia
+  troncal común de CS/matemáticas (Prog I→II, EDA I→II, etc.), (b) las **cajas-etiqueta de
+  prerrequisito** que las propias mallas dibujan sobre algunas tarjetas (p. ej. `ICCD523`←`ICCD442`),
+  y (c) las cadenas verticales evidentes (I→II). Las flechas diagonales ambiguas de la franja
+  profesional (ISID/IDSD) se dejaron **sin asignar** en lugar de inventarlas: quedan pendientes de
+  verificación con imágenes de esas dos carreras.
+
+Criterio: para datos académicos, **vacío es preferible a incorrecto**. Un prerrequisito faltante no
+introduce un bloqueo falso; uno inventado sí.
+
+### Re-sincronización segura para progreso
+
+`--replace-incomplete` borra y recrea las materias del pénsum, por lo que **se niega a correr si hay
+progreso o matrículas**. Para aplicar solo las correcciones del grafo a una base que ya tiene
+estados de estudiante, usar el modo que reescribe únicamente las aristas
+`course_requirements` (empareja por código de materia y conserva cada `curriculum_courses` y los
+`student_course_states` que las referencian):
+
+```bash
+cd backend
+uv run python -m seeds.loader --sync-requirements
+```
+
+Implementado en `sync_requirements` / `sync_requirements_file`
+([`backend/seeds/loader.py`](../backend/seeds/loader.py)); cubierto por
+[`backend/tests/integration/test_requirement_sync.py`](../backend/tests/integration/test_requirement_sync.py).
+
 ## Regeneración y validación
 
 Desde `backend/`:
@@ -202,11 +243,16 @@ PostgreSQL: 4 carreras, 4 pénsums, 204 entradas curriculares, 116 prerrequisito
 
 ## Próximos pasos recomendados
 
-1. Revisar visualmente la clasificación `organization_unit` contra las franjas de color oficiales.
-2. Añadir un test de snapshot del conjunto de aristas por carrera para detectar cambios geométricos
+1. Verificar los prerrequisitos de la franja profesional (ISID/IDSD) de Sistemas de Información y
+   Ciencia de Datos con imágenes oficiales de esas dos carreras, y completar los que quedaron sin
+   asignar.
+2. Revisar visualmente la clasificación `organization_unit` contra las franjas de color oficiales.
+3. Añadir un test de snapshot del conjunto de aristas por carrera para detectar cambios geométricos
    si se reemplazan los PDFs.
-3. Dibujar conectores de prerrequisitos en la UI; los datos ya están disponibles en
-   `prerequisite_codes`.
 4. Añadir filtro de malla por estado y una vista de “materias desbloqueadas”.
 5. Probar el drawer en iOS Safari y Android Chrome reales.
+
+> Los conectores de prerrequisito/correquisito ya se dibujan en la malla interactiva
+> ([`CurriculumMap.tsx`](../frontend/src/features/curriculum/components/CurriculumMap.tsx)),
+> con un overlay SVG que mide las tarjetas en vivo (azul = prerrequisito, naranja = correquisito).
 
