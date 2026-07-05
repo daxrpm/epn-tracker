@@ -78,6 +78,33 @@ async def search_courses(db: AsyncSession, query: str, limit: int = 20) -> Seque
     return (await db.execute(stmt)).scalars().all()
 
 
+async def get_curriculum_course(
+    db: AsyncSession, curriculum_course_id: uuid.UUID
+) -> CurriculumCourse | None:
+    return await db.get(CurriculumCourse, curriculum_course_id)
+
+
+async def get_course_requirement(
+    db: AsyncSession, requirement_id: uuid.UUID
+) -> CourseRequirement | None:
+    return await db.get(CourseRequirement, requirement_id)
+
+
+async def find_requirement(
+    db: AsyncSession,
+    *,
+    curriculum_course_id: uuid.UUID,
+    required_curriculum_course_id: uuid.UUID,
+    requirement_type,
+) -> CourseRequirement | None:
+    stmt = select(CourseRequirement).where(
+        CourseRequirement.curriculum_course_id == curriculum_course_id,
+        CourseRequirement.required_curriculum_course_id == required_curriculum_course_id,
+        CourseRequirement.requirement_type == requirement_type,
+    )
+    return (await db.execute(stmt)).scalar_one_or_none()
+
+
 async def requirements_for_curriculum(
     db: AsyncSession, curriculum_course_ids: list[uuid.UUID]
 ) -> Sequence[CourseRequirement]:

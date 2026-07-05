@@ -75,6 +75,36 @@ class CurriculumCourseOut(BaseModel):
     corequisite_codes: list[str] = []
 
 
+# --- Admin content editing (ERS §17.3) ----------------------------------------------------------
+
+
+class CourseUpdateIn(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    default_credits: Decimal | None = Field(default=None, ge=0, le=30)
+
+
+class CurriculumCourseUpdateIn(BaseModel):
+    reference_term: int | None = Field(default=None, ge=1, le=20)
+    credits: Decimal | None = Field(default=None, ge=0, le=30)
+    hours: int | None = Field(default=None, ge=0, le=2000)
+    is_required: bool | None = None
+    organization_unit: OrganizationUnit | None = None
+
+
+class RequirementCreateIn(BaseModel):
+    curriculum_course_id: uuid.UUID
+    required_curriculum_course_id: uuid.UUID
+    requirement_type: RequirementType = RequirementType.PREREQUISITE
+
+
+class RequirementOut(BaseModel):
+    id: uuid.UUID
+    curriculum_course_id: uuid.UUID
+    required_curriculum_course_id: uuid.UUID
+    requirement_type: RequirementType
+    model_config = {"from_attributes": True}
+
+
 # --- Academic periods (ERS §12.9) -----------------------------------------------------------------
 
 
@@ -104,6 +134,11 @@ class AcademicPeriodUpdateIn(BaseModel):
     starts_on: str | None = None
     ends_on: str | None = None
     is_current: bool | None = None
+
+
+class CareerUpdateIn(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    degree_title: str | None = Field(default=None, min_length=1, max_length=255)
 
 
 # --- Curriculum import (input, ERS §14.2) ---------------------------------------------------------

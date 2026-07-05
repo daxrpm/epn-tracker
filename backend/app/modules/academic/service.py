@@ -31,12 +31,17 @@ from app.modules.academic.model import (
 from app.modules.academic.schema import (
     AcademicPeriodCreateIn,
     AcademicPeriodUpdateIn,
+    CareerUpdateIn,
+    CourseUpdateIn,
+    CurriculumCourseUpdateIn,
     CurriculumImportIn,
     ImportCommitOut,
     ImportGraduationRequirement,
     ImportIssue,
     ImportValidationOut,
+    RequirementCreateIn,
 )
+from app.modules.audit import crud as audit_crud
 
 _CREDIT_TOLERANCE = Decimal("0.001")
 
@@ -392,3 +397,164 @@ async def _ensure_curriculum_is_new(
     )
     if existing.scalar_one_or_none() is not None:
         raise ValidationAppError(f"Ya existe un pénsum {pensum_year} para esta carrera.")
+
+
+# --- Admin content editing (ERS §17.3): direct edits by admins, each audited ---
+
+
+async def update_career(
+    db: AsyncSession, actor_id: uuid.UUID, career_id: uuid.UUID, payload: CareerUpdateIn
+) -> Career:
+    career = await crud.get_career(db, career_id)
+    if career is None:
+        raise NotFoundError("Carrera no encontrada.")
+    before = {"name": career.name, "degree_title": career.degree_title}
+    if payload.name is not None:
+        career.name = payload.name
+    if payload.degree_title is not None:
+        career.degree_title = payload.degree_title
+    await db.flush()
+    await audit_crud.record(
+        db,
+        actor_user_id=actor_id,
+        action="CAREER_UPDATE",
+        entity_type="career",
+        entity_id=str(career.id),
+        before=before,
+        after={"name": career.name, "degree_title": career.degree_title},
+    )
+    return career
+
+
+async def update_course(
+    db: AsyncSession, actor_id: uuid.UUID, course_id: uuid.UUID, payload: CourseUpdateIn
+) -> Course:
+    course = await crud.get_course(db, course_id)
+    if course is None:
+        raise NotFoundError("Materia no encontrada.")
+    before = {"name": course.name, "default_credits": str(course.default_credits)}
+    if payload.name is not None:
+        course.name = payload.name
+        course.normalized_name = normalize_name(payload.name)
+    if payload.default_credits is not None:
+        course.default_credits = payload.default_credits
+    await db.flush()
+    await audit_crud.record(
+        db,
+        actor_user_id=actor_id,
+        action="COURSE_UPDATE",
+        entity_type="course",
+        entity_id=str(course.id),
+        before=before,
+        after={"name": course.name, "default_credits": str(course.default_credits)},
+    )
+    return course
+
+
+async def update_curriculum_course(
+    db: AsyncSession,
+    actor_id: uuid.UUID,
+    curriculum_course_id: uuid.UUID,
+    payload: CurriculumCourseUpdateIn,
+) -> CurriculumCourse:
+    cc = await crud.get_curriculum_course(db, curriculum_course_id)
+    if cc is None:
+        raise NotFoundError("Materia de la malla no encontrada.")
+    before = {
+        "reference_term": cc.reference_term,
+        "credits": str(cc.credits),
+        "hours": cc.hours,
+        "is_required": cc.is_required,
+        "organization_unit": cc.organization_unit.value,
+    }
+    if payload.reference_term is not None:
+        cc.reference_term = payload.reference_term
+    if payload.credits is not None:
+        cc.credits = payload.credits
+    if payload.hours is not None:
+        cc.hours = payload.hours
+    if payload.is_required is not None:
+        cc.is_required = payload.is_required
+    if payload.organization_unit is not None:
+        cc.organization_unit = payload.organization_unit
+    await db.flush()
+    await audit_crud.record(
+        db,
+        actor_user_id=actor_id,
+        action="CURRICULUM_COURSE_UPDATE",
+        entity_type="curriculum_course",
+        entity_id=str(cc.id),
+        before=before,
+        after={
+            "reference_term": cc.reference_term,
+            "credits": str(cc.credits),
+            "hours": cc.hours,
+            "is_required": cc.is_required,
+            "organization_unit": cc.organization_unit.value,
+        },
+    )
+    return cc
+
+
+async def add_requirement(
+    db: AsyncSession, actor_id: uuid.UUID, payload: RequirementCreateIn
+) -> CourseRequirement:
+    target = await crud.get_curriculum_course(db, payload.curriculum_course_id)
+    required = await crud.get_curriculum_course(db, payload.required_curriculum_course_id)
+    if target is None or required is None:
+        raise NotFoundError("Materia de la malla no encontrada.")
+    if target.id == required.id:
+        raise ValidationAppError("Una materia no puede ser su propio requisito.")
+    if target.curriculum_id != required.curriculum_id:
+        raise ValidationAppError("Ambas materias deben pertenecer a la misma malla.")
+    existing = await crud.find_requirement(
+        db,
+        curriculum_course_id=target.id,
+        required_curriculum_course_id=required.id,
+        requirement_type=payload.requirement_type,
+    )
+    if existing is not None:
+        raise ConflictError("Ese requisito ya existe.")
+    requirement = CourseRequirement(
+        curriculum_course_id=target.id,
+        required_curriculum_course_id=required.id,
+        requirement_type=payload.requirement_type,
+    )
+    db.add(requirement)
+    await db.flush()
+    await audit_crud.record(
+        db,
+        actor_user_id=actor_id,
+        action="REQUIREMENT_ADD",
+        entity_type="course_requirement",
+        entity_id=str(requirement.id),
+        after={
+            "curriculum_course_id": str(target.id),
+            "required_curriculum_course_id": str(required.id),
+            "requirement_type": payload.requirement_type.value,
+        },
+    )
+    return requirement
+
+
+async def remove_requirement(
+    db: AsyncSession, actor_id: uuid.UUID, requirement_id: uuid.UUID
+) -> None:
+    requirement = await crud.get_course_requirement(db, requirement_id)
+    if requirement is None:
+        raise NotFoundError("Requisito no encontrado.")
+    before = {
+        "curriculum_course_id": str(requirement.curriculum_course_id),
+        "required_curriculum_course_id": str(requirement.required_curriculum_course_id),
+        "requirement_type": requirement.requirement_type.value,
+    }
+    await db.delete(requirement)
+    await db.flush()
+    await audit_crud.record(
+        db,
+        actor_user_id=actor_id,
+        action="REQUIREMENT_REMOVE",
+        entity_type="course_requirement",
+        entity_id=str(requirement_id),
+        before=before,
+    )

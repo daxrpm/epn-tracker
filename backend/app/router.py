@@ -11,6 +11,7 @@ from sqlalchemy import text
 from app.common.deps import DbSession
 from app.database.redis import redis_client
 from app.modules.academic.api import admin_router as academic_admin_router
+from app.modules.academic.api import content_admin_router as academic_content_admin_router
 from app.modules.academic.api import period_admin_router as academic_period_admin_router
 from app.modules.academic.api import router as academic_router
 from app.modules.evaluation.api import router as evaluation_router
@@ -46,6 +47,7 @@ api_router.include_router(admin_users_router)
 api_router.include_router(public_router)
 api_router.include_router(academic_router)
 api_router.include_router(academic_admin_router)
+api_router.include_router(academic_content_admin_router)
 api_router.include_router(academic_period_admin_router)
 api_router.include_router(offering_router)
 api_router.include_router(offering_admin_router)

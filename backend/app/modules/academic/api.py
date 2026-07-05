@@ -7,7 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 
-from app.common.deps import DbSession, require_admin
+from app.common.deps import CurrentUser, DbSession, require_admin
 from app.common.enums import RequirementType
 from app.common.exception.errors import NotFoundError
 from app.modules.academic import crud, service
@@ -16,14 +16,19 @@ from app.modules.academic.schema import (
     AcademicPeriodOut,
     AcademicPeriodUpdateIn,
     CareerOut,
+    CareerUpdateIn,
     CourseOut,
+    CourseUpdateIn,
     CurriculumCourseOut,
+    CurriculumCourseUpdateIn,
     CurriculumImportIn,
     CurriculumOut,
     FacultyOut,
     ImportCommitOut,
     ImportValidationOut,
     InstitutionOut,
+    RequirementCreateIn,
+    RequirementOut,
 )
 
 router = APIRouter(tags=["academic"])
@@ -173,3 +178,91 @@ async def validate_curriculum_import(payload: CurriculumImportIn) -> ImportValid
 )
 async def commit_curriculum_import(payload: CurriculumImportIn, db: DbSession) -> ImportCommitOut:
     return await service.commit_import(db, payload)
+
+
+# --- Admin: direct content editing (courses, mallas, requisitos) ---
+# Admins edit these directly, no community approval (ERS §17.3); every change is audited.
+
+content_admin_router = APIRouter(
+    prefix="/admin", tags=["admin-academic"], dependencies=[Depends(require_admin)]
+)
+
+
+async def _curriculum_course_out(db: DbSession, cc) -> CurriculumCourseOut:
+    course = await crud.get_course(db, cc.course_id)
+    reqs = await crud.requirements_for_curriculum(db, [cc.id])
+    code_of: dict = {}
+    for req in reqs:
+        required_cc = await crud.get_curriculum_course(db, req.required_curriculum_course_id)
+        if required_cc is not None:
+            rc = await crud.get_course(db, required_cc.course_id)
+            code_of[req.required_curriculum_course_id] = rc.code if rc else "?"
+    pre = [
+        code_of.get(r.required_curriculum_course_id, "?")
+        for r in reqs
+        if r.requirement_type == RequirementType.PREREQUISITE
+    ]
+    co = [
+        code_of.get(r.required_curriculum_course_id, "?")
+        for r in reqs
+        if r.requirement_type == RequirementType.COREQUISITE
+    ]
+    return CurriculumCourseOut(
+        id=cc.id,
+        course_id=cc.course_id,
+        code=course.code if course else "?",
+        name=course.name if course else "?",
+        reference_term=cc.reference_term,
+        credits=cc.credits,
+        hours=cc.hours,
+        organization_unit=cc.organization_unit,
+        is_required=cc.is_required,
+        prerequisite_codes=pre,
+        corequisite_codes=co,
+    )
+
+
+@content_admin_router.patch("/careers/{career_id}", response_model=CareerOut)
+async def update_career(
+    career_id: uuid.UUID, payload: CareerUpdateIn, actor: CurrentUser, db: DbSession
+) -> CareerOut:
+    return CareerOut.model_validate(
+        await service.update_career(db, actor.id, career_id, payload)
+    )
+
+
+@content_admin_router.patch("/courses/{course_id}", response_model=CourseOut)
+async def update_course(
+    course_id: uuid.UUID, payload: CourseUpdateIn, actor: CurrentUser, db: DbSession
+) -> CourseOut:
+    return CourseOut.model_validate(
+        await service.update_course(db, actor.id, course_id, payload)
+    )
+
+
+@content_admin_router.patch(
+    "/curriculum-courses/{curriculum_course_id}", response_model=CurriculumCourseOut
+)
+async def update_curriculum_course(
+    curriculum_course_id: uuid.UUID,
+    payload: CurriculumCourseUpdateIn,
+    actor: CurrentUser,
+    db: DbSession,
+) -> CurriculumCourseOut:
+    cc = await service.update_curriculum_course(db, actor.id, curriculum_course_id, payload)
+    return await _curriculum_course_out(db, cc)
+
+
+@content_admin_router.post("/course-requirements", response_model=RequirementOut)
+async def add_requirement(
+    payload: RequirementCreateIn, actor: CurrentUser, db: DbSession
+) -> RequirementOut:
+    return RequirementOut.model_validate(await service.add_requirement(db, actor.id, payload))
+
+
+@content_admin_router.delete("/course-requirements/{requirement_id}")
+async def remove_requirement(
+    requirement_id: uuid.UUID, actor: CurrentUser, db: DbSession
+) -> dict[str, bool]:
+    await service.remove_requirement(db, actor.id, requirement_id)
+    return {"deleted": True}
