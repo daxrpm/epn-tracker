@@ -15,6 +15,7 @@ from app.modules.offering.schema import (
     ProfessorCreateIn,
     ProfessorFindOrCreateIn,
     ProfessorOut,
+    ProfessorUpdateIn,
     SectionCreateIn,
     SectionOut,
     SectionProfessorCreateIn,
@@ -39,6 +40,11 @@ async def find_or_create_professor(
     return ProfessorOut.model_validate(professor)
 
 
+@router.get("/professors", response_model=list[ProfessorOut])
+async def list_professors(db: DbSession) -> list[ProfessorOut]:
+    return list(await crud.list_professors(db))
+
+
 @router.get("/course-offerings", response_model=list[CourseOfferingOut])
 async def list_course_offerings(
     db: DbSession,
@@ -59,6 +65,22 @@ admin_router = APIRouter(
 async def create_professor(payload: ProfessorCreateIn, db: DbSession) -> ProfessorOut:
     professor = await service.create_professor(db, payload)
     return ProfessorOut.model_validate(professor)
+
+
+@admin_router.patch("/professors/{professor_id}", response_model=ProfessorOut)
+async def update_professor(
+    professor_id: uuid.UUID, payload: ProfessorUpdateIn, actor: CurrentUser, db: DbSession
+) -> ProfessorOut:
+    professor = await service.update_professor(db, actor.id, professor_id, payload)
+    return ProfessorOut.model_validate(professor)
+
+
+@admin_router.delete("/professors/{professor_id}")
+async def delete_professor(
+    professor_id: uuid.UUID, actor: CurrentUser, db: DbSession
+) -> dict[str, bool]:
+    await service.delete_professor(db, actor.id, professor_id)
+    return {"deleted": True}
 
 
 @admin_router.post("/course-offerings", response_model=CourseOfferingOut)

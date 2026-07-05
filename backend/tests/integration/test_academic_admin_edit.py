@@ -105,6 +105,21 @@ async def test_admin_adds_and_removes_prerequisite(client, db_session):
     iccd244 = next(c for c in courses if c["code"] == "ICCD244")
     assert "ICCD144" in iccd244["prerequisite_codes"]
 
+    # The requirements-with-ids endpoint powers the malla's remove-prereq UI.
+    details = await client.get(
+        f"/api/v1/admin/curriculum-courses/{by_code['ICCD244']['id']}/requirements",
+        headers=_auth(admin),
+    )
+    assert details.status_code == 200
+    assert details.json() == [
+        {
+            "id": req_id,
+            "required_curriculum_course_id": by_code["ICCD144"]["id"],
+            "required_code": "ICCD144",
+            "requirement_type": "PREREQUISITE",
+        }
+    ]
+
     # Duplicate is rejected.
     dup = await client.post(
         "/api/v1/admin/course-requirements",

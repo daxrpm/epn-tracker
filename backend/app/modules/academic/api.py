@@ -28,6 +28,7 @@ from app.modules.academic.schema import (
     ImportValidationOut,
     InstitutionOut,
     RequirementCreateIn,
+    RequirementDetailOut,
     RequirementOut,
 )
 
@@ -251,6 +252,32 @@ async def update_curriculum_course(
 ) -> CurriculumCourseOut:
     cc = await service.update_curriculum_course(db, actor.id, curriculum_course_id, payload)
     return await _curriculum_course_out(db, cc)
+
+
+@content_admin_router.get(
+    "/curriculum-courses/{curriculum_course_id}/requirements",
+    response_model=list[RequirementDetailOut],
+)
+async def list_curriculum_course_requirements(
+    curriculum_course_id: uuid.UUID, db: DbSession
+) -> list[RequirementDetailOut]:
+    reqs = await crud.requirements_for_curriculum(db, [curriculum_course_id])
+    out: list[RequirementDetailOut] = []
+    for req in reqs:
+        required_cc = await crud.get_curriculum_course(db, req.required_curriculum_course_id)
+        code = "?"
+        if required_cc is not None:
+            rc = await crud.get_course(db, required_cc.course_id)
+            code = rc.code if rc else "?"
+        out.append(
+            RequirementDetailOut(
+                id=req.id,
+                required_curriculum_course_id=req.required_curriculum_course_id,
+                required_code=code,
+                requirement_type=req.requirement_type,
+            )
+        )
+    return out
 
 
 @content_admin_router.post("/course-requirements", response_model=RequirementOut)

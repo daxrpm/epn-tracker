@@ -6,11 +6,14 @@ User-facing messages stay in Spanish (product locale).
 
 from __future__ import annotations
 
+import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.exception.errors import ConflictError, NotFoundError
 from app.modules.academic import crud as academic_crud
 from app.modules.academic.model import AcademicPeriod, Course, Institution
+from app.modules.audit import crud as audit_crud
 from app.modules.offering import crud
 from app.modules.offering.model import (
     CourseOffering,
@@ -22,6 +25,7 @@ from app.modules.offering.schema import (
     CourseOfferingCreateIn,
     ProfessorCreateIn,
     ProfessorFindOrCreateIn,
+    ProfessorUpdateIn,
     SectionCreateIn,
     SectionProfessorCreateIn,
 )
@@ -38,6 +42,51 @@ async def create_professor(db: AsyncSession, payload: ProfessorCreateIn) -> Prof
     db.add(professor)
     await db.flush()
     return professor
+
+
+async def update_professor(
+    db: AsyncSession, actor_id: uuid.UUID, professor_id: uuid.UUID, payload: ProfessorUpdateIn
+) -> Professor:
+    professor = await crud.get_professor(db, professor_id)
+    if professor is None:
+        raise NotFoundError("Profesor no encontrado.")
+    before = {"full_name": professor.full_name, "email": professor.email,
+              "is_active": professor.is_active}
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(professor, field, value)
+    await db.flush()
+    await audit_crud.record(
+        db,
+        actor_user_id=actor_id,
+        action="PROFESSOR_UPDATE",
+        entity_type="professor",
+        entity_id=str(professor.id),
+        before=before,
+        after={"full_name": professor.full_name, "email": professor.email,
+               "is_active": professor.is_active},
+    )
+    return professor
+
+
+async def delete_professor(
+    db: AsyncSession, actor_id: uuid.UUID, professor_id: uuid.UUID
+) -> None:
+    professor = await crud.get_professor(db, professor_id)
+    if professor is None:
+        raise NotFoundError("Profesor no encontrado.")
+    before = {"full_name": professor.full_name, "email": professor.email}
+    # Soft delete: keep the row (offerings/schemes reference it) but mark inactive.
+    professor.is_active = False
+    await db.flush()
+    await audit_crud.record(
+        db,
+        actor_user_id=actor_id,
+        action="PROFESSOR_DELETE",
+        entity_type="professor",
+        entity_id=str(professor.id),
+        before=before,
+        after={"is_active": False},
+    )
 
 
 async def find_or_create_professor(

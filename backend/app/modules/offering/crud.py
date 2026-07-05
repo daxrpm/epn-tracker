@@ -33,6 +33,12 @@ async def get_professor(db: AsyncSession, professor_id: uuid.UUID) -> Professor 
     return await db.get(Professor, professor_id)
 
 
+async def list_professors(db: AsyncSession) -> Sequence[Professor]:
+    return (
+        (await db.execute(select(Professor).order_by(Professor.full_name))).scalars().all()
+    )
+
+
 async def get_professor_by_name(
     db: AsyncSession, institution_id: uuid.UUID, full_name: str
 ) -> Professor | None:

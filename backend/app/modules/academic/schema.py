@@ -105,6 +105,13 @@ class RequirementOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RequirementDetailOut(BaseModel):
+    id: uuid.UUID
+    required_curriculum_course_id: uuid.UUID
+    required_code: str
+    requirement_type: RequirementType
+
+
 # --- Academic periods (ERS §12.9) -----------------------------------------------------------------
 
 

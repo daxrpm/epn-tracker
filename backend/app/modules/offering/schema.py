@@ -26,6 +26,12 @@ class ProfessorCreateIn(BaseModel):
     email: str | None = None
 
 
+class ProfessorUpdateIn(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
+    email: str | None = None
+    is_active: bool | None = None
+
+
 class ProfessorFindOrCreateIn(BaseModel):
     """Lets any authenticated user register a professor while creating a course (ERS §17.7)."""
 
