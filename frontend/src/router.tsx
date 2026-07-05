@@ -14,6 +14,7 @@ import { RequirementsPage } from "@/features/requirements/pages/RequirementsPage
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
 import { SimulationPage } from "@/features/simulation/pages/SimulationPage";
 import { ConsolePage } from "@/features/admin/pages/ConsolePage";
+import { ProfessorsPage } from "@/features/admin/pages/ProfessorsPage";
 import { UsersPage } from "@/features/admin/pages/UsersPage";
 import { AppLayout } from "@/layouts/AppLayout";
 import { AuthLayout } from "@/layouts/AuthLayout";
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([
           { path: "calculadora", element: <CalculatorPage /> },
           { path: "admin", element: <ConsolePage /> },
           { path: "admin/usuarios", element: <UsersPage /> },
+          { path: "admin/profesores", element: <ProfessorsPage /> },
           { path: "ajustes", element: <SettingsPage /> },
         ],
       },

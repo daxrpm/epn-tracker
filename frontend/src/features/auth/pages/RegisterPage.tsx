@@ -1,8 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -73,6 +74,8 @@ function RequestStep({ onSent }: { onSent: (email: string) => void }) {
 
 function VerifyStep({ email, onDone }: { email: string; onDone: () => void }) {
   const verifyCode = useVerifyCode();
+  const resendCode = useRequestCode();
+  const [cooldown, setCooldown] = useState(0);
   const {
     register,
     handleSubmit,
@@ -82,10 +85,26 @@ function VerifyStep({ email, onDone }: { email: string; onDone: () => void }) {
     defaultValues: { email },
   });
 
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((value) => value - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+
   const onSubmit = handleSubmit(async (values) => {
     await verifyCode.mutateAsync(values);
     onDone();
   });
+
+  async function resend() {
+    try {
+      await resendCode.mutateAsync({ email });
+      setCooldown(60);
+      toast.success("Te reenviamos un código.");
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "No se pudo reenviar el código.");
+    }
+  }
 
   const serverError = verifyCode.error instanceof ApiError ? verifyCode.error.message : null;
 
@@ -122,6 +141,14 @@ function VerifyStep({ email, onDone }: { email: string; onDone: () => void }) {
             {verifyCode.isPending && <Loader2 className="size-4 animate-spin" />}
             Crear cuenta
           </Button>
+          <button
+            type="button"
+            onClick={() => void resend()}
+            disabled={cooldown > 0 || resendCode.isPending}
+            className="text-center text-sm text-muted-foreground underline-offset-4 hover:underline disabled:no-underline disabled:opacity-60"
+          >
+            {cooldown > 0 ? `Reenviar código en ${cooldown}s` : "Reenviar código"}
+          </button>
         </form>
       </CardContent>
     </Card>

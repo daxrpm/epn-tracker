@@ -186,6 +186,7 @@ export function CurriculumPage() {
         missingPrereqs={missingPrereqs}
         pending={bulkStates.isPending}
         isAdmin={isAdmin}
+        allCourses={coursesQuery.data ?? []}
         onClose={() => setSelected(null)}
         onChange={changeState}
       />
@@ -236,6 +237,7 @@ function CourseDialog({
   missingPrereqs,
   pending,
   isAdmin,
+  allCourses,
   onClose,
   onChange,
 }: {
@@ -244,6 +246,7 @@ function CourseDialog({
   missingPrereqs: string[];
   pending: boolean;
   isAdmin: boolean;
+  allCourses: CurriculumCourse[];
   onClose: () => void;
   onChange: (course: CurriculumCourse, state: CourseState) => Promise<void>;
 }) {
@@ -297,7 +300,9 @@ function CourseDialog({
                   </Link>
                 </Button>
               )}
-              {isAdmin && <AdminCourseEditor course={course} onDone={onClose} />}
+              {isAdmin && (
+                <AdminCourseEditor course={course} allCourses={allCourses} onDone={onClose} />
+              )}
             </div>
           </>
         )}

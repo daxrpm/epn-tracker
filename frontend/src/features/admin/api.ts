@@ -62,6 +62,22 @@ export interface RequirementCreate {
   requirement_type: "PREREQUISITE" | "COREQUISITE";
 }
 
+export interface RequirementDetail {
+  id: string;
+  required_curriculum_course_id: string;
+  required_code: string;
+  requirement_type: "PREREQUISITE" | "COREQUISITE";
+}
+
+export async function listCourseRequirements(
+  curriculumCourseId: string,
+): Promise<RequirementDetail[]> {
+  const { data } = await apiClient.get<RequirementDetail[]>(
+    `/admin/curriculum-courses/${curriculumCourseId}/requirements`,
+  );
+  return data;
+}
+
 export async function updateCurriculumCourse(
   id: string,
   patch: CurriculumCourseUpdate,
@@ -80,4 +96,51 @@ export async function addRequirement(payload: RequirementCreate): Promise<{ id: 
 
 export async function removeRequirement(id: string): Promise<void> {
   await apiClient.delete(`/admin/course-requirements/${id}`);
+}
+
+// --- Professors -----------------------------------------------------------------------------------
+
+export interface Professor {
+  id: string;
+  institution_id: string;
+  full_name: string;
+  email: string | null;
+  is_active: boolean;
+}
+
+export interface Institution {
+  id: string;
+  name: string;
+  acronym: string;
+}
+
+export async function listInstitutions(): Promise<Institution[]> {
+  const { data } = await apiClient.get<Institution[]>("/institutions");
+  return data;
+}
+
+export async function listProfessors(): Promise<Professor[]> {
+  const { data } = await apiClient.get<Professor[]>("/professors");
+  return data;
+}
+
+export async function createProfessor(input: {
+  institution_id: string;
+  full_name: string;
+  email?: string | null;
+}): Promise<Professor> {
+  const { data } = await apiClient.post<Professor>("/admin/professors", input);
+  return data;
+}
+
+export async function updateProfessor(
+  id: string,
+  patch: { full_name?: string; email?: string | null; is_active?: boolean },
+): Promise<Professor> {
+  const { data } = await apiClient.patch<Professor>(`/admin/professors/${id}`, patch);
+  return data;
+}
+
+export async function deleteProfessor(id: string): Promise<void> {
+  await apiClient.delete(`/admin/professors/${id}`);
 }

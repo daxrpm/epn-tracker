@@ -1,4 +1,4 @@
-import { GraduationCap, Network, ShieldCheck, Users } from "lucide-react";
+import { GraduationCap, Network, ShieldCheck, UserSquare2, Users } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,6 +26,12 @@ const CARDS: ConsoleCard[] = [
       "Abre la malla y toca una materia para editar sus créditos, horas, semestre y requisitos.",
     href: "/app/curriculum",
     icon: Network,
+  },
+  {
+    title: "Profesores",
+    description: "Registra y edita el catálogo de docentes de la institución.",
+    href: "/app/admin/profesores",
+    icon: UserSquare2,
   },
 ];
 
