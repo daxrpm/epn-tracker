@@ -115,6 +115,61 @@ export async function removeRequirement(id: string): Promise<void> {
   await apiClient.delete(`/admin/course-requirements/${id}`);
 }
 
+// --- System management (careers, academic periods) — superadmin ---------------------------------
+
+export interface Career {
+  id: string;
+  faculty_id: string;
+  name: string;
+  degree_title: string;
+}
+
+export async function updateCareer(
+  id: string,
+  patch: { name?: string; degree_title?: string },
+): Promise<Career> {
+  const { data } = await apiClient.patch<Career>(`/admin/careers/${id}`, patch);
+  return data;
+}
+
+export interface AcademicPeriod {
+  id: string;
+  institution_id: string;
+  code: string;
+  name: string;
+  starts_on: string | null;
+  ends_on: string | null;
+  is_current: boolean;
+}
+
+export interface AcademicPeriodInput {
+  code: string;
+  name: string;
+  starts_on?: string | null;
+  ends_on?: string | null;
+  is_current?: boolean;
+}
+
+export async function listAcademicPeriods(): Promise<AcademicPeriod[]> {
+  const { data } = await apiClient.get<AcademicPeriod[]>("/academic-periods");
+  return data;
+}
+
+export async function createAcademicPeriod(
+  input: AcademicPeriodInput & { institution_id: string },
+): Promise<AcademicPeriod> {
+  const { data } = await apiClient.post<AcademicPeriod>("/admin/academic-periods", input);
+  return data;
+}
+
+export async function updateAcademicPeriod(
+  id: string,
+  patch: Partial<AcademicPeriodInput>,
+): Promise<AcademicPeriod> {
+  const { data } = await apiClient.patch<AcademicPeriod>(`/admin/academic-periods/${id}`, patch);
+  return data;
+}
+
 // --- Professors -----------------------------------------------------------------------------------
 
 export interface Professor {

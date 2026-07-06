@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  type AcademicPeriodInput,
   addRequirement,
+  createAcademicPeriod,
   type CreateUserInput,
   createProfessor,
   createUser,
   type CurriculumCourseUpdate,
   deleteProfessor,
   deleteUser,
+  listAcademicPeriods,
   listCourseRequirements,
   listCurriculumRequirements,
   listInstitutions,
@@ -15,6 +18,8 @@ import {
   listUsers,
   type RequirementCreate,
   removeRequirement,
+  updateAcademicPeriod,
+  updateCareer,
   updateProfessor,
   type UserRole,
   updateCourseName,
@@ -26,6 +31,7 @@ import {
 export const adminKeys = {
   users: ["admin", "users"] as const,
   professors: ["admin", "professors"] as const,
+  academicPeriods: ["admin", "academic-periods"] as const,
   requirements: (curriculumCourseId: string) =>
     ["admin", "requirements", curriculumCourseId] as const,
   curriculumRequirements: (curriculumId: string) =>
@@ -172,6 +178,44 @@ export function useDeleteProfessor() {
   const refetch = useProfessorsRefetch();
   return useMutation({
     mutationFn: (id: string) => deleteProfessor(id),
+    onSuccess: refetch,
+  });
+}
+
+// --- System management (careers, academic periods) ----------------------------------------------
+
+export function useUpdateCareer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: { name?: string; degree_title?: string } }) =>
+      updateCareer(id, patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["careers"] }),
+  });
+}
+
+export function useAcademicPeriods() {
+  return useQuery({ queryKey: adminKeys.academicPeriods, queryFn: listAcademicPeriods });
+}
+
+function usePeriodsRefetch() {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: adminKeys.academicPeriods });
+}
+
+export function useCreateAcademicPeriod() {
+  const refetch = usePeriodsRefetch();
+  return useMutation({
+    mutationFn: (input: AcademicPeriodInput & { institution_id: string }) =>
+      createAcademicPeriod(input),
+    onSuccess: refetch,
+  });
+}
+
+export function useUpdateAcademicPeriod() {
+  const refetch = usePeriodsRefetch();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<AcademicPeriodInput> }) =>
+      updateAcademicPeriod(id, patch),
     onSuccess: refetch,
   });
 }

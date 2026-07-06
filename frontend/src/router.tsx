@@ -15,6 +15,7 @@ import { SettingsPage } from "@/features/settings/pages/SettingsPage";
 import { SimulationPage } from "@/features/simulation/pages/SimulationPage";
 import { ConsolePage } from "@/features/admin/pages/ConsolePage";
 import { ProfessorsPage } from "@/features/admin/pages/ProfessorsPage";
+import { SistemaPage } from "@/features/admin/pages/SistemaPage";
 import { UsersPage } from "@/features/admin/pages/UsersPage";
 import { AppLayout } from "@/layouts/AppLayout";
 import { AuthLayout } from "@/layouts/AuthLayout";
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
           { path: "admin", element: <ConsolePage /> },
           { path: "admin/usuarios", element: <UsersPage /> },
           { path: "admin/profesores", element: <ProfessorsPage /> },
+          { path: "admin/sistema", element: <SistemaPage /> },
           { path: "ajustes", element: <SettingsPage /> },
         ],
       },
