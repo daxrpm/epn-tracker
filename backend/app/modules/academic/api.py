@@ -29,6 +29,7 @@ from app.modules.academic.schema import (
     InstitutionOut,
     RequirementCreateIn,
     RequirementDetailOut,
+    RequirementEdgeOut,
     RequirementOut,
 )
 
@@ -278,6 +279,19 @@ async def list_curriculum_course_requirements(
             )
         )
     return out
+
+
+@content_admin_router.get(
+    "/curricula/{curriculum_id}/requirements",
+    response_model=list[RequirementEdgeOut],
+)
+async def list_curriculum_requirements(
+    curriculum_id: uuid.UUID, db: DbSession
+) -> list[RequirementEdgeOut]:
+    """Every requirement edge (with its id) in the malla, so the visual editor can delete arrows."""
+    curriculum_courses = list(await crud.list_curriculum_courses(db, curriculum_id))
+    reqs = await crud.requirements_for_curriculum(db, [cc.id for cc in curriculum_courses])
+    return [RequirementEdgeOut.model_validate(req) for req in reqs]
 
 
 @content_admin_router.post("/course-requirements", response_model=RequirementOut)

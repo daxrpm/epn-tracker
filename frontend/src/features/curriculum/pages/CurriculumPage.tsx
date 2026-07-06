@@ -2,12 +2,14 @@ import {
   AlertTriangle,
   ArrowRight,
   BookOpen,
+  Check,
   Clock3,
   GraduationCap,
   Loader2,
   NotebookPen,
   Search,
   Settings2,
+  Waypoints,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
@@ -37,6 +39,11 @@ import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 import { AdminCourseEditor } from "@/features/admin/components/AdminCourseEditor";
+import {
+  useAddRequirement,
+  useCurriculumRequirements,
+  useRemoveRequirement,
+} from "@/features/admin/hooks";
 import { useAuthStore } from "@/stores/auth.store";
 
 import type { CurriculumCourse } from "../api";
@@ -59,6 +66,13 @@ export function CurriculumPage() {
 
   const [selected, setSelected] = useState<CurriculumCourse | null>(null);
   const [search, setSearch] = useState("");
+  const [editConnections, setEditConnections] = useState(false);
+  const [drawKind, setDrawKind] = useState<"prereq" | "coreq">("prereq");
+
+  const edgesQuery = useCurriculumRequirements(curriculumId, isAdmin && editConnections);
+  const addRequirement = useAddRequirement();
+  const removeRequirement = useRemoveRequirement();
+  const edgesBusy = addRequirement.isPending || removeRequirement.isPending;
 
   const curriculum = (curriculaQuery.data ?? []).find((item) => item.id === curriculumId);
   const career = (careersQuery.data ?? []).find((item) => item.id === curriculum?.career_id);
@@ -91,6 +105,44 @@ export function CurriculumPage() {
     if (!selected) return [];
     return unmetPrerequisites(selected, buildCodeStateMap(coursesQuery.data ?? [], stateByCourse));
   }, [selected, coursesQuery.data, stateByCourse]);
+
+  // Map each drawn arrow (`${kind}:${fromCode}->${toCode}`) to its requirement id so the visual
+  // editor can delete an arrow by clicking it. Curriculum-course ids match `CurriculumCourse.id`.
+  const edgeIndex = useMemo(() => {
+    const codeById = new Map((coursesQuery.data ?? []).map((c) => [c.id, c.code]));
+    const index = new Map<string, string>();
+    for (const edge of edgesQuery.data ?? []) {
+      const from = codeById.get(edge.required_curriculum_course_id);
+      const to = codeById.get(edge.curriculum_course_id);
+      if (!from || !to) continue;
+      const kind = edge.requirement_type === "PREREQUISITE" ? "prereq" : "coreq";
+      index.set(`${kind}:${from}->${to}`, edge.id);
+    }
+    return index;
+  }, [coursesQuery.data, edgesQuery.data]);
+
+  async function createEdge(from: CurriculumCourse, to: CurriculumCourse) {
+    const kindLabel = drawKind === "prereq" ? "prerrequisito" : "correquisito";
+    try {
+      await addRequirement.mutateAsync({
+        curriculum_course_id: to.id,
+        required_curriculum_course_id: from.id,
+        requirement_type: drawKind === "prereq" ? "PREREQUISITE" : "COREQUISITE",
+      });
+      toast.success(`${from.code} es ${kindLabel} de ${to.code}.`);
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "No se pudo crear la conexión.");
+    }
+  }
+
+  async function deleteEdge(requirementId: string) {
+    try {
+      await removeRequirement.mutateAsync(requirementId);
+      toast.success("Conexión eliminada.");
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "No se pudo eliminar la conexión.");
+    }
+  }
 
   async function changeState(course: CurriculumCourse, state: CourseState) {
     try {
@@ -136,7 +188,9 @@ export function CurriculumPage() {
             {career?.name ?? "Tu malla académica"}
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Toca una materia para resaltar sus prerrequisitos; tócala de nuevo para cambiar su estado.
+            {editConnections
+              ? "Modo edición: toca una materia origen y luego la que la exige para trazar la flecha. Toca una flecha para borrarla."
+              : "Toca una materia para resaltar sus prerrequisitos; tócala de nuevo para cambiar su estado."}
           </p>
         </div>
         <Button asChild variant="outline" className="w-fit bg-background/60">
@@ -161,8 +215,58 @@ export function CurriculumPage() {
               className="h-10 bg-background/70 pl-9"
             />
           </div>
-          <Legend showArrows />
+          <div className="flex flex-wrap items-center gap-2">
+            <Legend showArrows />
+            {isAdmin && (
+              <Button
+                variant={editConnections ? "default" : "outline"}
+                size="sm"
+                className={cn(!editConnections && "bg-background/60")}
+                onClick={() => setEditConnections((value) => !value)}
+              >
+                {editConnections ? <Check /> : <Waypoints />}
+                {editConnections ? "Terminar edición" : "Editar conexiones"}
+              </Button>
+            )}
+          </div>
         </div>
+
+        {isAdmin && editConnections && (
+          <div className="flex flex-wrap items-center gap-3 border-b border-border/70 bg-primary/5 px-4 py-3">
+            <span className="text-xs font-medium text-muted-foreground">Tipo de flecha:</span>
+            <div className="flex overflow-hidden rounded-lg border border-border">
+              <button
+                type="button"
+                onClick={() => setDrawKind("prereq")}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors",
+                  drawKind === "prereq"
+                    ? "bg-blue-500 text-white"
+                    : "bg-background/60 text-muted-foreground hover:bg-accent",
+                )}
+              >
+                <span className="size-1.5 rounded-full bg-current" /> Prerrequisito
+              </button>
+              <button
+                type="button"
+                onClick={() => setDrawKind("coreq")}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors",
+                  drawKind === "coreq"
+                    ? "bg-amber-500 text-white"
+                    : "bg-background/60 text-muted-foreground hover:bg-accent",
+                )}
+              >
+                <span className="size-1.5 rounded-full bg-current" /> Correquisito
+              </button>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              La flecha va del {drawKind === "prereq" ? "prerrequisito" : "correquisito"} hacia la
+              materia que lo exige.
+            </span>
+            {edgesBusy && <Loader2 className="size-4 animate-spin text-muted-foreground" />}
+          </div>
+        )}
 
         {coursesQuery.isLoading ? (
           <PageLoader />
@@ -176,6 +280,12 @@ export function CurriculumPage() {
             stateByCourse={stateByCourse}
             onSelect={setSelected}
             prereqWarnings={prereqWarnings}
+            editMode={isAdmin && editConnections}
+            edgeIndex={edgeIndex}
+            drawKind={drawKind}
+            busy={edgesBusy}
+            onCreateEdge={createEdge}
+            onDeleteEdge={deleteEdge}
           />
         )}
       </section>

@@ -69,6 +69,23 @@ export interface RequirementDetail {
   requirement_type: "PREREQUISITE" | "COREQUISITE";
 }
 
+/** Every requirement edge in a malla, with its id — powers the visual vector editor. */
+export interface RequirementEdge {
+  id: string;
+  curriculum_course_id: string;
+  required_curriculum_course_id: string;
+  requirement_type: "PREREQUISITE" | "COREQUISITE";
+}
+
+export async function listCurriculumRequirements(
+  curriculumId: string,
+): Promise<RequirementEdge[]> {
+  const { data } = await apiClient.get<RequirementEdge[]>(
+    `/admin/curricula/${curriculumId}/requirements`,
+  );
+  return data;
+}
+
 export async function listCourseRequirements(
   curriculumCourseId: string,
 ): Promise<RequirementDetail[]> {

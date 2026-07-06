@@ -9,6 +9,7 @@ import {
   deleteProfessor,
   deleteUser,
   listCourseRequirements,
+  listCurriculumRequirements,
   listInstitutions,
   listProfessors,
   listUsers,
@@ -27,6 +28,8 @@ export const adminKeys = {
   professors: ["admin", "professors"] as const,
   requirements: (curriculumCourseId: string) =>
     ["admin", "requirements", curriculumCourseId] as const,
+  curriculumRequirements: (curriculumId: string) =>
+    ["admin", "curriculum-requirements", curriculumId] as const,
 };
 
 export function useCourseRequirements(curriculumCourseId: string | null) {
@@ -34,6 +37,15 @@ export function useCourseRequirements(curriculumCourseId: string | null) {
     queryKey: adminKeys.requirements(curriculumCourseId ?? ""),
     queryFn: () => listCourseRequirements(curriculumCourseId as string),
     enabled: Boolean(curriculumCourseId),
+  });
+}
+
+/** All requirement edges of a malla (with ids) for the visual editor; only fetched while editing. */
+export function useCurriculumRequirements(curriculumId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: adminKeys.curriculumRequirements(curriculumId ?? ""),
+    queryFn: () => listCurriculumRequirements(curriculumId as string),
+    enabled: Boolean(curriculumId) && enabled,
   });
 }
 
@@ -80,6 +92,7 @@ function useCurriculumRefetch() {
   return () => {
     void queryClient.invalidateQueries({ queryKey: ["curriculum-courses"] });
     void queryClient.invalidateQueries({ queryKey: ["admin", "requirements"] });
+    void queryClient.invalidateQueries({ queryKey: ["admin", "curriculum-requirements"] });
   };
 }
 

@@ -138,6 +138,41 @@ async def test_admin_adds_and_removes_prerequisite(client, db_session):
     assert removed.status_code == 200
 
 
+async def test_curriculum_requirements_endpoint_lists_edges_with_ids(client, db_session):
+    """The visual malla editor lists every arrow (with its id) so it can delete by clicking."""
+    admin, curriculum_id, by_code = await _seed(client, db_session)
+    add = await client.post(
+        "/api/v1/admin/course-requirements",
+        json={
+            "curriculum_course_id": by_code["ICCD244"]["id"],
+            "required_curriculum_course_id": by_code["ICCD144"]["id"],
+            "requirement_type": "PREREQUISITE",
+        },
+        headers=_auth(admin),
+    )
+    assert add.status_code == 200, add.text
+    req_id = add.json()["id"]
+
+    edges = await client.get(
+        f"/api/v1/admin/curricula/{curriculum_id}/requirements", headers=_auth(admin)
+    )
+    assert edges.status_code == 200, edges.text
+    assert edges.json() == [
+        {
+            "id": req_id,
+            "curriculum_course_id": by_code["ICCD244"]["id"],
+            "required_curriculum_course_id": by_code["ICCD144"]["id"],
+            "requirement_type": "PREREQUISITE",
+        }
+    ]
+
+    student = await _make_token(db_session, "edge-student@epn.edu.ec", UserRole.STUDENT)
+    forbidden = await client.get(
+        f"/api/v1/admin/curricula/{curriculum_id}/requirements", headers=_auth(student)
+    )
+    assert forbidden.status_code == 403
+
+
 async def test_self_requirement_rejected(client, db_session):
     admin, _, by_code = await _seed(client, db_session)
     resp = await client.post(

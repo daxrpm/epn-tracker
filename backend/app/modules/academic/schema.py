@@ -112,6 +112,16 @@ class RequirementDetailOut(BaseModel):
     requirement_type: RequirementType
 
 
+class RequirementEdgeOut(BaseModel):
+    """A single requirement edge with its id, for the visual malla editor (ERS §17.3)."""
+
+    id: uuid.UUID
+    curriculum_course_id: uuid.UUID
+    required_curriculum_course_id: uuid.UUID
+    requirement_type: RequirementType
+    model_config = {"from_attributes": True}
+
+
 # --- Academic periods (ERS §12.9) -----------------------------------------------------------------
 
 
