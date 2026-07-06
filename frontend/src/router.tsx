@@ -10,6 +10,7 @@ import { DashboardPage } from "@/features/dashboard/pages/DashboardPage";
 import { GradebookPage } from "@/features/evaluation/pages/GradebookPage";
 import { MyCoursesPage } from "@/features/evaluation/pages/MyCoursesPage";
 import { OnboardingPage } from "@/features/onboarding/pages/OnboardingPage";
+import { RecursosPage } from "@/features/recursos/pages/RecursosPage";
 import { RequirementsPage } from "@/features/requirements/pages/RequirementsPage";
 import { SettingsPage } from "@/features/settings/pages/SettingsPage";
 import { SimulationPage } from "@/features/simulation/pages/SimulationPage";
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
           { path: "notas", element: <MyCoursesPage /> },
           { path: "notas/:curriculumCourseId", element: <GradebookPage /> },
           { path: "requisitos", element: <RequirementsPage /> },
+          { path: "recursos", element: <RecursosPage /> },
           { path: "calculadora", element: <CalculatorPage /> },
           { path: "admin", element: <ConsolePage /> },
           { path: "admin/usuarios", element: <UsersPage /> },
