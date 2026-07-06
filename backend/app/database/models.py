@@ -12,6 +12,7 @@ from app.modules.audit import model as audit_model
 from app.modules.evaluation import model as evaluation_model
 from app.modules.iam import model as iam_model
 from app.modules.offering import model as offering_model
+from app.modules.resources import model as resources_model
 from app.modules.simulation import model as simulation_model
 from app.modules.student import model as student_model
 
@@ -22,6 +23,7 @@ __all__ = [
     "evaluation_model",
     "iam_model",
     "offering_model",
+    "resources_model",
     "simulation_model",
     "student_model",
 ]

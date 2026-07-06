@@ -252,3 +252,28 @@ class SyllabusJobStatus(StrEnum):
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
     FAILED = "FAILED"
+
+
+# --- Study resources (recursos) -------------------------------------------------------------------
+
+
+class ResourceKind(StrEnum):
+    """How the frontend renders a resource."""
+
+    PDF = "PDF"
+    IMAGE = "IMAGE"
+    MARKDOWN = "MARKDOWN"
+    TEXT = "TEXT"  # .txt / code / plain text
+    OFFICE = "OFFICE"  # docx/pptx/xlsx — download only, no inline preview
+    LINK = "LINK"  # external Drive/YouTube/URL
+
+
+class ResourceStatus(StrEnum):
+    """Moderation lifecycle, mirrors ``EvaluationSchemeStatus`` (ERS §RF-019)."""
+
+    PERSONAL = "PERSONAL"
+    COMMUNITY_PENDING = "COMMUNITY_PENDING"
+    COMMUNITY_VERIFIED = "COMMUNITY_VERIFIED"
+    ADMIN_VERIFIED = "ADMIN_VERIFIED"
+    REJECTED = "REJECTED"
+    ARCHIVED = "ARCHIVED"

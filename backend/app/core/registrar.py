@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,12 +12,21 @@ from app.common.exception.handlers import register_exception_handlers
 from app.core.conf import settings
 from app.core.logging import setup_logging
 from app.middleware.request_context import RequestContextMiddleware
+from app.modules.resources import storage
 from app.router import api_router
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     setup_logging()
+    # Ensure the resources bucket exists. Non-fatal: the API still boots if MinIO is unavailable
+    # (uploads will error later, but reads/other modules keep working).
+    try:
+        await storage.ensure_bucket()
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not initialize object storage bucket at startup", exc_info=True)
     yield
 
 

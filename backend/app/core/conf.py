@@ -82,6 +82,19 @@ class Settings(BaseSettings):
     first_superadmin_email: str | None = None
     first_superadmin_password: str | None = None
 
+    # Object storage (MinIO/S3) for study resources.
+    # ``s3_endpoint_url`` is the in-network endpoint the backend uses; ``s3_public_endpoint_url``
+    # is the browser-reachable host used to *sign* GET URLs (must match what the browser hits, or
+    # the SigV4 signature fails). They differ under Docker (minio:9000 vs localhost:9000).
+    s3_endpoint_url: str = "http://localhost:9000"
+    s3_public_endpoint_url: str = "http://localhost:9000"
+    s3_access_key: str = "epnminio"
+    s3_secret_key: str = "epnminio123"
+    s3_bucket: str = "epn-resources"
+    s3_region: str = "us-east-1"
+    resource_max_upload_mb: int = 50
+    resource_extract_sync_mb: int = 2
+
     @field_validator(
         "database_url_override",
         "smtp_host",

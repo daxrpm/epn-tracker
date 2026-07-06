@@ -20,6 +20,8 @@ from app.modules.iam.api import router as iam_router
 from app.modules.offering.api import admin_router as offering_admin_router
 from app.modules.offering.api import router as offering_router
 from app.modules.public.api import router as public_router
+from app.modules.resources.api import admin_router as resources_admin_router
+from app.modules.resources.api import router as resources_router
 from app.modules.simulation.api import public_router as simulation_public_router
 from app.modules.simulation.api import router as simulation_router
 from app.modules.simulation.api import student_router as simulation_student_router
@@ -51,6 +53,8 @@ api_router.include_router(academic_content_admin_router)
 api_router.include_router(academic_period_admin_router)
 api_router.include_router(offering_router)
 api_router.include_router(offering_admin_router)
+api_router.include_router(resources_router)
+api_router.include_router(resources_admin_router)
 api_router.include_router(evaluation_router)
 api_router.include_router(student_router)
 api_router.include_router(simulation_router)
