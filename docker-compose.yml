@@ -29,6 +29,24 @@ services:
       timeout: 5s
       retries: 5
 
+  minio:
+    image: minio/minio:latest
+    container_name: epn_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-epnminio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-epnminio123}
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console
+    volumes:
+      - epn_miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ./backend
@@ -37,6 +55,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     environment:
       APP_ENV: ${APP_ENV:-dev}
@@ -48,6 +68,11 @@ services:
       REDIS_HOST: redis
       JWT_SECRET: ${JWT_SECRET:-dev-insecure-secret-change-me-please-32bytes+}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+      S3_PUBLIC_ENDPOINT_URL: ${S3_PUBLIC_ENDPOINT_URL:-http://localhost:9000}
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-epnminio}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-epnminio123}
+      S3_BUCKET: ${S3_BUCKET:-epn-resources}
       EMAIL_BACKEND: ${EMAIL_BACKEND:-console}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
@@ -67,3 +92,4 @@ services:
 volumes:
   epn_pgdata:
   epn_redisdata:
+  epn_miniodata:
