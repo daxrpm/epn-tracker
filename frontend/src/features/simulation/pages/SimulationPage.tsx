@@ -136,8 +136,15 @@ export function SimulationPage() {
 
   function changeAssumption(courseId: string, state: CourseState) {
     const next = { ...assumptions, [courseId]: state };
+    const nextSelected = new Set(selectedIds);
+    if (state === "FAILED") nextSelected.add(courseId);
+    else nextSelected.delete(courseId);
     setAssumptions(next);
-    if (hasRun) void runWith(next, selectedIds, specialAuth);
+    setSelectedIds(nextSelected);
+    if (state === "FAILED") {
+      toast.info("La materia reprobada se agregó obligatoriamente al próximo semestre.");
+    }
+    if (hasRun) void runWith(next, nextSelected, specialAuth);
   }
 
   function toggleSelect(courseId: string) {

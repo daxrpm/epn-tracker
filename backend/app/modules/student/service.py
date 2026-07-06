@@ -21,6 +21,7 @@ from app.common.enums import (
     GradeComponentMode,
     GraduationRequirementState,
     GraduationRequirementType,
+    RequirementType,
 )
 from app.common.exception.errors import ForbiddenError, NotFoundError, ValidationAppError
 from app.domain.grading.grade_calculation import (
@@ -38,8 +39,14 @@ from app.domain.grading.projection import (
     project_target,
 )
 from app.domain.grading.recovery import required_recovery_score
+from app.domain.simulation.credit_limits import MAX_CREDITS_NORMAL
 from app.modules.academic import crud as academic_crud
-from app.modules.academic.model import GraduationRequirement
+from app.modules.academic.model import (
+    Course,
+    CourseRequirement,
+    CurriculumCourse,
+    GraduationRequirement,
+)
 from app.modules.evaluation.model import EvaluationComponent, EvaluationScheme
 from app.modules.iam.model import User
 from app.modules.student import crud
@@ -196,6 +203,81 @@ async def get_progress(db: AsyncSession, profile: StudentProfile) -> ProgressOut
 async def bulk_upsert_course_states(
     db: AsyncSession, profile: StudentProfile, payload: CourseStateBulkIn
 ) -> list[StudentCourseState]:
+    if profile.current_curriculum_id is None:
+        raise ValidationAppError("Primero selecciona una malla.")
+
+    curriculum_rows = (
+        await db.execute(
+            select(CurriculumCourse, Course.code)
+            .join(Course, Course.id == CurriculumCourse.course_id)
+            .where(CurriculumCourse.curriculum_id == profile.current_curriculum_id)
+        )
+    ).all()
+    courses_by_id = {course.id: course for course, _code in curriculum_rows}
+    codes_by_id = {course.id: code for course, code in curriculum_rows}
+    unknown = [
+        item.curriculum_course_id
+        for item in payload.items
+        if item.curriculum_course_id not in courses_by_id
+    ]
+    if unknown:
+        raise ValidationAppError("Una o más materias no pertenecen a tu malla actual.")
+
+    existing = await crud.get_course_states(db, profile.id)
+    prospective = {
+        state.curriculum_course_id: state.state
+        for state in existing
+        if state.curriculum_course_id in courses_by_id
+    }
+    prospective.update({item.curriculum_course_id: item.state for item in payload.items})
+
+    requirements = (
+        (
+            await db.execute(
+                select(CourseRequirement).where(
+                    CourseRequirement.curriculum_course_id.in_(list(courses_by_id)),
+                    CourseRequirement.requirement_type == RequirementType.PREREQUISITE,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    prerequisites: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for requirement in requirements:
+        prerequisites.setdefault(requirement.curriculum_course_id, []).append(
+            requirement.required_curriculum_course_id
+        )
+
+    for curriculum_course_id, course_state in prospective.items():
+        if course_state not in (CourseState.PASSED, CourseState.IN_PROGRESS):
+            continue
+        missing = [
+            required_id
+            for required_id in prerequisites.get(curriculum_course_id, [])
+            if prospective.get(required_id) != CourseState.PASSED
+        ]
+        if missing:
+            names = ", ".join(
+                codes_by_id.get(required_id, str(required_id)) for required_id in missing
+            )
+            raise ValidationAppError(
+                f"No puedes marcar {codes_by_id[curriculum_course_id]} sin aprobar antes: {names}."
+            )
+
+    in_progress_credits = sum(
+        (
+            course.credits
+            for course_id, course in courses_by_id.items()
+            if prospective.get(course_id) == CourseState.IN_PROGRESS
+        ),
+        start=ZERO,
+    )
+    if in_progress_credits > MAX_CREDITS_NORMAL:
+        raise ValidationAppError(
+            f"No puedes cursar más de {MAX_CREDITS_NORMAL} créditos simultáneamente."
+        )
+
     result: list[StudentCourseState] = []
     for item in payload.items:
         state = await crud.get_course_state_by_course(db, profile.id, item.curriculum_course_id)
@@ -235,8 +317,13 @@ async def create_enrollment(
     components = (
         (
             await db.execute(
-                select(EvaluationComponent).where(
-                    EvaluationComponent.evaluation_scheme_id == scheme.id
+                select(EvaluationComponent)
+                .where(EvaluationComponent.evaluation_scheme_id == scheme.id)
+                .order_by(
+                    EvaluationComponent.contribution,
+                    EvaluationComponent.display_order,
+                    EvaluationComponent.created_at,
+                    EvaluationComponent.id,
                 )
             )
         )
@@ -280,10 +367,17 @@ async def set_bimestre_override(
         setattr(enrollment, f"{prefix}_override_score", None)
         setattr(enrollment, f"{prefix}_override_scale", None)
     else:
+        _validate_score_pair(payload.score, payload.score_scale or Decimal("10"))
         setattr(enrollment, f"{prefix}_override_score", payload.score)
         setattr(enrollment, f"{prefix}_override_scale", payload.score_scale or Decimal("10"))
     await db.flush()
     return enrollment
+
+
+def _validate_score_pair(score: Decimal | None, scale: Decimal) -> None:
+    """Reject impossible grade inputs before they reach normalization or persistence."""
+    if score is not None and score > scale:
+        raise ValidationAppError("La nota no puede ser mayor que su escala.")
 
 
 async def _owned_component_state(
@@ -373,14 +467,16 @@ async def patch_component(
     mode: GradeComponentMode | None,
     direct_score,  # noqa: ANN001 - Decimal | None
     direct_score_scale: Decimal | None = None,
+    direct_score_provided: bool = False,
 ) -> GradeComponentState:
     state = await _owned_component_state(db, profile, component_state_id)
     if mode is not None:
         state.mode = mode
-    if direct_score is not None or mode == GradeComponentMode.DIRECT_SCORE:
+    if direct_score_provided:
         state.direct_score = direct_score
     if direct_score_scale is not None:
         state.score_scale = direct_score_scale
+    _validate_score_pair(state.direct_score, state.score_scale)
     await _recompute_component(db, state)
     await db.flush()
     return state
@@ -397,12 +493,16 @@ async def add_item(
     internal_weight_percent,  # noqa: ANN001
 ) -> GradeItem:
     state = await _owned_component_state(db, profile, component_state_id)
+    _validate_score_pair(score, score_scale)
+    existing_items = await crud.get_items(db, state.id)
+    next_display_order = max((item.display_order for item in existing_items), default=-1) + 1
     item = GradeItem(
         grade_component_state_id=state.id,
         name=name,
         score=score,
         score_scale=score_scale,
         internal_weight_percent=internal_weight_percent,
+        display_order=next_display_order,
     )
     db.add(item)
     await db.flush()
@@ -418,7 +518,11 @@ async def patch_item(
     if item is None:
         raise NotFoundError("Insumo no encontrado.")
     state = await _owned_component_state(db, profile, item.grade_component_state_id)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    fields = payload.model_dump(exclude_unset=True)
+    prospective_score = fields.get("score", item.score)
+    prospective_scale = fields.get("score_scale", item.score_scale)
+    _validate_score_pair(prospective_score, prospective_scale)
+    for field, value in fields.items():
         setattr(item, field, value)
     await db.flush()
     await _recompute_component(db, state)
@@ -479,7 +583,7 @@ async def calculate(
         aporte_1=_contribution_out("APORTE_1", a1),
         aporte_2=_contribution_out("APORTE_2", a2),
         final_40=display_str(final.final_40) or "0.00",
-        final_20=str(final.final_20),
+        final_20=display_str(final.final_20) or "0.00",
         display_final_20=display_str(final.final_20) or "0.00",
         status=final.status,
         is_complete=is_complete,

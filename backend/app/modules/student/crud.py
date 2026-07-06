@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.academic.model import GraduationRequirement
+from app.modules.evaluation.model import EvaluationComponent
 from app.modules.student.model import (
     GradeComponentState,
     GradeItem,
@@ -45,9 +46,7 @@ async def get_enrollment(db: AsyncSession, enrollment_id: uuid.UUID) -> StudentE
     return await db.get(StudentEnrollment, enrollment_id)
 
 
-async def list_enrollments(
-    db: AsyncSession, profile_id: uuid.UUID
-) -> Sequence[StudentEnrollment]:
+async def list_enrollments(db: AsyncSession, profile_id: uuid.UUID) -> Sequence[StudentEnrollment]:
     stmt = select(StudentEnrollment).where(StudentEnrollment.student_profile_id == profile_id)
     return (await db.execute(stmt)).scalars().all()
 
@@ -55,8 +54,19 @@ async def list_enrollments(
 async def get_component_states(
     db: AsyncSession, enrollment_id: uuid.UUID
 ) -> Sequence[GradeComponentState]:
-    stmt = select(GradeComponentState).where(
-        GradeComponentState.student_enrollment_id == enrollment_id
+    stmt = (
+        select(GradeComponentState)
+        .where(GradeComponentState.student_enrollment_id == enrollment_id)
+        .join(
+            EvaluationComponent,
+            EvaluationComponent.id == GradeComponentState.evaluation_component_id,
+        )
+        .order_by(
+            EvaluationComponent.contribution,
+            EvaluationComponent.display_order,
+            EvaluationComponent.created_at,
+            EvaluationComponent.id,
+        )
     )
     return (await db.execute(stmt)).scalars().all()
 
@@ -67,13 +77,11 @@ async def get_component_state(
     return await db.get(GradeComponentState, component_state_id)
 
 
-async def get_items(
-    db: AsyncSession, component_state_id: uuid.UUID
-) -> Sequence[GradeItem]:
+async def get_items(db: AsyncSession, component_state_id: uuid.UUID) -> Sequence[GradeItem]:
     stmt = (
         select(GradeItem)
         .where(GradeItem.grade_component_state_id == component_state_id)
-        .order_by(GradeItem.display_order)
+        .order_by(GradeItem.display_order, GradeItem.created_at, GradeItem.id)
     )
     return (await db.execute(stmt)).scalars().all()
 
@@ -87,7 +95,7 @@ async def get_items_for_states(
     stmt = (
         select(GradeItem)
         .where(GradeItem.grade_component_state_id.in_(component_state_ids))
-        .order_by(GradeItem.display_order)
+        .order_by(GradeItem.display_order, GradeItem.created_at, GradeItem.id)
     )
     return (await db.execute(stmt)).scalars().all()
 
@@ -113,8 +121,7 @@ async def get_grad_req_states_with_details(
         select(StudentGraduationRequirementState, GraduationRequirement)
         .join(
             GraduationRequirement,
-            GraduationRequirement.id
-            == StudentGraduationRequirementState.graduation_requirement_id,
+            GraduationRequirement.id == StudentGraduationRequirementState.graduation_requirement_id,
         )
         .where(StudentGraduationRequirementState.student_profile_id == profile_id)
         .order_by(GraduationRequirement.code)

@@ -15,3 +15,11 @@ export function formatDecimal(value: string | number | null, maxDecimals = 2): s
   if (Number.isNaN(num)) return "—";
   return num.toFixed(maxDecimals).replace(/\.?0+$/, "");
 }
+
+/** Keeps a decimal text input non-negative and capped at two decimal places. */
+export function limitDecimalInput(value: string): string {
+  const normalized = value.replace(",", ".").replace(/[^\d.]/g, "");
+  const [whole, ...fractionParts] = normalized.split(".");
+  if (fractionParts.length === 0) return whole;
+  return `${whole}.${fractionParts.join("").slice(0, 2)}`;
+}

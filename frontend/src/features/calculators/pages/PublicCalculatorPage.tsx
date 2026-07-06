@@ -14,11 +14,14 @@ import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 import { useRecoveryCalculator } from "../hooks";
-import { formatScore } from "../format";
+import { formatScore, limitDecimalInput } from "../format";
 
 const scoreField = z
   .string()
   .trim()
+  .refine((value) => /^\d+(?:\.\d{1,2})?$/.test(value), {
+    message: "Usa máximo 2 decimales.",
+  })
   .refine((value) => value !== "" && Number(value) >= 0 && Number(value) <= 20, {
     message: "Usa una nota entre 0 y 20.",
   });
@@ -202,6 +205,9 @@ function ScoreInput({ id, label, error, registration }: ScoreInputProps) {
         className="h-12 bg-muted/45 px-3 text-lg font-medium tabular-nums"
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
+        onInput={(event) => {
+          event.currentTarget.value = limitDecimalInput(event.currentTarget.value);
+        }}
         {...registration}
       />
       {error && (

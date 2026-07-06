@@ -151,3 +151,55 @@ async def test_updating_a_graduation_requirement_returns_full_details(client, db
     profile = await client.get("/api/v1/student/profile", headers=_auth(student))
     assert profile.json()["english_sufficiency"] is True
     assert profile.json()["english_level"] == "SUFFICIENCY_B1"
+
+
+async def test_course_states_reject_more_than_15_in_progress_credits(client, db_session):
+    malla = {
+        **_MALLA,
+        "career": {"name": "Sistemas", "degree_title": "Ingeniero/a en Sistemas"},
+        "curriculum": {
+            "pensum_year": 2026,
+            "total_terms": 1,
+            "total_credits": "18",
+            "total_hours": 0,
+        },
+        "courses": [
+            {
+                "code": f"ONB10{index}",
+                "name": f"Materia {index}",
+                "credits": "3",
+                "hours": 0,
+                "reference_term": 1,
+                "organization_unit": "PROFESSIONAL",
+                "requirements": [],
+            }
+            for index in range(6)
+        ],
+        "graduation_requirements": [],
+    }
+    admin = await _make_user(db_session, "admin-limit@epn.edu.ec", role=UserRole.ADMIN)
+    imported = await client.post(
+        "/api/v1/admin/curricula/import/commit", json=malla, headers=_auth(admin)
+    )
+    assert imported.status_code == 200, imported.text
+    curriculum_id = imported.json()["curriculum_id"]
+    courses = (await client.get(f"/api/v1/curricula/{curriculum_id}/courses")).json()
+    student = await _make_user(db_session, "student-limit@epn.edu.ec")
+    await client.put(
+        "/api/v1/student/profile",
+        json={"current_curriculum_id": curriculum_id},
+        headers=_auth(student),
+    )
+
+    response = await client.put(
+        "/api/v1/student/course-states/bulk",
+        json={
+            "items": [
+                {"curriculum_course_id": course["id"], "state": "IN_PROGRESS"} for course in courses
+            ]
+        },
+        headers=_auth(student),
+    )
+
+    assert response.status_code == 422
+    assert "15 créditos" in response.text

@@ -1,6 +1,5 @@
 import {
   ArrowRight,
-  BookOpen,
   Calculator,
   GitBranch,
   GraduationCap,
@@ -11,7 +10,6 @@ import {
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
-import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -87,7 +85,7 @@ export function DashboardPage() {
             </CardContent>
           </Card>
 
-          <BentoGrid className="mx-0 max-w-full md:auto-rows-[12rem]">
+          <div className="grid gap-3 sm:grid-cols-3">
             <StatItem label="Aprobadas" value={stats.counts.PASSED} accent="text-emerald-500" />
             <StatItem label="En curso" value={stats.counts.IN_PROGRESS} accent="text-sky-500" />
             <StatItem
@@ -95,47 +93,40 @@ export function DashboardPage() {
               value={stats.counts.FAILED + stats.counts.ANNULLED}
               accent="text-red-500"
             />
-            <Link to="/app/curriculum" className="[&>div]:h-full">
-              <BentoGridItem
-                title="Malla interactiva"
-                description="Explora tu pénsum por semestre y actualiza tus materias."
-                header={<GradientHeader icon={<GraduationCap className="size-8 text-primary" />} />}
-                icon={<GraduationCap className="size-4 text-muted-foreground" />}
-              />
-            </Link>
-            <Link to="/app/simulacion" className="[&>div]:h-full">
-              <BentoGridItem
-                title="Simulador de matrícula"
-                description="Proyecta tus materias y arma tu próximo semestre según las reglas EPN."
-                header={<GradientHeader icon={<GitBranch className="size-8 text-primary" />} />}
-                icon={<GitBranch className="size-4 text-muted-foreground" />}
-              />
-            </Link>
-            <Link to="/app/notas" className="[&>div]:h-full">
-              <BentoGridItem
-                title="Gestión de notas"
-                description="Registra tus notas por bimestre y proyecta tu resultado final."
-                header={<GradientHeader icon={<NotebookPen className="size-8 text-primary" />} />}
-                icon={<NotebookPen className="size-4 text-muted-foreground" />}
-              />
-            </Link>
-            <Link to="/app/requisitos" className="[&>div]:h-full">
-              <BentoGridItem
-                title="Requisitos de graduación"
-                description="Revisa y actualiza el estado de tus requisitos."
-                header={<GradientHeader icon={<ListChecks className="size-8 text-primary" />} />}
-                icon={<ListChecks className="size-4 text-muted-foreground" />}
-              />
-            </Link>
-            <Link to="/app/calculadora" className="[&>div]:h-full">
-              <BentoGridItem
-                title="Calculadora de recuperación"
-                description="Calcula tu nota final sobre 40 y cuánto necesitas para aprobar."
-                header={<GradientHeader icon={<Calculator className="size-8 text-primary" />} />}
-                icon={<BookOpen className="size-4 text-muted-foreground" />}
-              />
-            </Link>
-          </BentoGrid>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <DashboardAction
+              to="/app/curriculum"
+              title="Malla interactiva"
+              description="Explora tu pénsum por semestre y actualiza el estado de tus materias."
+              icon={GraduationCap}
+            />
+            <DashboardAction
+              to="/app/simulacion"
+              title="Simulador de matrícula"
+              description="Proyecta tus materias y arma tu próximo semestre según las reglas EPN."
+              icon={GitBranch}
+            />
+            <DashboardAction
+              to="/app/notas"
+              title="Gestión de notas"
+              description="Registra tus notas por bimestre y proyecta tu resultado final."
+              icon={NotebookPen}
+            />
+            <DashboardAction
+              to="/app/requisitos"
+              title="Requisitos de graduación"
+              description="Revisa y actualiza el estado de todos tus requisitos."
+              icon={ListChecks}
+            />
+            <DashboardAction
+              to="/app/calculadora"
+              title="Calculadora de recuperación"
+              description="Calcula tu nota final sobre 40 y cuánto necesitas para aprobar."
+              icon={Calculator}
+            />
+          </div>
         </>
       )}
     </div>
@@ -175,17 +166,40 @@ function StatItem({
   accent: string;
 }) {
   return (
-    <div className="row-span-1 flex flex-col justify-between rounded-2xl border border-border/80 bg-card/65 p-5">
+    <div className="flex min-h-28 flex-col justify-between rounded-2xl border border-border/80 bg-card/65 p-5 shadow-sm">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <span className={`text-4xl font-bold tabular-nums ${accent}`}>{value}</span>
+      <span className={`text-3xl font-semibold tabular-nums ${accent}`}>{value}</span>
     </div>
   );
 }
 
-function GradientHeader({ icon }: { icon: React.ReactNode }) {
+function DashboardAction({
+  to,
+  title,
+  description,
+  icon: Icon,
+}: {
+  to: string;
+  title: string;
+  description: string;
+  icon: typeof GraduationCap;
+}) {
   return (
-    <div className="flex size-full min-h-24 flex-1 items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 via-transparent to-primary/5">
-      {icon}
-    </div>
+    <Link to={to} className="group block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Card className="h-full min-h-40 rounded-2xl border-border/80 bg-card/65 py-0 shadow-sm transition-all duration-200 group-hover:-translate-y-0.5 group-hover:border-primary/25 group-hover:shadow-md">
+        <CardContent className="flex h-full items-start gap-4 p-5">
+          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+            <Icon className="size-5" />
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col self-stretch">
+            <h2 className="text-base font-semibold leading-snug">{title}</h2>
+            <p className="mt-2 text-sm leading-5 text-muted-foreground">{description}</p>
+            <span className="mt-auto flex items-center gap-1 pt-4 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+              Abrir <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }

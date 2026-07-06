@@ -1,4 +1,4 @@
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Copy, Loader2, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import type { Contribution, EvaluationType, SchemeComponentInput, SchemeVisibility } from "../api";
 import { CONTRIBUTION_LABELS, CONTRIBUTION_ORDER } from "../constants";
 import { useCreateScheme } from "../hooks";
+import { isDecimalDraft } from "../scoreInput";
 
 interface Row {
   key: string;
@@ -71,8 +72,18 @@ export function SchemeForm({
     [rows],
   );
 
-  const bothSumTo100 = CONTRIBUTION_ORDER.every((c) => Math.round(sums[c]) === 100);
-  const canSubmit = bothSumTo100 && code.trim() !== "" && professorQuery.trim() !== "";
+  const sumIsComplete = (value: number) => value >= 99.99 - Number.EPSILON && value <= 100;
+  const bothSumTo100 = CONTRIBUTION_ORDER.every((c) => sumIsComplete(sums[c]));
+  const validRows = CONTRIBUTION_ORDER.every((c) =>
+    rows[c].every(
+      (row) =>
+        row.name.trim() !== "" &&
+        Number(row.weight_percent.replace(",", ".")) >= 0 &&
+        Number(row.weight_percent.replace(",", ".")) <= 35,
+    ),
+  );
+  const canSubmit =
+    bothSumTo100 && validRows && code.trim() !== "" && professorQuery.trim() !== "";
 
   function updateRow(c: Contribution, key: string, patch: Partial<Row>) {
     setRows((prev) => ({
@@ -85,6 +96,16 @@ export function SchemeForm({
   }
   function removeRow(c: Contribution, key: string) {
     setRows((prev) => ({ ...prev, [c]: prev[c].filter((r) => r.key !== key) }));
+  }
+  function copyFirstBimestre() {
+    setRows((prev) => ({
+      ...prev,
+      APORTE_2: prev.APORTE_1.map((row) => ({
+        ...newRow(row.name, row.weight_percent),
+        evaluation_type: row.evaluation_type,
+      })),
+    }));
+    toast.success("Se copió la configuración del primer bimestre.");
   }
 
   function selectProfessor(professor: Professor) {
@@ -104,7 +125,7 @@ export function SchemeForm({
         .map((r, index) => ({
           contribution: c,
           name: r.name.trim(),
-          weight_percent: r.weight_percent || "0",
+          weight_percent: r.weight_percent.replace(",", ".") || "0",
           evaluation_type: r.evaluation_type,
           display_order: index,
         })),
@@ -183,6 +204,17 @@ export function SchemeForm({
         </TabsList>
         {CONTRIBUTION_ORDER.map((c) => (
           <TabsContent key={c} value={c} className="mt-4 flex flex-col gap-3">
+            {c === "APORTE_2" && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-fit"
+                onClick={copyFirstBimestre}
+              >
+                <Copy className="size-4" /> Copiar primer bimestre
+              </Button>
+            )}
             {rows[c].map((row) => (
               <div key={row.key} className="flex items-end gap-2">
                 <div className="flex flex-1 flex-col gap-1.5">
@@ -198,7 +230,10 @@ export function SchemeForm({
                   <Input
                     inputMode="decimal"
                     value={row.weight_percent}
-                    onChange={(e) => updateRow(c, row.key, { weight_percent: e.target.value })}
+                    onChange={(e) =>
+                      isDecimalDraft(e.target.value) &&
+                      updateRow(c, row.key, { weight_percent: e.target.value })
+                    }
                     className="tabular-nums"
                   />
                 </div>
@@ -235,10 +270,10 @@ export function SchemeForm({
               <span
                 className={cn(
                   "text-sm font-medium tabular-nums",
-                  Math.round(sums[c]) === 100 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400",
+                  sumIsComplete(sums[c]) ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400",
                 )}
               >
-                Suma: {sums[c]}%
+                Suma: {sumIsComplete(sums[c]) ? 100 : sums[c]}%
               </span>
             </div>
           </TabsContent>
@@ -248,9 +283,9 @@ export function SchemeForm({
       <div className="flex items-center justify-end gap-3">
         {!canSubmit && (
           <span className="text-xs text-muted-foreground">
-            {bothSumTo100
+            {bothSumTo100 && validRows
               ? "Ingresa el código del curso y el profesor."
-              : "Cada bimestre debe sumar 100%."}
+              : "Cada peso debe estar entre 0 y 35%, con máximo 2 decimales, y cada bimestre debe sumar 100%."}
           </span>
         )}
         <Button onClick={() => void submit()} disabled={!canSubmit || submitting}>

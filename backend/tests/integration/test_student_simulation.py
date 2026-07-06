@@ -117,14 +117,20 @@ async def test_passing_prerequisite_makes_course_eligible(client, db_session):
     curriculum_id, by_code = await _seed_malla(client, db_session)
     token = await _register_student(client, db_session, curriculum_id, "s2@epn.edu.ec")
 
+    invalid = await client.put(
+        "/api/v1/student/course-states/bulk",
+        json={"items": [{"curriculum_course_id": by_code["ICCD523"]["id"], "state": "PASSED"}]},
+        headers=_auth(token),
+    )
+    assert invalid.status_code == 422
+    assert "ICCD442" in invalid.text
+
     await client.put(
         "/api/v1/student/course-states/bulk",
         json={"items": [{"curriculum_course_id": by_code["ICCD442"]["id"], "state": "PASSED"}]},
         headers=_auth(token),
     )
-    resp = await client.post(
-        "/api/v1/student/simulations/run", json={}, headers=_auth(token)
-    )
+    resp = await client.post("/api/v1/student/simulations/run", json={}, headers=_auth(token))
     body = resp.json()
     eligible = {c["code"] for c in body["eligible_courses"]}
     assert "ICCD523" in eligible
@@ -156,9 +162,7 @@ async def test_save_list_get_delete_scenario(client, db_session):
     assert items[0]["id"] == simulation_id
     assert items[0]["name"] == "Si paso todo"
 
-    fetched = await client.get(
-        f"/api/v1/student/simulations/{simulation_id}", headers=_auth(token)
-    )
+    fetched = await client.get(f"/api/v1/student/simulations/{simulation_id}", headers=_auth(token))
     assert fetched.status_code == 200
     assert fetched.json()["result"]["selected_credits"] == "3.00"
 
@@ -184,7 +188,5 @@ async def test_cannot_access_another_students_scenario(client, db_session):
     )
     simulation_id = saved.json()["id"]
 
-    resp = await client.get(
-        f"/api/v1/student/simulations/{simulation_id}", headers=_auth(intruder)
-    )
+    resp = await client.get(f"/api/v1/student/simulations/{simulation_id}", headers=_auth(intruder))
     assert resp.status_code == 404

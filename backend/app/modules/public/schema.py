@@ -10,8 +10,8 @@ from app.common.enums import Contribution, CourseFinalStatus, EvaluationType
 
 
 class AportesIn(BaseModel):
-    aporte_1: Decimal = Field(ge=0, le=20)
-    aporte_2: Decimal = Field(ge=0, le=20)
+    aporte_1: Decimal = Field(ge=0, le=20, decimal_places=2)
+    aporte_2: Decimal = Field(ge=0, le=20, decimal_places=2)
 
 
 class FinalGradeOut(BaseModel):

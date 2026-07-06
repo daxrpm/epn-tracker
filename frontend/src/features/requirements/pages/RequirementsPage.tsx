@@ -39,20 +39,26 @@ export function RequirementsPage() {
   const updateProfile = useUpdateProfile();
 
   const requirements = requirementsQuery.data ?? [];
+  const englishRequirement = requirements.find((r) => r.requirement_type === "ENGLISH");
+  const visibleRequirements = requirements.filter((r) => r.requirement_type !== "ENGLISH");
 
-  const completed = requirements.filter((r) => r.state === "COMPLETED").length;
-  const applicable = requirements.filter((r) => r.state !== "NOT_APPLICABLE").length;
+  const completed =
+    visibleRequirements.filter((r) => r.state === "COMPLETED").length +
+    (englishRequirement && profileQuery.data?.english_sufficiency ? 1 : 0);
+  const applicable =
+    visibleRequirements.filter((r) => r.state !== "NOT_APPLICABLE").length +
+    (englishRequirement ? 1 : 0);
   const percent = applicable === 0 ? 0 : Math.round((completed / applicable) * 100);
 
   const grouped = useMemo(() => {
     const map = new Map<GradRequirementType, GradRequirementRecord[]>();
-    for (const requirement of requirements) {
+    for (const requirement of visibleRequirements) {
       const list = map.get(requirement.requirement_type) ?? [];
       list.push(requirement);
       map.set(requirement.requirement_type, list);
     }
     return [...map.entries()];
-  }, [requirements]);
+  }, [visibleRequirements]);
 
   async function changeState(stateId: string, state: GradRequirementState) {
     try {

@@ -10,10 +10,12 @@ import hashlib
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
+from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.enums import (
+    Contribution,
     EvaluationSchemeStatus,
     SchemeSourceType,
     SchemeVote,
@@ -57,10 +59,32 @@ def build_context_hash(
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
-async def create_scheme(
-    db: AsyncSession, user: User, payload: SchemeCreateIn
-) -> SchemeCreateOut:
+async def create_scheme(db: AsyncSession, user: User, payload: SchemeCreateIn) -> SchemeCreateOut:
     """Create a student scheme. Public schemes start as COMMUNITY_PENDING (ERS §RF-019)."""
+    # A two-decimal split such as 33.33 + 33.33 + 33.33 is academically 100%, although its
+    # literal sum is 99.99. Complete the missing cent on a component with available capacity so
+    # subsequent grade calculations operate on an exact 100%.
+    for contribution in (Contribution.APORTE_1, Contribution.APORTE_2):
+        contribution_components = [
+            component for component in payload.components if component.contribution == contribution
+        ]
+        total = sum(
+            (component.weight_percent for component in contribution_components),
+            start=Decimal("0"),
+        )
+        if Decimal("99.99") <= total < Decimal("100"):
+            adjustment = Decimal("100") - total
+            target = next(
+                (
+                    component
+                    for component in reversed(contribution_components)
+                    if component.weight_percent + adjustment <= Decimal("35")
+                ),
+                None,
+            )
+            if target is not None:
+                target.weight_percent += adjustment
+
     validation = validate_scheme(
         [
             SchemeComponent(
@@ -109,6 +133,7 @@ async def create_scheme(
     db.add(scheme)
     await db.flush()
 
+    display_orders = {Contribution.APORTE_1: 0, Contribution.APORTE_2: 0}
     for component in payload.components:
         db.add(
             EvaluationComponent(
@@ -118,9 +143,10 @@ async def create_scheme(
                 evaluation_type=component.evaluation_type,
                 weight_percent=component.weight_percent,
                 score_scale=component.score_scale,
-                display_order=component.display_order,
+                display_order=display_orders[component.contribution],
             )
         )
+        display_orders[component.contribution] += 1
     await db.flush()
 
     return SchemeCreateOut(
@@ -164,9 +190,7 @@ async def vote_scheme(
             scheme.status = EvaluationSchemeStatus.COMMUNITY_VERIFIED
 
     await db.flush()
-    return VoteOut(
-        scheme_id=scheme.id, status=scheme.status, approval_count=scheme.approval_count
-    )
+    return VoteOut(scheme_id=scheme.id, status=scheme.status, approval_count=scheme.approval_count)
 
 
 async def copy_scheme_to_personal(

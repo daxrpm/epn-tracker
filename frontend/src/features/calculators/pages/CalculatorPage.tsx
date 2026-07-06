@@ -10,11 +10,12 @@ import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 import { useRecoveryCalculator } from "../hooks";
-import { formatScore } from "../format";
+import { formatScore, limitDecimalInput } from "../format";
 
 const scoreField = z
   .string()
   .trim()
+  .refine((v) => /^\d+(?:\.\d{1,2})?$/.test(v), "Usa máximo 2 decimales.")
   .refine((v) => v !== "" && Number(v) >= 0 && Number(v) <= 20, "Ingresa un valor entre 0 y 20.");
 
 const schema = z.object({ aporte_1: scoreField, aporte_2: scoreField });
@@ -169,6 +170,9 @@ function ScoreInput({ id, label, error, registration }: ScoreInputProps) {
         className="h-12 bg-muted/45 px-3 text-lg font-medium tabular-nums"
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
+        onInput={(event) => {
+          event.currentTarget.value = limitDecimalInput(event.currentTarget.value);
+        }}
         {...registration}
       />
       {error && (

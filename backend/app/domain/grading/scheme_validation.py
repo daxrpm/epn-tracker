@@ -16,7 +16,7 @@ from app.domain.numeric import to_decimal
 
 MAX_COMPONENT_WEIGHT = Decimal("35")
 FULL_WEIGHT = Decimal("100")
-DEFAULT_TOLERANCE = Decimal("0.001")
+DEFAULT_TOLERANCE = Decimal("0.01")
 
 
 @dataclass(slots=True)
@@ -82,7 +82,7 @@ def validate_scheme(
             continue
 
         total = sum((to_decimal(c.weight_percent) or Decimal("0") for c in comps), Decimal("0"))
-        if abs(total - FULL_WEIGHT) > tolerance:
+        if total < FULL_WEIGHT - tolerance or total > FULL_WEIGHT:
             issue = SchemeIssue(
                 contribution.value,
                 f"El aporte {contribution.value} suma {total}%, debe sumar 100%.",

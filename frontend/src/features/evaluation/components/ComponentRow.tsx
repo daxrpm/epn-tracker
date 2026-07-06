@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight, Loader2, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,14 @@ import { cn } from "@/lib/utils";
 import { scoreTone } from "../colors";
 import type { ComponentState, GradeComponentMode, GradeItem } from "../gradebook";
 import { useAddItem, useDeleteItem, usePatchComponent, usePatchItem } from "../hooks";
-import { formatScoreScale, normalizeTo20, parseScoreInput } from "../scoreInput";
+import {
+  formatScoreScale,
+  isDecimalDraft,
+  isScoreInputDraft,
+  normalizeTo20,
+  parseScoreInput,
+  scoreInputError,
+} from "../scoreInput";
 
 const MODE_LABELS: Record<GradeComponentMode, string> = {
   DIRECT_SCORE: "Nota directa",
@@ -45,7 +53,12 @@ export function ComponentRow({
     if (mode !== "DIRECT_SCORE") setExpanded(true);
   }
 
-  function commitDirect(text: string) {
+  function commitDirect(text: string): boolean {
+    const error = scoreInputError(text);
+    if (error) {
+      toast.error(error);
+      return false;
+    }
     const parsed = parseScoreInput(text);
     patchComponent.mutate({
       componentStateId: component.id,
@@ -53,6 +66,7 @@ export function ComponentRow({
       direct_score: parsed?.score ?? null,
       direct_score_scale: parsed?.scale ?? null,
     });
+    return true;
   }
 
   return (
@@ -142,7 +156,7 @@ function DirectScoreInput({
 }: {
   value: string | null;
   scale: string;
-  onCommit: (text: string) => void;
+  onCommit: (text: string) => boolean;
   pending: boolean;
 }) {
   const [text, setText] = useState(formatScoreScale(value, scale));
@@ -152,9 +166,17 @@ function DirectScoreInput({
     <div className="flex items-center gap-1.5">
       <Input
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => isScoreInputDraft(e.target.value) && setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+        }}
         onBlur={() => {
-          if (text.trim() !== formatScoreScale(value, scale)) onCommit(text);
+          if (
+            text.trim() !== formatScoreScale(value, scale) &&
+            !onCommit(text)
+          ) {
+            setText(formatScoreScale(value, scale));
+          }
         }}
         placeholder="Ej. 8/10"
         className="h-8 w-24 tabular-nums"
@@ -227,6 +249,12 @@ function ItemRow({
 
   function commitScore() {
     if (scoreText.trim() === formatScoreScale(item.score, item.score_scale)) return;
+    const error = scoreInputError(scoreText);
+    if (error) {
+      toast.error(error);
+      setScoreText(formatScoreScale(item.score, item.score_scale));
+      return;
+    }
     const parsed = parseScoreInput(scoreText);
     patchItem.mutate({
       itemId: item.id,
@@ -246,7 +274,10 @@ function ItemRow({
       />
       <Input
         value={scoreText}
-        onChange={(e) => setScoreText(e.target.value)}
+        onChange={(e) => isScoreInputDraft(e.target.value) && setScoreText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+        }}
         onBlur={commitScore}
         className="h-8 w-20 tabular-nums"
         placeholder="Ej. 8/10"
@@ -255,14 +286,22 @@ function ItemRow({
         <Input
           inputMode="decimal"
           value={weight}
-          onChange={(e) => setWeight(e.target.value)}
-          onBlur={() =>
-            weight !== (item.internal_weight_percent ?? "") &&
+          onChange={(e) => isDecimalDraft(e.target.value) && setWeight(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+          onBlur={() => {
+            if (weight === (item.internal_weight_percent ?? "")) return;
+            if (weight !== "" && Number(weight.replace(",", ".")) > 100) {
+              toast.error("El peso no puede ser mayor que 100%.");
+              setWeight(item.internal_weight_percent ?? "");
+              return;
+            }
             patchItem.mutate({
               itemId: item.id,
-              internal_weight_percent: weight === "" ? null : weight,
-            })
-          }
+              internal_weight_percent: weight === "" ? null : weight.replace(",", "."),
+            });
+          }}
           className="h-8 w-14 tabular-nums"
           placeholder="%"
         />

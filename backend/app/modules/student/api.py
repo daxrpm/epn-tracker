@@ -90,9 +90,7 @@ async def update_grad_requirement(
     state_id: uuid.UUID, payload: GradReqStateUpdateIn, user: CurrentUser, db: DbSession
 ) -> GradReqStateOut:
     profile = await service.get_or_create_profile(db, user)
-    state, requirement = await service.update_grad_requirement(
-        db, profile, state_id, payload.state
-    )
+    state, requirement = await service.update_grad_requirement(db, profile, state_id, payload.state)
     # code/name/type live on the joined GraduationRequirement, not on the state row itself.
     return GradReqStateOut(
         id=state.id,
@@ -133,9 +131,7 @@ async def set_bimestre_override(
 
 
 @router.get("/enrollments/{enrollment_id}/gradebook", response_model=GradebookOut)
-async def get_gradebook(
-    enrollment_id: uuid.UUID, user: CurrentUser, db: DbSession
-) -> GradebookOut:
+async def get_gradebook(enrollment_id: uuid.UUID, user: CurrentUser, db: DbSession) -> GradebookOut:
     profile = await service.get_or_create_profile(db, user)
     return await service.get_gradebook(db, profile, enrollment_id)
 
@@ -169,6 +165,7 @@ async def patch_component(
         mode=payload.mode,
         direct_score=payload.direct_score,
         direct_score_scale=payload.direct_score_scale,
+        direct_score_provided="direct_score" in payload.model_fields_set,
     )
     return {"id": str(state.id), "calculated_score": display_str(state.calculated_score) or "0.00"}
 

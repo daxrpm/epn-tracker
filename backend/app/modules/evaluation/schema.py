@@ -19,9 +19,9 @@ from app.common.enums import (
 class ComponentIn(BaseModel):
     contribution: Contribution
     name: str
-    weight_percent: Decimal = Field(ge=0, le=100)
+    weight_percent: Decimal = Field(ge=0, le=100, decimal_places=2)
     evaluation_type: EvaluationType = EvaluationType.UNKNOWN
-    score_scale: Decimal = Decimal("20")
+    score_scale: Decimal = Field(default=Decimal("20"), gt=0, decimal_places=2)
     display_order: int = 0
 
 

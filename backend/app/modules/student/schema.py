@@ -52,7 +52,7 @@ class CourseStateOut(BaseModel):
 class CourseStateItemIn(BaseModel):
     curriculum_course_id: uuid.UUID
     state: CourseState
-    final_score_40: Decimal | None = None
+    final_score_40: Decimal | None = Field(default=None, ge=0, le=40, decimal_places=2)
 
 
 class CourseStateBulkIn(BaseModel):
@@ -102,8 +102,8 @@ class BimestreOverrideIn(BaseModel):
     """Sets (or clears, with score=None) a bimestre's total directly, skipping components."""
 
     contribution: Contribution
-    score: Decimal | None = None
-    score_scale: Decimal | None = None
+    score: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    score_scale: Decimal | None = Field(default=None, gt=0, decimal_places=2)
 
 
 class GradeItemOut(BaseModel):
@@ -135,24 +135,24 @@ class GradebookOut(BaseModel):
 
 class ComponentPatchIn(BaseModel):
     mode: GradeComponentMode | None = None
-    direct_score: Decimal | None = None
+    direct_score: Decimal | None = Field(default=None, ge=0, decimal_places=2)
     # The scale the student entered direct_score on (e.g. 8/10); defaults to /10 (ERS §17.6).
-    direct_score_scale: Decimal | None = None
+    direct_score_scale: Decimal | None = Field(default=None, gt=0, decimal_places=2)
 
 
 class ItemCreateIn(BaseModel):
     name: str
-    score: Decimal | None = None
+    score: Decimal | None = Field(default=None, ge=0, decimal_places=2)
     # Scale the raw score was entered on (e.g. 8/10, 14/24); defaults to /10, not /20.
-    score_scale: Decimal = Decimal("10")
-    internal_weight_percent: Decimal | None = None
+    score_scale: Decimal = Field(default=Decimal("10"), gt=0, decimal_places=2)
+    internal_weight_percent: Decimal | None = Field(default=None, ge=0, le=100, decimal_places=2)
 
 
 class ItemPatchIn(BaseModel):
     name: str | None = None
-    score: Decimal | None = None
-    score_scale: Decimal | None = None
-    internal_weight_percent: Decimal | None = None
+    score: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    score_scale: Decimal | None = Field(default=None, gt=0, decimal_places=2)
+    internal_weight_percent: Decimal | None = Field(default=None, ge=0, le=100, decimal_places=2)
 
 
 # --- Malla progress -------------------------------------------------------------------------------

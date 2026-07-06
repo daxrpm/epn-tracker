@@ -24,8 +24,8 @@ def calculate_final_grade(payload: AportesIn) -> FinalGradeOut:
     result = calculate_final(payload.aporte_1, payload.aporte_2, is_complete=True)
     required = required_recovery_score(result.final_40)
     return FinalGradeOut(
-        final_40=str(result.final_40),
-        final_20=str(result.final_20),
+        final_40=display_str(result.final_40) or "0.00",
+        final_20=display_str(result.final_20) or "0.00",
         display_final_20=display_str(result.final_20),
         status=result.status,
         is_recovery_eligible=is_recovery_eligible(result.final_40),
@@ -38,8 +38,8 @@ def calculate_recovery(payload: AportesIn) -> RecoveryOut:
     result = calculate_final(payload.aporte_1, payload.aporte_2, is_complete=True)
     required = required_recovery_score(result.final_40)
     return RecoveryOut(
-        final_40=str(result.final_40),
-        final_20=str(result.final_20),
+        final_40=display_str(result.final_40) or "0.00",
+        final_20=display_str(result.final_20) or "0.00",
         display_final_20=display_str(result.final_20),
         status=result.status,
         required_recovery_score_40=None if required is None else str(required),
@@ -78,10 +78,10 @@ def calculate_anon_scheme(payload: AnonSchemeIn) -> AnonSchemeOut:
     final = calculate_final(a1.score_20, a2.score_20, is_complete=is_complete)
 
     return AnonSchemeOut(
-        aporte_1_score_20=str(a1.score_20),
-        aporte_2_score_20=str(a2.score_20),
-        final_40=str(final.final_40),
-        final_20=str(final.final_20),
+        aporte_1_score_20=display_str(a1.score_20) or "0.00",
+        aporte_2_score_20=display_str(a2.score_20) or "0.00",
+        final_40=display_str(final.final_40) or "0.00",
+        final_20=display_str(final.final_20) or "0.00",
         display_final_20=display_str(final.final_20) or "0.00",
         status=final.status,
         is_valid=validation.is_valid,

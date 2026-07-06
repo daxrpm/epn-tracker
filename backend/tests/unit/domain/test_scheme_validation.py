@@ -58,3 +58,30 @@ def test_personal_scheme_incomplete_is_warning_not_error():
     result = validate_scheme(comps, strict=False)
     assert result.is_valid is True
     assert result.warnings
+
+
+def test_two_decimal_99_99_total_is_accepted_as_100():
+    components = []
+    for contribution in (Contribution.APORTE_1, Contribution.APORTE_2):
+        components.extend(
+            [
+                SchemeComponent(contribution, "Prueba", "33.33", EvaluationType.SUMMATIVE),
+                SchemeComponent(contribution, "Deberes", "33.33", EvaluationType.FORMATIVE),
+                SchemeComponent(contribution, "Examen", "33.33", EvaluationType.SUMMATIVE),
+            ]
+        )
+
+    result = validate_scheme(components, strict=True)
+
+    assert result.is_valid is True
+    assert result.errors == []
+
+
+def test_total_above_100_is_not_accepted_by_tolerance():
+    components = _full_scheme()
+    components[0].weight_percent = "30.01"
+
+    result = validate_scheme(components, strict=True)
+
+    assert result.is_valid is False
+    assert any("APORTE_1" in error.field for error in result.errors)

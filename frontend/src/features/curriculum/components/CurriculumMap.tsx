@@ -122,7 +122,7 @@ export function CurriculumMap({
         const midY = (fy + ty) / 2;
         next.push({
           key: `${kind}:${fromCode}->${course.code}`,
-          d: `M ${fx} ${fy} C ${fx} ${midY}, ${tx} ${midY}, ${tx} ${ty}`,
+          d: `M ${fx} ${fy} L ${fx} ${midY} L ${tx} ${midY} L ${tx} ${ty}`,
           kind,
           from: fromCode,
           to: course.code,
@@ -305,7 +305,7 @@ export function CurriculumMap({
           {/* Live connector that follows the cursor while a source card is armed. */}
           {editMode && rubber && (
             <path
-              d={`M ${rubber.x1} ${rubber.y1} C ${rubber.x1} ${(rubber.y1 + rubber.y2) / 2}, ${rubber.x2} ${(rubber.y1 + rubber.y2) / 2}, ${rubber.x2} ${rubber.y2}`}
+              d={`M ${rubber.x1} ${rubber.y1} L ${rubber.x1} ${(rubber.y1 + rubber.y2) / 2} L ${rubber.x2} ${(rubber.y1 + rubber.y2) / 2} L ${rubber.x2} ${rubber.y2}`}
               stroke={KIND_COLOR[drawKind]}
               strokeWidth={2}
               strokeDasharray="5 4"

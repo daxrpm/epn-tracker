@@ -8,11 +8,14 @@ import { useCurriculumCourses } from "@/features/curriculum/hooks";
 import { subjectIcon } from "@/features/curriculum/subjectIcons";
 import { useCourseStates, useProfile } from "@/features/student/hooks";
 
+import { useCalculate, useEnrollments } from "../hooks";
+
 export function MyCoursesPage() {
   const profileQuery = useProfile();
   const curriculumId = profileQuery.data?.current_curriculum_id ?? null;
   const coursesQuery = useCurriculumCourses(curriculumId);
   const statesQuery = useCourseStates();
+  const enrollmentsQuery = useEnrollments();
 
   const inProgress = useMemo(() => {
     const ids = new Set(
@@ -23,7 +26,21 @@ export function MyCoursesPage() {
     return (coursesQuery.data ?? []).filter((c) => ids.has(c.id));
   }, [coursesQuery.data, statesQuery.data]);
 
-  const loading = profileQuery.isLoading || coursesQuery.isLoading || statesQuery.isLoading;
+  const loading =
+    profileQuery.isLoading ||
+    coursesQuery.isLoading ||
+    statesQuery.isLoading ||
+    enrollmentsQuery.isLoading;
+  const enrollmentByCourse = useMemo(
+    () =>
+      new Map(
+        (enrollmentsQuery.data ?? []).map((enrollment) => [
+          enrollment.curriculum_course_id,
+          enrollment.id,
+        ]),
+      ),
+    [enrollmentsQuery.data],
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -72,6 +89,7 @@ export function MyCoursesPage() {
                     <p className="text-xs text-muted-foreground">
                       {course.code} · Semestre {course.reference_term}
                     </p>
+                    <CourseGrade enrollmentId={enrollmentByCourse.get(course.id) ?? null} />
                   </div>
                 </div>
                 <Button asChild size="sm">
@@ -86,5 +104,24 @@ export function MyCoursesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function CourseGrade({ enrollmentId }: { enrollmentId: string | null }) {
+  const calculationQuery = useCalculate(enrollmentId);
+  if (!enrollmentId) {
+    return <p className="mt-1 text-xs text-muted-foreground">Nota: sin configurar</p>;
+  }
+  if (calculationQuery.isLoading) {
+    return <p className="mt-1 text-xs text-muted-foreground">Calculando nota…</p>;
+  }
+  const hasGrades =
+    calculationQuery.data &&
+    (Number(calculationQuery.data.aporte_1.evaluated_weight_percent) > 0 ||
+      Number(calculationQuery.data.aporte_2.evaluated_weight_percent) > 0);
+  return (
+    <p className="mt-1 text-xs font-medium tabular-nums">
+      Nota: {hasGrades ? `${calculationQuery.data?.final_40}/40` : "—"}
+    </p>
   );
 }

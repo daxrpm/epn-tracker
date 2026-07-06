@@ -32,7 +32,12 @@ import {
   useScheme,
   useSetBimestreOverride,
 } from "../hooks";
-import { formatScoreScale, parseScoreInput } from "../scoreInput";
+import {
+  formatScoreScale,
+  isScoreInputDraft,
+  parseScoreInput,
+  scoreInputError,
+} from "../scoreInput";
 
 const CONTRIBUTION_ICON: Record<Contribution, typeof BookOpen> = {
   APORTE_1: BookOpen,
@@ -173,7 +178,7 @@ export function GradebookPage() {
             )}
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-start">
             <Button type="button" variant="outline" size="sm" onClick={toggleFirstBimestreDone}>
               {firstBimestreDone
                 ? "Ocultar nota final y segundo bimestre"
@@ -249,6 +254,11 @@ function BimestreOverrideControl({
   }, [overrideScore, overrideScale]);
 
   async function commit() {
+    const validationError = scoreInputError(text);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
     const parsed = parseScoreInput(text);
     if (!parsed) {
       toast.error("Ingresa una nota válida, ej. 16/20.");
@@ -284,6 +294,9 @@ function BimestreOverrideControl({
           <span className="font-semibold tabular-nums">
             {formatScoreScale(overrideScore, overrideScale)}
           </span>
+          <span className="ml-1 text-muted-foreground">
+            (reemplaza el cálculo sin borrar tus ponderaciones)
+          </span>
         </p>
         <Button
           type="button"
@@ -317,7 +330,10 @@ function BimestreOverrideControl({
       <Input
         autoFocus
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => isScoreInputDraft(e.target.value) && setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void commit();
+        }}
         placeholder="Ej. 16/20"
         className="h-9 w-28 tabular-nums"
       />
@@ -454,13 +470,13 @@ function ComponentsTable({
   }
   return (
     <div className="overflow-hidden rounded-xl border border-border/80">
-      <Table>
+      <Table className="table-fixed">
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead>Componente</TableHead>
-            <TableHead>Modo</TableHead>
+            <TableHead className="w-[32%]">Componente</TableHead>
+            <TableHead className="w-40">Modo</TableHead>
             <TableHead>Entrada</TableHead>
-            <TableHead>Nota /20</TableHead>
+            <TableHead className="w-24">Nota /20</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

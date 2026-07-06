@@ -8,23 +8,51 @@ export interface ParsedScore {
   scale: string;
 }
 
+const DECIMAL_PATTERN = /^\d+(?:[.,]\d{1,2})?$/;
+const SCORE_DRAFT_PATTERN = /^\d*(?:[.,]\d{0,2})?(?:\/\d*(?:[.,]\d{0,2})?)?$/;
+
+/** Allows only a non-negative decimal draft with at most two decimal places. */
+export function isDecimalDraft(value: string): boolean {
+  return /^\d*(?:[.,]\d{0,2})?$/.test(value);
+}
+
+/** Allows a score draft such as `9.25/10` while limiting both values to two decimals. */
+export function isScoreInputDraft(value: string): boolean {
+  return SCORE_DRAFT_PATTERN.test(value);
+}
+
+/** User-facing validation for a score and its scale. */
+export function scoreInputError(text: string): string | null {
+  const trimmed = text.trim();
+  if (!trimmed) return "Ingresa una nota.";
+  const parts = trimmed.split("/");
+  if (parts.length > 2 || !DECIMAL_PATTERN.test(parts[0])) {
+    return "Usa números positivos con máximo 2 decimales.";
+  }
+  const rawScale = parts[1];
+  if (rawScale !== undefined && !DECIMAL_PATTERN.test(rawScale)) {
+    return "La escala debe ser un número positivo con máximo 2 decimales.";
+  }
+  const score = Number(parts[0].replace(",", "."));
+  const scale = Number((rawScale ?? DEFAULT_SCORE_SCALE).replace(",", "."));
+  if (scale <= 0) return "La escala debe ser mayor que 0.";
+  if (score > scale) return "La nota no puede ser mayor que su escala.";
+  return null;
+}
+
 /**
  * Parses "9/10", "14/24" or a bare "14" (defaults to /10) into a score/scale pair.
  * Returns null for empty or unparsable input.
  */
 export function parseScoreInput(text: string): ParsedScore | null {
   const trimmed = text.trim();
-  if (!trimmed) return null;
+  if (scoreInputError(trimmed)) return null;
 
   const [rawScore, rawScale] = trimmed.split("/");
-  const score = rawScore?.trim() ?? "";
-  if (score === "" || Number.isNaN(Number(score))) return null;
+  const score = rawScore.trim().replace(",", ".");
 
-  const scale = rawScale?.trim();
-  if (scale && !Number.isNaN(Number(scale)) && Number(scale) > 0) {
-    return { score, scale };
-  }
-  return { score, scale: DEFAULT_SCORE_SCALE };
+  const scale = rawScale?.trim().replace(",", ".") ?? DEFAULT_SCORE_SCALE;
+  return { score, scale };
 }
 
 /** Renders a score/scale pair as "9/10", trimming trailing decimal zeros on both sides. */

@@ -53,18 +53,42 @@ def _four_component_scheme(course_id):
         "title": "IA GR1CC 2026-A",
         "visibility": "COMMUNITY",
         "components": [
-            {"contribution": "APORTE_1", "name": "Prueba", "weight_percent": "30",
-             "evaluation_type": "SUMMATIVE"},
-            {"contribution": "APORTE_1", "name": "Deberes", "weight_percent": "35",
-             "evaluation_type": "FORMATIVE"},
-            {"contribution": "APORTE_1", "name": "Proyecto", "weight_percent": "35",
-             "evaluation_type": "FORMATIVE"},
-            {"contribution": "APORTE_2", "name": "Prueba", "weight_percent": "30",
-             "evaluation_type": "SUMMATIVE"},
-            {"contribution": "APORTE_2", "name": "Deberes", "weight_percent": "35",
-             "evaluation_type": "FORMATIVE"},
-            {"contribution": "APORTE_2", "name": "Proyecto", "weight_percent": "35",
-             "evaluation_type": "FORMATIVE"},
+            {
+                "contribution": "APORTE_1",
+                "name": "Prueba",
+                "weight_percent": "30",
+                "evaluation_type": "SUMMATIVE",
+            },
+            {
+                "contribution": "APORTE_1",
+                "name": "Deberes",
+                "weight_percent": "35",
+                "evaluation_type": "FORMATIVE",
+            },
+            {
+                "contribution": "APORTE_1",
+                "name": "Proyecto",
+                "weight_percent": "35",
+                "evaluation_type": "FORMATIVE",
+            },
+            {
+                "contribution": "APORTE_2",
+                "name": "Prueba",
+                "weight_percent": "30",
+                "evaluation_type": "SUMMATIVE",
+            },
+            {
+                "contribution": "APORTE_2",
+                "name": "Deberes",
+                "weight_percent": "35",
+                "evaluation_type": "FORMATIVE",
+            },
+            {
+                "contribution": "APORTE_2",
+                "name": "Proyecto",
+                "weight_percent": "35",
+                "evaluation_type": "FORMATIVE",
+            },
         ],
     }
 
@@ -155,6 +179,40 @@ async def test_gradebook_accepts_scores_on_custom_scales(client, db_session):
     assert direct.status_code == 200, direct.text
     assert Decimal(direct.json()["calculated_score"]) == Decimal("14")
 
+    impossible = await client.patch(
+        f"/api/v1/student/grade-components/{components[0]['id']}",
+        json={"mode": "DIRECT_SCORE", "direct_score": "100", "direct_score_scale": "20"},
+        headers=_auth(student),
+    )
+    assert impossible.status_code == 422
+
+    too_precise = await client.patch(
+        f"/api/v1/student/grade-components/{components[0]['id']}",
+        json={"mode": "DIRECT_SCORE", "direct_score": "7.123", "direct_score_scale": "10"},
+        headers=_auth(student),
+    )
+    assert too_precise.status_code == 422
+
+    # Item notes remain available while direct mode replaces their calculation.
+    preserved_item = await client.post(
+        f"/api/v1/student/grade-components/{components[0]['id']}/items",
+        json={"name": "Práctica guardada", "score": "9"},
+        headers=_auth(student),
+    )
+    assert preserved_item.status_code == 200
+    by_items = await client.patch(
+        f"/api/v1/student/grade-components/{components[0]['id']}",
+        json={"mode": "EQUAL_AVERAGE"},
+        headers=_auth(student),
+    )
+    assert Decimal(by_items.json()["calculated_score"]) == Decimal("18")
+    restored_direct = await client.patch(
+        f"/api/v1/student/grade-components/{components[0]['id']}",
+        json={"mode": "DIRECT_SCORE"},
+        headers=_auth(student),
+    )
+    assert Decimal(restored_direct.json()["calculated_score"]) == Decimal("14")
+
     # An item scored 9/10 (the new default scale) also normalizes to 18/20.
     item = await client.post(
         f"/api/v1/student/grade-components/{components[1]['id']}/items",
@@ -164,11 +222,19 @@ async def test_gradebook_accepts_scores_on_custom_scales(client, db_session):
     assert item.status_code == 200, item.text
     assert item.json()["score_scale"] == "10"
 
+    second_item = await client.post(
+        f"/api/v1/student/grade-components/{components[1]['id']}/items",
+        json={"name": "Deber 2", "score": "8"},
+        headers=_auth(student),
+    )
+    assert second_item.status_code == 200
+
     gradebook = await client.get(
         f"/api/v1/student/enrollments/{enrollment_id}/gradebook", headers=_auth(student)
     )
     updated = gradebook.json()["components"][1]
-    assert Decimal(updated["calculated_score"]) == Decimal("18")
+    assert [entry["name"] for entry in updated["items"]] == ["Deber 1", "Deber 2"]
+    assert Decimal(updated["calculated_score"]) == Decimal("17")
 
 
 async def test_bimestre_override_skips_component_breakdown(client, db_session):
@@ -196,6 +262,13 @@ async def test_bimestre_override_skips_component_breakdown(client, db_session):
     assert override.status_code == 200, override.text
     assert Decimal(override.json()["aporte_1_override_score"]) == Decimal("8")
 
+    impossible = await client.patch(
+        f"/api/v1/student/enrollments/{enrollment_id}/bimestre-override",
+        json={"contribution": "APORTE_1", "score": "100", "score_scale": "20"},
+        headers=_auth(student),
+    )
+    assert impossible.status_code == 422
+
     result = await client.post(
         f"/api/v1/student/enrollments/{enrollment_id}/calculate", headers=_auth(student)
     )
@@ -217,6 +290,44 @@ async def test_bimestre_override_skips_component_breakdown(client, db_session):
         f"/api/v1/student/enrollments/{enrollment_id}/calculate", headers=_auth(student)
     )
     assert Decimal(result_after_clear.json()["aporte_1"]["score_20"]) == Decimal("0")
+
+
+async def test_scheme_rounds_a_99_99_weight_total_to_100(client, db_session):
+    course_id, _ = await _seed_course(client, db_session)
+    student = await _make_user(db_session, "weights@epn.edu.ec")
+    components = []
+    for contribution in ("APORTE_1", "APORTE_2"):
+        for index, name in enumerate(("Prueba", "Deberes", "Examen")):
+            components.append(
+                {
+                    "contribution": contribution,
+                    "name": name,
+                    "weight_percent": "33.33",
+                    "evaluation_type": "FORMATIVE" if index == 1 else "SUMMATIVE",
+                }
+            )
+
+    created = await client.post(
+        "/api/v1/evaluation-schemes",
+        json={
+            "course_id": course_id,
+            "title": "Pesos con dos decimales",
+            "visibility": "PRIVATE",
+            "components": components,
+        },
+        headers=_auth(student),
+    )
+    assert created.status_code == 200, created.text
+    detail = await client.get(
+        f"/api/v1/evaluation-schemes/{created.json()['id']}", headers=_auth(student)
+    )
+    for contribution in ("APORTE_1", "APORTE_2"):
+        total = sum(
+            Decimal(component["weight_percent"])
+            for component in detail.json()["components"]
+            if component["contribution"] == contribution
+        )
+        assert total == Decimal("100")
 
 
 async def test_community_verification_at_three_votes(client, db_session):
@@ -292,9 +403,7 @@ async def test_suggest_returns_scheme_for_course(client, db_session):
         )
     ).json()["id"]
 
-    resp = await client.get(
-        "/api/v1/evaluation-schemes/suggest", params={"course_id": course_id}
-    )
+    resp = await client.get("/api/v1/evaluation-schemes/suggest", params={"course_id": course_id})
     assert resp.status_code == 200, resp.text
     ids = [item["id"] for item in resp.json()]
     assert scheme_id in ids

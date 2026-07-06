@@ -1,4 +1,12 @@
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, Loader2, PlayCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Loader2,
+  PlayCircle,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -23,6 +31,7 @@ import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 const STEPS = ["Carrera y pénsum", "Tus materias", "Nivel de inglés"];
+const MAX_IN_PROGRESS_CREDITS = 15;
 
 /** The two states a student can paint onto a course during onboarding. */
 type PickMode = "PASSED" | "IN_PROGRESS";
@@ -71,30 +80,54 @@ export function OnboardingPage() {
     () => coursesWithUnmetPrereqs(coursesQuery.data ?? [], stateByCourse),
     [coursesQuery.data, stateByCourse],
   );
+  const inProgressCredits = useMemo(
+    () =>
+      (coursesQuery.data ?? []).reduce(
+        (total, course) =>
+          courseStates[course.id] === "IN_PROGRESS" ? total + Number(course.credits) : total,
+        0,
+      ),
+    [courseStates, coursesQuery.data],
+  );
 
   const submitting = updateProfile.isPending || bulkStates.isPending;
 
-  /** Tap a course to paint it with the active mode; tap again to unmark it. */
+  function validatedStates(next: Record<string, CourseState>): boolean {
+    const nextMap = new Map<string, CourseState>(Object.entries(next));
+    const invalid = coursesWithUnmetPrereqs(coursesQuery.data ?? [], nextMap);
+    if (invalid.size > 0) {
+      toast.error("Primero debes aprobar los prerrequisitos de las materias seleccionadas.");
+      return false;
+    }
+    const credits = (coursesQuery.data ?? []).reduce(
+      (total, course) =>
+        next[course.id] === "IN_PROGRESS" ? total + Number(course.credits) : total,
+      0,
+    );
+    if (credits > MAX_IN_PROGRESS_CREDITS) {
+      toast.error(`Puedes marcar como cursando hasta ${MAX_IN_PROGRESS_CREDITS} créditos.`);
+      return false;
+    }
+    return true;
+  }
+
+  /** Tap a course to paint it with the active mode; invalid prerequisite chains are rejected. */
   function applyMode(id: string) {
-    setCourseStates((prev) => {
-      const next = { ...prev };
-      if (prev[id] === pickMode) delete next[id];
-      else next[id] = pickMode;
-      return next;
-    });
+    const next = { ...courseStates };
+    if (courseStates[id] === pickMode) delete next[id];
+    else next[id] = pickMode;
+    if (validatedStates(next)) setCourseStates(next);
   }
 
   /** Paint (or clear, if all already match) every course of a semester with the active mode. */
   function applyModeToTerm(courseIds: string[]) {
-    setCourseStates((prev) => {
-      const next = { ...prev };
-      const allMatch = courseIds.every((id) => prev[id] === pickMode);
-      for (const id of courseIds) {
-        if (allMatch) delete next[id];
-        else next[id] = pickMode;
-      }
-      return next;
-    });
+    const next = { ...courseStates };
+    const allMatch = courseIds.every((id) => courseStates[id] === pickMode);
+    for (const id of courseIds) {
+      if (allMatch) delete next[id];
+      else next[id] = pickMode;
+    }
+    if (validatedStates(next)) setCourseStates(next);
   }
 
   async function finish() {
@@ -103,21 +136,33 @@ export function OnboardingPage() {
         curriculum_course_id,
         state,
       }));
-      if (items.length > 0) {
-        await bulkStates.mutateAsync(items);
-      }
       await updateProfile.mutateAsync({
         current_curriculum_id: curriculumId,
         english_level: englishLevel,
       });
-      toast.success("Perfil académico configurado.");
+      if (items.length > 0) {
+        await bulkStates.mutateAsync(items);
+      }
+      const finishedCareer =
+        (coursesQuery.data?.length ?? 0) > 0 &&
+        coursesQuery.data?.every((course) => courseStates[course.id] === "PASSED");
+      toast.success(
+        finishedCareer
+          ? "¡Felicidades! Completaste todas las materias de tu carrera."
+          : "Perfil académico configurado.",
+      );
       navigate("/app/dashboard");
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "No se pudo guardar tu perfil.");
     }
   }
 
-  const canNext = step === 0 ? Boolean(curriculumId) : true;
+  const canNext =
+    step === 0
+      ? Boolean(curriculumId)
+      : step === 1
+        ? prereqWarnings.size === 0 && inProgressCredits <= MAX_IN_PROGRESS_CREDITS
+        : true;
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-8">
@@ -194,6 +239,23 @@ export function OnboardingPage() {
                   cuando termines con un grupo. Puedes ajustarlo después en tu malla.
                 </p>
                 <ModePicker mode={pickMode} onChange={setPickMode} />
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">Créditos cursando</span>
+                  <span
+                    className={cn(
+                      "font-semibold tabular-nums",
+                      inProgressCredits > MAX_IN_PROGRESS_CREDITS && "text-destructive",
+                    )}
+                  >
+                    {inProgressCredits} / {MAX_IN_PROGRESS_CREDITS}
+                  </span>
+                </div>
+                {prereqWarnings.size > 0 && (
+                  <p className="flex items-start gap-2 text-sm text-destructive">
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                    Corrige las materias con prerrequisitos pendientes antes de continuar.
+                  </p>
+                )}
               </div>
               {coursesQuery.isLoading && (
                 <div className="flex justify-center py-8">
