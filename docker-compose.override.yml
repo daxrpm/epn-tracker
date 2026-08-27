@@ -4,17 +4,24 @@
 # them from the host. Production runs the base file on its own:
 #
 #   docker compose -f docker-compose.yml --env-file .env.prod up -d
+#
+# Every port is overridable, because these are the defaults every other local stack also claims:
+#
+#   MINIO_PORT=9100 MINIO_CONSOLE_PORT=9101 docker compose --env-file .env.dev up -d
+#
+# If you change MINIO_PORT, set S3_PUBLIC_ENDPOINT_URL to match — presigned URLs are signed
+# against the host the browser will actually call.
 
 services:
   postgres:
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
 
   redis:
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
 
   minio:
     ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # web console
+      - "${MINIO_PORT:-9000}:9000" # S3 API
+      - "${MINIO_CONSOLE_PORT:-9001}:9001" # web console

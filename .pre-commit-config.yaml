@@ -1,0 +1,73 @@
+# Hooks de pre-commit. Instálalos con `make hooks`; son opcionales pero recomendados.
+#
+# Criterio: aquí solo va lo que corre en menos de un segundo sobre los ficheros que cambiaron.
+# Los tipos y las pruebas se quedan en `make check` y en CI — un hook lento se acaba saltando
+# con --no-verify, y un hook que se salta no protege nada.
+#
+# ruff y prettier son hooks `local` a propósito: usan los binarios del propio proyecto, los
+# mismos que ejecuta `make lint`. Con las versiones fijadas aquí aparte, un hook de prettier
+# 3.6 y un devDependency 3.9 formatean distinto el mismo fichero y se pelean en cada commit.
+
+default_install_hook_types: [pre-commit, commit-msg]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$' # dos espacios finales son un salto de línea en Markdown
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+        # VS Code y los devcontainers usan JSONC (JSON con comentarios) a propósito, y los
+        # comentarios de esos ficheros explican por qué está cada ajuste. No son JSON estricto.
+        exclude: ^(\.vscode/|\.devcontainer/)
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-added-large-files
+        # Las mallas y sílabos en PDF ya están versionados; el tope es para lo que venga después.
+        args: [--maxkb=2048]
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --project backend ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        files: ^backend/
+
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --project backend ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+        files: ^backend/
+
+      - id: prettier
+        name: prettier
+        entry: npx --prefix frontend prettier --write --ignore-unknown
+        language: system
+        files: ^frontend/(src/.*\.(ts|tsx|css)|[^/]*\.(json|md))$
+        exclude: ^frontend/package-lock\.json$
+
+      - id: no-env-files
+        name: no commitear ficheros .env con secretos
+        entry: Los ficheros .env llevan secretos; solo se versionan las plantillas .example
+        language: fail
+        files: '^\.env($|\.(?!.*\.example$))'
+
+      - id: commit-message-format
+        name: mensaje de commit con prefijo convencional
+        # Los commits de este repo van en español con prefijo tipo(ámbito). El hook solo
+        # comprueba la forma, no el idioma.
+        entry: >-
+          bash -c 'head -1 "$1" | grep -qE
+          "^(feat|fix|refactor|perf|test|docs|build|chore|style|revert)(\([a-z0-9,/-]+\))?!?: .+"
+          || { echo "El asunto debe empezar con tipo(ámbito): — p. ej. fix(student): ..."; exit 1; }' --
+        language: system
+        stages: [commit-msg]

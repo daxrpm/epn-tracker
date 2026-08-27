@@ -1,0 +1,41 @@
+{
+  // Entorno reproducible para quien no quiera instalar uv, Node y Docker a mano.
+  // No es obligatorio: `make setup` sobre una máquina con uv + Node 22 hace lo mismo.
+  "name": "EPN Notas Mallas",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+  "features": {
+    // Las mismas versiones que producción y CI. Si cambian aquí, cambian en .python-version,
+    // frontend/.nvmrc, el Dockerfile del backend y el workflow de CI.
+    "ghcr.io/devcontainers/features/python:1": { "version": "3.12" },
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" },
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/va-h/devcontainers-features/uv:1": {}
+  },
+
+  "postCreateCommand": "make setup",
+
+  // El contenedor habla con Postgres, Redis y MinIO por la red del host.
+  "forwardPorts": [8000, 5173, 5432, 6379, 9000, 9001],
+  "portsAttributes": {
+    "8000": { "label": "API" },
+    "5173": { "label": "App" },
+    "9001": { "label": "MinIO console" }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "charliermarsh.ruff",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "bradlc.vscode-tailwindcss",
+        "editorconfig.editorconfig"
+      ]
+    }
+  },
+
+  "remoteUser": "vscode"
+}

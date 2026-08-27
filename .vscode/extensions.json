@@ -1,0 +1,20 @@
+{
+  // Lo mínimo para que el editor coincida con lo que comprueba `make lint`.
+  "recommendations": [
+    "charliermarsh.ruff",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+    "editorconfig.editorconfig",
+    "ms-azuretools.vscode-docker"
+  ],
+  "unwantedRecommendations": [
+    // Formatearían Python de otra forma que ruff, y las dos herramientas se pelearían en cada
+    // guardado.
+    "ms-python.black-formatter",
+    "ms-python.autopep8",
+    "ms-python.isort"
+  ]
+}

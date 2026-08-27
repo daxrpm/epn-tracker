@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# CI ejecuta exactamente las mismas recetas que `make check` en local. Si algo pasa aquí y falla
+# en tu máquina (o al revés), es un fallo del entorno, no una diferencia de comandos.
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+          # Toma la versión de .python-version, que es la misma del Dockerfile.
+          python-version-file: backend/.python-version
+
+      - run: uv sync --frozen
+
+      - name: Formato y estilo
+        run: uv run ruff format --check . && uv run ruff check .
+
+      - name: Tipos
+        run: uv run mypy
+
+      - name: Pruebas
+        run: uv run pytest -q
+
+  migrations:
+    name: Migraciones contra Postgres
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    # La suite corre sobre SQLite; el DDL, las restricciones y `ilike` solo se comportan como en
+    # producción sobre Postgres, así que las migraciones tienen su propio job contra el real.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: epn
+          POSTGRES_PASSWORD: epn
+          POSTGRES_DB: epn
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U epn -d epn"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_USER: epn
+      POSTGRES_PASSWORD: epn
+      POSTGRES_DB: epn
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+          python-version-file: backend/.python-version
+
+      - run: uv sync --frozen
+
+      - name: Aplicar migraciones
+        run: uv run alembic upgrade head
+
+      - name: Sin divergencia entre migraciones y modelos
+        run: uv run alembic check
+
+      - name: Ida y vuelta de la última revisión
+        run: |
+          uv run alembic downgrade -1
+          uv run alembic upgrade head
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Formato
+        run: npx prettier --check "src/**/*.{ts,tsx,css}"
+
+      - name: Estilo
+        run: npm run lint
+
+      - name: Tipos
+        run: npm run typecheck
+
+      - name: Pruebas
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+  hooks:
+    name: Hooks de pre-commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: backend/.python-version
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+      - uses: pre-commit/action@v3.0.1
