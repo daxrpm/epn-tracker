@@ -1,0 +1,20 @@
+# Local development only. Compose loads this automatically on `docker compose up`.
+#
+# It re-publishes the datastore ports so you can point psql, redis-cli or the MinIO console at
+# them from the host. Production runs the base file on its own:
+#
+#   docker compose -f docker-compose.yml --env-file .env.prod up -d
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  minio:
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # web console

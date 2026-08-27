@@ -1,13 +1,25 @@
+# Base stack. Nothing but the app is reachable from outside the compose network.
+#
+# `docker-compose.override.yml` is loaded automatically by `docker compose up` and re-publishes
+# the datastore ports for local development. Production therefore uses this file *alone*:
+#
+#   docker compose -f docker-compose.yml --env-file .env.prod up -d
+#
+# Publishing Postgres, Redis and MinIO on 0.0.0.0 is fine on a laptop and is a database on the
+# public internet on a server, which is why the two cases are separate files.
+
+x-restart: &restart
+  restart: unless-stopped
+
 services:
   postgres:
     image: postgres:16-alpine
     container_name: epn_postgres
+    <<: *restart
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-epn}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-epn}
       POSTGRES_DB: ${POSTGRES_DB:-epn}
-    ports:
-      - "5432:5432"
     volumes:
       - epn_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -19,12 +31,14 @@ services:
   redis:
     image: redis:7-alpine
     container_name: epn_redis
-    ports:
-      - "6379:6379"
+    <<: *restart
+    # Redis holds verification codes and the refresh-token allowlist; it is not a cache we can
+    # leave open.
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-epnredis}", "--appendonly", "yes"]
     volumes:
       - epn_redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-epnredis}", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -32,17 +46,16 @@ services:
   minio:
     image: minio/minio:latest
     container_name: epn_minio
+    <<: *restart
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-epnminio}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-epnminio123}
-    ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # web console
     volumes:
       - epn_miniodata:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      # `mc` is not on PATH in every tag; curl against the documented liveness endpoint is stable.
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -51,6 +64,7 @@ services:
     build:
       context: ./backend
     container_name: epn_backend
+    <<: *restart
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,6 +80,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-epn}
       POSTGRES_DB: ${POSTGRES_DB:-epn}
       REDIS_HOST: redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-epnredis}
       JWT_SECRET: ${JWT_SECRET:-dev-insecure-secret-change-me-please-32bytes+}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
       S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
@@ -86,7 +101,7 @@ services:
       FIRST_SUPERADMIN_EMAIL: ${FIRST_SUPERADMIN_EMAIL:-admin@epn.edu.ec}
       FIRST_SUPERADMIN_PASSWORD: ${FIRST_SUPERADMIN_PASSWORD:-ChangeMe-12345}
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     command: ["sh", "./scripts/entrypoint.sh"]
 
 volumes:

@@ -1,0 +1,17 @@
+# Keep the build context small and never ship a host virtualenv into the image.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+coverage.xml
+tests/
+*.sqlite3
+*.db
+.env
+.env.*
+!.env.example
