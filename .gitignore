@@ -44,5 +44,9 @@ coverage.xml
 *.db
 uploads/
 
-# Node (future frontend)
+# Node
 node_modules/
+dist/
+
+# Cachés de build que cambian en cada compilación y no deben viajar en la historia.
+*.tsbuildinfo
