@@ -26,9 +26,7 @@ async def test_register_verify_login_me(client, fake_redis):
     tokens = resp.json()
     assert tokens["access_token"] and tokens["refresh_token"]
 
-    login = await client.post(
-        "/api/v1/auth/login", json={"email": EMAIL, "password": PASSWORD}
-    )
+    login = await client.post("/api/v1/auth/login", json={"email": EMAIL, "password": PASSWORD})
     assert login.status_code == 200
     access = login.json()["access_token"]
 

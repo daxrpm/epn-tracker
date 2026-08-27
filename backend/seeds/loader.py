@@ -249,6 +249,4 @@ if __name__ == "__main__":
         help="re-apply only prerequisite/corequisite edges to existing curricula (keeps progress)",
     )
     args = parser.parse_args()
-    asyncio.run(
-        main(replace_incomplete=args.replace_incomplete, sync_reqs=args.sync_requirements)
-    )
+    asyncio.run(main(replace_incomplete=args.replace_incomplete, sync_reqs=args.sync_requirements))

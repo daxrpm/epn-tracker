@@ -46,9 +46,7 @@ def test_smtp_sender_uses_starttls_and_authentication(monkeypatch):
     monkeypatch.setattr(email_module.settings, "smtp_starttls", True)
     monkeypatch.setattr(email_module.settings, "smtp_use_ssl", False)
 
-    email_module.SMTPEmailSender._send(
-        "student@epn.edu.ec", "Código", "Tu código es 123456."
-    )
+    email_module.SMTPEmailSender._send("student@epn.edu.ec", "Código", "Tu código es 123456.")
 
     smtp = FakeSMTP.instance
     assert smtp.host == "smtp.example.com"

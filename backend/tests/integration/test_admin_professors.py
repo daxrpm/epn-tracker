@@ -14,8 +14,15 @@ _MALLA = {
     "career": {"name": "Computación", "degree_title": "Ingeniero/a en Computación"},
     "curriculum": {"pensum_year": 2020, "total_terms": 9, "total_credits": "3", "total_hours": 0},
     "courses": [
-        {"code": "ICCD144", "name": "Programación I", "credits": "3", "hours": 144,
-         "reference_term": 1, "organization_unit": "BASIC", "requirements": []},
+        {
+            "code": "ICCD144",
+            "name": "Programación I",
+            "credits": "3",
+            "hours": 144,
+            "reference_term": 1,
+            "organization_unit": "BASIC",
+            "requirements": [],
+        },
     ],
     "graduation_requirements": [],
 }

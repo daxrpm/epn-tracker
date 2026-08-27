@@ -16,8 +16,12 @@ pytestmark = pytest.mark.asyncio
 
 def _course(code, name, term, credits, requirements=None):
     return {
-        "code": code, "name": name, "credits": credits, "hours": 144,
-        "reference_term": term, "organization_unit": "PROFESSIONAL",
+        "code": code,
+        "name": name,
+        "credits": credits,
+        "hours": 144,
+        "reference_term": term,
+        "organization_unit": "PROFESSIONAL",
         "requirements": requirements or [],
     }
 
@@ -27,8 +31,12 @@ def _malla(requirements_for_523):
         "institution": {"name": "Escuela Politécnica Nacional", "acronym": "EPN"},
         "faculty": {"name": "Facultad de Ingeniería de Sistemas", "acronym": "FIS"},
         "career": {"name": "Computación", "degree_title": "Ingeniero/a en Computación"},
-        "curriculum": {"pensum_year": 2020, "total_terms": 9, "total_credits": "9",
-                       "total_hours": 0},
+        "curriculum": {
+            "pensum_year": 2020,
+            "total_terms": 9,
+            "total_credits": "9",
+            "total_hours": 0,
+        },
         "courses": [
             _course("ICCD442", "Estructuras II", 4, "3"),
             _course("ICCD523", "Inteligencia Artificial", 5, "3", requirements_for_523),
@@ -41,9 +49,9 @@ def _malla(requirements_for_523):
 async def _cc_ids(db, curriculum_id):
     rows = (
         await db.execute(
-            select(Course.code, CurriculumCourse.id).join(
-                Course, Course.id == CurriculumCourse.course_id
-            ).where(CurriculumCourse.curriculum_id == curriculum_id)
+            select(Course.code, CurriculumCourse.id)
+            .join(Course, Course.id == CurriculumCourse.course_id)
+            .where(CurriculumCourse.curriculum_id == curriculum_id)
         )
     ).all()
     return dict(rows)
@@ -81,9 +89,7 @@ async def test_sync_adds_missing_prereq_and_keeps_progress(db_session):
 
     # Curriculum courses are untouched (same ids) — so the student state still points at a live row.
     assert await _cc_ids(db_session, result.curriculum_id) == before
-    surviving = (
-        await db_session.execute(select(func.count(StudentCourseState.id)))
-    ).scalar_one()
+    surviving = (await db_session.execute(select(func.count(StudentCourseState.id)))).scalar_one()
     assert surviving == 1
 
     # The new prerequisite edge exists: IA <- Estructuras II.
@@ -111,7 +117,5 @@ async def test_sync_removes_stale_edge(db_session):
     count = await sync_requirements(db_session, CurriculumImportIn.model_validate(_malla([])))
     await db_session.flush()
     assert count == 0
-    total = (
-        await db_session.execute(select(func.count(CourseRequirement.id)))
-    ).scalar_one()
+    total = (await db_session.execute(select(func.count(CourseRequirement.id)))).scalar_one()
     assert total == 0

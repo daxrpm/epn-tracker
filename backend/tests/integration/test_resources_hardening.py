@@ -48,8 +48,12 @@ async def test_a_valid_pdf_is_accepted(client, db_session, fake_storage):
     student = await make_user(db_session, "up1@epn.edu.ec")
 
     resp = await _upload(
-        client, student, course_id,
-        filename="apunte.pdf", content=PDF, content_type="application/pdf",
+        client,
+        student,
+        course_id,
+        filename="apunte.pdf",
+        content=PDF,
+        content_type="application/pdf",
     )
     assert resp.status_code == 200, resp.text
     assert resp.json()["kind"] == "PDF"
@@ -60,8 +64,12 @@ async def test_an_executable_is_rejected_by_extension(client, db_session, fake_s
     student = await make_user(db_session, "up2@epn.edu.ec")
 
     resp = await _upload(
-        client, student, course_id,
-        filename="malware.exe", content=b"MZ\x90\x00", content_type="application/octet-stream",
+        client,
+        student,
+        course_id,
+        filename="malware.exe",
+        content=b"MZ\x90\x00",
+        content_type="application/octet-stream",
     )
     assert resp.status_code == 422
 
@@ -72,8 +80,11 @@ async def test_a_non_pdf_wearing_a_pdf_extension_is_rejected(client, db_session,
     student = await make_user(db_session, "up3@epn.edu.ec")
 
     resp = await _upload(
-        client, student, course_id,
-        filename="fake.pdf", content=b"<html><script>alert(1)</script></html>",
+        client,
+        student,
+        course_id,
+        filename="fake.pdf",
+        content=b"<html><script>alert(1)</script></html>",
         content_type="application/pdf",
     )
     assert resp.status_code == 422
@@ -85,8 +96,12 @@ async def test_an_empty_file_is_rejected(client, db_session, fake_storage):
     student = await make_user(db_session, "up4@epn.edu.ec")
 
     resp = await _upload(
-        client, student, course_id,
-        filename="vacio.pdf", content=b"", content_type="application/pdf",
+        client,
+        student,
+        course_id,
+        filename="vacio.pdf",
+        content=b"",
+        content_type="application/pdf",
     )
     assert resp.status_code == 422
 
@@ -98,8 +113,12 @@ async def test_an_oversized_upload_is_rejected(client, db_session, fake_storage,
 
     oversized = PDF + b"\x00" * (2 * 1024 * 1024)
     resp = await _upload(
-        client, student, course_id,
-        filename="grande.pdf", content=oversized, content_type="application/pdf",
+        client,
+        student,
+        course_id,
+        filename="grande.pdf",
+        content=oversized,
+        content_type="application/pdf",
     )
     assert resp.status_code == 422
     assert "MB" in resp.json()["error"]["message"]
@@ -114,14 +133,16 @@ async def test_a_spoofed_content_type_is_not_stored(client, db_session, fake_sto
     student = await make_user(db_session, "up6@epn.edu.ec")
 
     created = await _upload(
-        client, student, course_id,
-        filename="notas.txt", content=b"<script>alert(1)</script>", content_type="text/html",
+        client,
+        student,
+        course_id,
+        filename="notas.txt",
+        content=b"<script>alert(1)</script>",
+        content_type="text/html",
     )
     assert created.status_code == 200, created.text
 
-    detail = await client.get(
-        f"{API}/resources/{created.json()['id']}", headers=auth(student)
-    )
+    detail = await client.get(f"{API}/resources/{created.json()['id']}", headers=auth(student))
     assert detail.json()["content_type"].startswith("text/plain")
 
 
@@ -129,8 +150,12 @@ async def test_the_preview_never_serves_html(client, db_session, fake_storage):
     course_id, _ = await _course_id(client, db_session)
     student = await make_user(db_session, "up7@epn.edu.ec")
     created = await _upload(
-        client, student, course_id,
-        filename="notas.md", content=b"# hola", content_type="text/html",
+        client,
+        student,
+        course_id,
+        filename="notas.md",
+        content=b"# hola",
+        content_type="text/html",
     )
 
     content = await client.get(
@@ -147,8 +172,12 @@ async def test_a_hostile_filename_cannot_forge_a_header(client, db_session, fake
     student = await make_user(db_session, "up8@epn.edu.ec")
 
     created = await _upload(
-        client, student, course_id,
-        filename='ev"il\r\nX-Injected: yes.pdf', content=PDF, content_type="application/pdf",
+        client,
+        student,
+        course_id,
+        filename='ev"il\r\nX-Injected: yes.pdf',
+        content=PDF,
+        content_type="application/pdf",
     )
     assert created.status_code == 200, created.text
 
@@ -222,8 +251,12 @@ async def test_a_private_resource_is_invisible_to_others(client, db_session, fak
     other = await make_user(db_session, "priv2@epn.edu.ec")
 
     created = await _upload(
-        client, owner, course_id,
-        filename="secreto.pdf", content=PDF, content_type="application/pdf",
+        client,
+        owner,
+        course_id,
+        filename="secreto.pdf",
+        content=PDF,
+        content_type="application/pdf",
         visibility="PRIVATE",
     )
     resource_id = created.json()["id"]
@@ -251,8 +284,12 @@ async def test_voting_on_an_invisible_resource_is_refused(client, db_session, fa
     owner = await make_user(db_session, "priv3@epn.edu.ec")
     other = await make_user(db_session, "priv4@epn.edu.ec")
     created = await _upload(
-        client, owner, course_id,
-        filename="secreto.pdf", content=PDF, content_type="application/pdf",
+        client,
+        owner,
+        course_id,
+        filename="secreto.pdf",
+        content=PDF,
+        content_type="application/pdf",
         visibility="PRIVATE",
     )
 
@@ -266,8 +303,12 @@ async def test_an_owner_can_withdraw_their_own_upload(client, db_session, fake_s
     course_id, _ = await _course_id(client, db_session)
     owner = await make_user(db_session, "own1@epn.edu.ec")
     created = await _upload(
-        client, owner, course_id,
-        filename="error.pdf", content=PDF, content_type="application/pdf",
+        client,
+        owner,
+        course_id,
+        filename="error.pdf",
+        content=PDF,
+        content_type="application/pdf",
     )
     resource_id = created.json()["id"]
 
@@ -285,8 +326,12 @@ async def test_a_stranger_cannot_withdraw_someone_elses_upload(client, db_sessio
     owner = await make_user(db_session, "own2@epn.edu.ec")
     other = await make_user(db_session, "own3@epn.edu.ec")
     created = await _upload(
-        client, owner, course_id,
-        filename="apunte.pdf", content=PDF, content_type="application/pdf",
+        client,
+        owner,
+        course_id,
+        filename="apunte.pdf",
+        content=PDF,
+        content_type="application/pdf",
     )
 
     resp = await client.delete(f"{API}/resources/{created.json()['id']}", headers=auth(other))
@@ -300,8 +345,12 @@ async def test_a_community_verified_resource_needs_a_moderator_to_remove(
     course_id, admin = await _course_id(client, db_session)
     owner = await make_user(db_session, "own4@epn.edu.ec")
     created = await _upload(
-        client, owner, course_id,
-        filename="bueno.pdf", content=PDF, content_type="application/pdf",
+        client,
+        owner,
+        course_id,
+        filename="bueno.pdf",
+        content=PDF,
+        content_type="application/pdf",
     )
     resource_id = created.json()["id"]
 
@@ -316,9 +365,7 @@ async def test_a_community_verified_resource_needs_a_moderator_to_remove(
     refused = await client.delete(f"{API}/resources/{resource_id}", headers=auth(owner))
     assert refused.status_code == 403
 
-    allowed = await client.delete(
-        f"{API}/admin/resources/{resource_id}", headers=auth(admin)
-    )
+    allowed = await client.delete(f"{API}/admin/resources/{resource_id}", headers=auth(admin))
     assert allowed.status_code == 200
 
 
@@ -326,8 +373,12 @@ async def test_the_approval_count_matches_the_number_of_votes(client, db_session
     course_id, _ = await _course_id(client, db_session)
     owner = await make_user(db_session, "count@epn.edu.ec")
     created = await _upload(
-        client, owner, course_id,
-        filename="apunte.pdf", content=PDF, content_type="application/pdf",
+        client,
+        owner,
+        course_id,
+        filename="apunte.pdf",
+        content=PDF,
+        content_type="application/pdf",
     )
     resource_id = created.json()["id"]
 
@@ -345,8 +396,12 @@ async def test_a_second_vote_from_the_same_user_is_refused(client, db_session, f
     owner = await make_user(db_session, "twice1@epn.edu.ec")
     voter = await make_user(db_session, "twice2@epn.edu.ec")
     created = await _upload(
-        client, owner, course_id,
-        filename="apunte.pdf", content=PDF, content_type="application/pdf",
+        client,
+        owner,
+        course_id,
+        filename="apunte.pdf",
+        content=PDF,
+        content_type="application/pdf",
     )
     resource_id = created.json()["id"]
 
@@ -363,8 +418,12 @@ async def test_rejection_votes_archive_a_resource(client, db_session, fake_stora
     course_id, _ = await _course_id(client, db_session)
     owner = await make_user(db_session, "rej@epn.edu.ec")
     created = await _upload(
-        client, owner, course_id,
-        filename="malo.pdf", content=PDF, content_type="application/pdf",
+        client,
+        owner,
+        course_id,
+        filename="malo.pdf",
+        content=PDF,
+        content_type="application/pdf",
     )
     resource_id = created.json()["id"]
 
@@ -387,8 +446,12 @@ async def test_listing_resources_is_bounded(client, db_session, fake_storage):
     student = await make_user(db_session, "page@epn.edu.ec", role=UserRole.ADMIN)
     for i in range(5):
         await _upload(
-            client, student, course_id,
-            filename=f"a{i}.pdf", content=PDF, content_type="application/pdf",
+            client,
+            student,
+            course_id,
+            filename=f"a{i}.pdf",
+            content=PDF,
+            content_type="application/pdf",
             title=f"Apunte {i}",
         )
 
@@ -414,12 +477,22 @@ async def test_searching_resources_runs_on_the_server(client, db_session, fake_s
     course_id, _ = await _course_id(client, db_session)
     student = await make_user(db_session, "search@epn.edu.ec", role=UserRole.ADMIN)
     await _upload(
-        client, student, course_id,
-        filename="a.pdf", content=PDF, content_type="application/pdf", title="Derivadas",
+        client,
+        student,
+        course_id,
+        filename="a.pdf",
+        content=PDF,
+        content_type="application/pdf",
+        title="Derivadas",
     )
     await _upload(
-        client, student, course_id,
-        filename="b.pdf", content=PDF, content_type="application/pdf", title="Integrales",
+        client,
+        student,
+        course_id,
+        filename="b.pdf",
+        content=PDF,
+        content_type="application/pdf",
+        title="Integrales",
     )
 
     resp = await client.get(

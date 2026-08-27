@@ -31,7 +31,10 @@ _MALLA = {
     + [
         _course("ICCD442", "Estructuras II", 4, "3"),
         _course(
-            "ICCD523", "Inteligencia Artificial", 5, "3",
+            "ICCD523",
+            "Inteligencia Artificial",
+            5,
+            "3",
             [{"type": "PREREQUISITE", "course_code": "ICCD442"}],
         ),
     ],

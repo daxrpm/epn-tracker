@@ -253,9 +253,7 @@ async def test_an_enrollment_can_be_dropped_and_recreated(client, db_session):
     token, enrollment_id, malla = await _enrolled_student(client, db_session, "drop@epn.edu.ec")
     curriculum_course_id = malla["courses"][0]["id"]
 
-    dropped = await client.delete(
-        f"{API}/student/enrollments/{enrollment_id}", headers=auth(token)
-    )
+    dropped = await client.delete(f"{API}/student/enrollments/{enrollment_id}", headers=auth(token))
     assert dropped.status_code == 200, dropped.text
 
     listing = await client.get(f"{API}/student/enrollments", headers=auth(token))

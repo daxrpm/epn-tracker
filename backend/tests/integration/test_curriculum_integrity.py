@@ -124,7 +124,7 @@ async def test_students_cannot_edit_the_malla_graph(client, db_session):
 
 
 async def test_search_ignores_accents(client, db_session):
-    """"Cálculo" must find the course stored with its accent-stripped normalised name."""
+    """ "Cálculo" must find the course stored with its accent-stripped normalised name."""
     await _three_course_malla(client, db_session)
 
     accented = await client.get(f"{API}/courses/search", params={"q": "Cálculo"})

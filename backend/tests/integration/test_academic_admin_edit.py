@@ -13,8 +13,12 @@ pytestmark = pytest.mark.asyncio
 
 def _course(code, name, term, credits, requirements=None):
     return {
-        "code": code, "name": name, "credits": credits, "hours": 144,
-        "reference_term": term, "organization_unit": "PROFESSIONAL",
+        "code": code,
+        "name": name,
+        "credits": credits,
+        "hours": 144,
+        "reference_term": term,
+        "organization_unit": "PROFESSIONAL",
         "requirements": requirements or [],
     }
 

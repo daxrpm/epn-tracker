@@ -23,8 +23,15 @@ _MALLA = {
     "career": {"name": "Computación", "degree_title": "Ingeniero/a en Computación"},
     "curriculum": {"pensum_year": 2020, "total_terms": 9, "total_credits": "3", "total_hours": 0},
     "courses": [
-        {"code": "ICCD144", "name": "Programación I", "credits": "3", "hours": 144,
-         "reference_term": 1, "organization_unit": "BASIC", "requirements": []},
+        {
+            "code": "ICCD144",
+            "name": "Programación I",
+            "credits": "3",
+            "hours": 144,
+            "reference_term": 1,
+            "organization_unit": "BASIC",
+            "requirements": [],
+        },
     ],
     "graduation_requirements": [],
 }
@@ -59,8 +66,12 @@ async def _setup(client, db_session):
     # Current academic period, auto-stamped onto uploads.
     await client.post(
         "/api/v1/admin/academic-periods",
-        json={"institution_id": institution_id, "code": "2026-A", "name": "2026 A",
-              "is_current": True},
+        json={
+            "institution_id": institution_id,
+            "code": "2026-A",
+            "name": "2026 A",
+            "is_current": True,
+        },
         headers=_auth(admin),
     )
     search = await client.get("/api/v1/courses/search", params={"q": "ICCD144"})
@@ -77,8 +88,12 @@ async def test_upload_render_moderate_and_vote(client, db_session, fake_storage)
     md = await client.post(
         "/api/v1/resources",
         files={"file": ("apuntes.md", md_bytes, "text/markdown")},
-        data={"course_id": course_id, "title": "Apuntes de derivadas", "tema": "Derivadas",
-              "contribution": "APORTE_1"},
+        data={
+            "course_id": course_id,
+            "title": "Apuntes de derivadas",
+            "tema": "Derivadas",
+            "contribution": "APORTE_1",
+        },
         headers=_auth(student),
     )
     assert md.status_code == 200, md.text
@@ -117,8 +132,11 @@ async def test_upload_render_moderate_and_vote(client, db_session, fake_storage)
     # --- Create a LINK (YouTube) -------------------------------------------------------------
     link = await client.post(
         "/api/v1/resources/links",
-        json={"course_id": course_id, "title": "Clase grabada",
-              "external_url": "https://youtu.be/dQw4w9WgXcQ"},
+        json={
+            "course_id": course_id,
+            "title": "Clase grabada",
+            "external_url": "https://youtu.be/dQw4w9WgXcQ",
+        },
         headers=_auth(student),
     )
     assert link.status_code == 200, link.text
@@ -150,16 +168,18 @@ async def test_upload_render_moderate_and_vote(client, db_session, fake_storage)
     # --- Community voting: three external approvals verify the resource ----------------------
     for i in range(3):
         voter = await _token(db_session, f"voter{i}@epn.edu.ec", UserRole.STUDENT)
-        res = await client.post(f"/api/v1/resources/{md_id}/vote", json={"vote": "APPROVE"},
-                                headers=_auth(voter))
+        res = await client.post(
+            f"/api/v1/resources/{md_id}/vote", json={"vote": "APPROVE"}, headers=_auth(voter)
+        )
         assert res.status_code == 200, res.text
     verified = (await client.get(f"/api/v1/resources/{md_id}", headers=_auth(student))).json()
     assert verified["status"] == "COMMUNITY_VERIFIED"
     assert verified["approval_count"] == 3
 
     # Creator cannot vote their own resource.
-    self_vote = await client.post(f"/api/v1/resources/{md_id}/vote", json={"vote": "APPROVE"},
-                                  headers=_auth(student))
+    self_vote = await client.post(
+        f"/api/v1/resources/{md_id}/vote", json={"vote": "APPROVE"}, headers=_auth(student)
+    )
     assert self_vote.status_code == 403
 
     # --- Admin moderation --------------------------------------------------------------------

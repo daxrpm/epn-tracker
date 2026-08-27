@@ -54,8 +54,12 @@ async def test_create_and_list_academic_period(client, db_session):
 
     created = await client.post(
         "/api/v1/admin/academic-periods",
-        json={"institution_id": institution_id, "code": "2026-A", "name": "Periodo 2026-A",
-              "is_current": True},
+        json={
+            "institution_id": institution_id,
+            "code": "2026-A",
+            "name": "Periodo 2026-A",
+            "is_current": True,
+        },
         headers=_auth(token),
     )
     assert created.status_code == 200, created.text

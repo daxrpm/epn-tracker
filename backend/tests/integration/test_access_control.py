@@ -205,9 +205,7 @@ async def test_suspending_a_user_stops_their_refresh_tokens(client, db_session):
     user = await make_user_row(db_session, "victim@epn.edu.ec", password=password)
     superadmin = await make_user(db_session, "root@epn.edu.ec", role=UserRole.SUPER_ADMIN)
 
-    login = await client.post(
-        f"{API}/auth/login", json={"email": user.email, "password": password}
-    )
+    login = await client.post(f"{API}/auth/login", json={"email": user.email, "password": password})
     assert login.status_code == 200, login.text
     refresh_token = login.json()["refresh_token"]
 
@@ -228,9 +226,7 @@ async def test_a_suspended_user_cannot_log_in(client, db_session):
     user.status = UserStatus.SUSPENDED
     await db_session.commit()
 
-    resp = await client.post(
-        f"{API}/auth/login", json={"email": user.email, "password": password}
-    )
+    resp = await client.post(f"{API}/auth/login", json={"email": user.email, "password": password})
     assert resp.status_code == 401
     # The message must not distinguish "suspended" from "wrong password".
     assert resp.json()["error"]["message"] == "Credenciales inválidas."
@@ -240,15 +236,11 @@ async def test_changing_the_password_revokes_existing_sessions(client, db_sessio
     password = "Sufficiently-long-pass-3"
     user = await make_user_row(db_session, "reset@epn.edu.ec", password=password)
 
-    login = await client.post(
-        f"{API}/auth/login", json={"email": user.email, "password": password}
-    )
+    login = await client.post(f"{API}/auth/login", json={"email": user.email, "password": password})
     old_refresh = login.json()["refresh_token"]
 
     # Drive the real reset path: request a code, read it from Redis, verify with a new password.
-    requested = await client.post(
-        f"{API}/auth/register/request-code", json={"email": user.email}
-    )
+    requested = await client.post(f"{API}/auth/register/request-code", json={"email": user.email})
     assert requested.status_code == 200, requested.text
     code = await fake_redis.get(f"verify:code:{user.email}")
 
@@ -274,9 +266,7 @@ async def test_security_headers_are_present(client):
 
 async def test_a_forged_request_id_is_replaced(client):
     """The value is echoed into logs and headers, so newlines must never survive."""
-    resp = await client.get(
-        f"{API}/health", headers={"X-Request-ID": "abc\r\nX-Injected: evil"}
-    )
+    resp = await client.get(f"{API}/health", headers={"X-Request-ID": "abc\r\nX-Injected: evil"})
     assert "\n" not in resp.headers["X-Request-ID"]
     assert resp.headers["X-Request-ID"] != "abc\r\nX-Injected: evil"
     assert "X-Injected" not in resp.headers

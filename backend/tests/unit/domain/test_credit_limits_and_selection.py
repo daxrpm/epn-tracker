@@ -27,9 +27,7 @@ def _reason_codes(result) -> set[str]:  # noqa: ANN001
 
 
 def test_without_authorization_the_ceiling_is_fifteen():
-    result = calculate_credit_limit(
-        30, has_pending_failed_courses=False, english=EnglishState()
-    )
+    result = calculate_credit_limit(30, has_pending_failed_courses=False, english=EnglishState())
     assert result.max_credits == MAX_CREDITS_NORMAL
     assert result.reasons == []
 
@@ -92,24 +90,18 @@ def _two_course_curriculum() -> list[CourseNode]:
 
 def test_selecting_a_course_whose_prerequisite_is_missing_is_invalid():
     """The simulator used to bless any selection that merely fitted in the credit budget."""
-    result = simulate_next_courses(
-        _two_course_curriculum(), ScenarioState(), selected={"B"}
-    )
+    result = simulate_next_courses(_two_course_curriculum(), ScenarioState(), selected={"B"})
     assert result.selected_valid is False
     assert "SELECTED_COURSE_NOT_ELIGIBLE" in {r.code for r in result.restriction_reasons}
 
 
 def test_selecting_an_eligible_course_is_valid():
-    result = simulate_next_courses(
-        _two_course_curriculum(), ScenarioState(), selected={"A"}
-    )
+    result = simulate_next_courses(_two_course_curriculum(), ScenarioState(), selected={"A"})
     assert result.selected_valid is True
 
 
 def test_a_course_code_that_does_not_exist_is_reported():
-    result = simulate_next_courses(
-        _two_course_curriculum(), ScenarioState(), selected={"NOPE"}
-    )
+    result = simulate_next_courses(_two_course_curriculum(), ScenarioState(), selected={"NOPE"})
     assert result.selected_valid is False
     assert "UNKNOWN_COURSE_SELECTED" in {r.code for r in result.restriction_reasons}
 

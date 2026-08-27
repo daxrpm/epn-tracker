@@ -57,8 +57,11 @@ async def test_professor_create_and_search(client, db_session):
 
     created = await client.post(
         "/api/v1/admin/professors",
-        json={"institution_id": institution_id, "full_name": "Ada Lovelace",
-              "email": "ada@epn.edu.ec"},
+        json={
+            "institution_id": institution_id,
+            "full_name": "Ada Lovelace",
+            "email": "ada@epn.edu.ec",
+        },
         headers=_auth(token),
     )
     assert created.status_code == 200, created.text
@@ -83,8 +86,11 @@ async def test_create_course_offering(client, db_session):
 
     offering = await client.post(
         "/api/v1/admin/course-offerings",
-        json={"course_id": course_id, "academic_period_id": period_id,
-              "curriculum_id": curriculum_id},
+        json={
+            "course_id": course_id,
+            "academic_period_id": period_id,
+            "curriculum_id": curriculum_id,
+        },
         headers=_auth(token),
     )
     assert offering.status_code == 200, offering.text

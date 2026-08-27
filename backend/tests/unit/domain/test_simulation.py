@@ -41,9 +41,7 @@ def test_english_exception_last_level():
 
 
 def test_repetition_limit_12():
-    result = calculate_credit_limit(
-        "30", has_pending_failed_courses=True, english=EnglishState()
-    )
+    result = calculate_credit_limit("30", has_pending_failed_courses=True, english=EnglishState())
     assert result.max_credits == Decimal("12")
     assert any(r.code == "REPETITION_LIMIT_12" for r in result.reasons)
 
