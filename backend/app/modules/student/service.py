@@ -7,6 +7,7 @@ adapts between ORM rows and domain inputs. User-facing messages stay in Spanish.
 from __future__ import annotations
 
 import uuid
+from dataclasses import dataclass
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.common.decimal_utils import ZERO, display_round, display_str
 from app.common.enums import (
     Contribution,
+    CourseFinalStatus,
     CourseState,
     CourseStateSource,
     EnglishLevel,
@@ -23,7 +25,12 @@ from app.common.enums import (
     GraduationRequirementType,
     RequirementType,
 )
-from app.common.exception.errors import ForbiddenError, NotFoundError, ValidationAppError
+from app.common.exception.errors import (
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    ValidationAppError,
+)
 from app.domain.grading.grade_calculation import (
     ComponentInput,
     ContributionResult,
@@ -38,7 +45,7 @@ from app.domain.grading.projection import (
     ProjectionComponent,
     project_target,
 )
-from app.domain.grading.recovery import required_recovery_score
+from app.domain.grading.recovery import evaluate_recovery, is_recovery_eligible
 from app.domain.simulation.credit_limits import MAX_CREDITS_NORMAL
 from app.modules.academic import crud as academic_crud
 from app.modules.academic.model import (
@@ -47,7 +54,8 @@ from app.modules.academic.model import (
     CurriculumCourse,
     GraduationRequirement,
 )
-from app.modules.evaluation.model import EvaluationComponent, EvaluationScheme
+from app.modules.evaluation import service as evaluation_service
+from app.modules.evaluation.model import EvaluationComponent
 from app.modules.iam.model import User
 from app.modules.student import crud
 from app.modules.student.model import (
@@ -71,6 +79,7 @@ from app.modules.student.schema import (
     ProgressOut,
     ProgressTermOut,
     ProjectionOut,
+    RecoveryScoreIn,
 )
 
 
@@ -285,23 +294,43 @@ async def bulk_upsert_course_states(
             state = StudentCourseState(
                 student_profile_id=profile.id,
                 curriculum_course_id=item.curriculum_course_id,
-                source=CourseStateSource.MANUAL,
             )
             db.add(state)
         state.state = item.state
-        state.final_score_40 = item.final_score_40
+        # The student is deciding this by hand, which outranks a state derived from the gradebook.
+        state.source = CourseStateSource.MANUAL
+        # Only touch the stored grade when the client actually sent one: the malla screen omits
+        # it, and blindly assigning would erase a score the gradebook computed.
+        if "final_score_40" in item.model_fields_set:
+            state.final_score_40 = item.final_score_40
         result.append(state)
     await db.flush()
     return result
 
 
 async def create_enrollment(
-    db: AsyncSession, profile: StudentProfile, payload: EnrollmentCreateIn
+    db: AsyncSession, user: User, profile: StudentProfile, payload: EnrollmentCreateIn
 ) -> StudentEnrollment:
-    """Create an enrollment and seed its gradebook from the chosen scheme's components."""
-    scheme = await db.get(EvaluationScheme, payload.evaluation_scheme_id)
-    if scheme is None:
-        raise NotFoundError("Esquema de evaluación no encontrado.")
+    """Create an enrollment and seed its gradebook from the chosen scheme's components.
+
+    The scheme goes through the evaluation module's visibility policy: seeding a gradebook from
+    a scheme would otherwise expose another student's private components (ERS §8.9).
+    """
+    curriculum_course = await academic_crud.get_curriculum_course(
+        db, payload.curriculum_course_id
+    )
+    if curriculum_course is None or (
+        curriculum_course.curriculum_id != profile.current_curriculum_id
+    ):
+        raise NotFoundError("Esa materia no pertenece a tu malla actual.")
+
+    existing = await crud.get_enrollment_by_course(db, profile.id, payload.curriculum_course_id)
+    if existing is not None:
+        raise ConflictError("Ya tienes una matrícula abierta para esta materia.")
+
+    scheme = await evaluation_service.get_readable_scheme(
+        db, user, payload.evaluation_scheme_id
+    )
 
     enrollment = StudentEnrollment(
         student_profile_id=profile.id,
@@ -354,6 +383,53 @@ async def _owned_enrollment(
     return enrollment
 
 
+async def delete_enrollment(
+    db: AsyncSession, profile: StudentProfile, enrollment_id: uuid.UUID
+) -> None:
+    """Drop an enrollment and its gradebook so the student can pick a different course.
+
+    Cascades handle the component states and their items. The malla state is left alone: the
+    student decides separately whether the course is still in progress.
+    """
+    enrollment = await _owned_enrollment(db, profile, enrollment_id)
+    await db.delete(enrollment)
+    await db.flush()
+
+
+async def set_recovery_score(
+    db: AsyncSession,
+    profile: StudentProfile,
+    enrollment_id: uuid.UUID,
+    payload: RecoveryScoreIn,
+) -> StudentEnrollment:
+    """Record (or clear) the makeup-exam score, scored over 40 (ERS §8.5-8.6).
+
+    Only a course whose ordinary grade actually lands in the recovery band can carry one, so a
+    stale score cannot silently change a passed or directly-failed course.
+    """
+    enrollment = await _owned_enrollment(db, profile, enrollment_id)
+    if payload.score is None:
+        enrollment.recovery_score_40 = None
+        await db.flush()
+        await _sync_course_state_from_gradebook(db, profile, enrollment)
+        return enrollment
+
+    ordinary = await _ordinary_result(db, enrollment)
+    if not ordinary.is_complete:
+        raise ValidationAppError(
+            "Primero completa las notas de los dos bimestres para registrar la recuperación."
+        )
+    if not is_recovery_eligible(ordinary.final_40):
+        raise ValidationAppError(
+            "Esta materia no va a recuperación: la nota ordinaria está fuera del rango 18-28/40."
+        )
+
+    enrollment.recovery_score_40 = payload.score
+    await db.flush()
+    await _sync_course_state_from_gradebook(db, profile, enrollment)
+    return enrollment
+
+
 async def set_bimestre_override(
     db: AsyncSession,
     profile: StudentProfile,
@@ -371,6 +447,7 @@ async def set_bimestre_override(
         setattr(enrollment, f"{prefix}_override_score", payload.score)
         setattr(enrollment, f"{prefix}_override_scale", payload.score_scale or Decimal("10"))
     await db.flush()
+    await _sync_course_state_from_gradebook(db, profile, enrollment)
     return enrollment
 
 
@@ -382,12 +459,13 @@ def _validate_score_pair(score: Decimal | None, scale: Decimal) -> None:
 
 async def _owned_component_state(
     db: AsyncSession, profile: StudentProfile, component_state_id: uuid.UUID
-) -> GradeComponentState:
+) -> tuple[GradeComponentState, StudentEnrollment]:
+    """Load a component state together with the enrollment that owns it, checking ownership."""
     state = await crud.get_component_state(db, component_state_id)
     if state is None:
         raise NotFoundError("Componente no encontrado.")
-    await _owned_enrollment(db, profile, state.student_enrollment_id)
-    return state
+    enrollment = await _owned_enrollment(db, profile, state.student_enrollment_id)
+    return state, enrollment
 
 
 async def _recompute_component(db: AsyncSession, state: GradeComponentState) -> None:
@@ -469,7 +547,7 @@ async def patch_component(
     direct_score_scale: Decimal | None = None,
     direct_score_provided: bool = False,
 ) -> GradeComponentState:
-    state = await _owned_component_state(db, profile, component_state_id)
+    state, enrollment = await _owned_component_state(db, profile, component_state_id)
     if mode is not None:
         state.mode = mode
     if direct_score_provided:
@@ -479,6 +557,7 @@ async def patch_component(
     _validate_score_pair(state.direct_score, state.score_scale)
     await _recompute_component(db, state)
     await db.flush()
+    await _sync_course_state_from_gradebook(db, profile, enrollment)
     return state
 
 
@@ -492,7 +571,7 @@ async def add_item(
     score_scale: Decimal,
     internal_weight_percent,  # noqa: ANN001
 ) -> GradeItem:
-    state = await _owned_component_state(db, profile, component_state_id)
+    state, enrollment = await _owned_component_state(db, profile, component_state_id)
     _validate_score_pair(score, score_scale)
     existing_items = await crud.get_items(db, state.id)
     next_display_order = max((item.display_order for item in existing_items), default=-1) + 1
@@ -508,6 +587,7 @@ async def add_item(
     await db.flush()
     await _recompute_component(db, state)
     await db.flush()
+    await _sync_course_state_from_gradebook(db, profile, enrollment)
     return item
 
 
@@ -517,7 +597,7 @@ async def patch_item(
     item = await crud.get_item(db, item_id)
     if item is None:
         raise NotFoundError("Insumo no encontrado.")
-    state = await _owned_component_state(db, profile, item.grade_component_state_id)
+    state, enrollment = await _owned_component_state(db, profile, item.grade_component_state_id)
     fields = payload.model_dump(exclude_unset=True)
     prospective_score = fields.get("score", item.score)
     prospective_scale = fields.get("score_scale", item.score_scale)
@@ -527,6 +607,7 @@ async def patch_item(
     await db.flush()
     await _recompute_component(db, state)
     await db.flush()
+    await _sync_course_state_from_gradebook(db, profile, enrollment)
     return item
 
 
@@ -534,61 +615,197 @@ async def delete_item(db: AsyncSession, profile: StudentProfile, item_id: uuid.U
     item = await crud.get_item(db, item_id)
     if item is None:
         raise NotFoundError("Insumo no encontrado.")
-    state = await _owned_component_state(db, profile, item.grade_component_state_id)
+    state, enrollment = await _owned_component_state(db, profile, item.grade_component_state_id)
     await db.delete(item)
     await db.flush()
     await _recompute_component(db, state)
     await db.flush()
+    await _sync_course_state_from_gradebook(db, profile, enrollment)
 
 
-async def calculate(
-    db: AsyncSession, profile: StudentProfile, enrollment_id: uuid.UUID
-) -> CalculateOut:
-    """Compute contributions, final grade and recovery for an enrollment (ERS §16)."""
-    enrollment = await _owned_enrollment(db, profile, enrollment_id)
+@dataclass(slots=True)
+class OrdinaryResult:
+    """The ordinary (pre-recovery) outcome of an enrollment. Pure data, nothing persisted."""
+
+    aporte_1: ContributionResult
+    aporte_2: ContributionResult
+    final_40: Decimal
+    final_20: Decimal
+    status: CourseFinalStatus
+    is_complete: bool
+
+
+async def _ordinary_result(db: AsyncSession, enrollment: StudentEnrollment) -> OrdinaryResult:
+    """Compute the ordinary grade from the stored gradebook.
+
+    Read-only on purpose: computing a grade must never be a write. Component scores are
+    persisted by the PATCH endpoints that change them (``_recompute_component``), so reading
+    here cannot drift from what is stored.
+    """
     states = await crud.get_component_states(db, enrollment.id)
     components = await _load_components(db, states)
     items_by_state = await _load_items_by_state(db, states)
 
     grouped: dict[str, list[ComponentInput]] = {"APORTE_1": [], "APORTE_2": []}
     for state in states:
-        component = components[state.evaluation_component_id]
-        item_inputs = [
-            ItemInput(
-                score=i.score,
-                internal_weight_percent=i.internal_weight_percent,
-                score_scale=i.score_scale,
-            )
-            for i in items_by_state.get(state.id, [])
-        ]
-        state.calculated_score = calculate_component_score(
-            state.mode, state.direct_score, item_inputs, state.score_scale
+        component = components.get(state.evaluation_component_id)
+        if component is None:  # orphaned row: skip rather than fail the whole calculation
+            continue
+        score = calculate_component_score(
+            state.mode,
+            state.direct_score,
+            _item_inputs(items_by_state.get(state.id, [])),
+            state.score_scale,
         )
         grouped[component.contribution.value].append(
             ComponentInput(
                 weight_percent=component.weight_percent,
                 mode=GradeComponentMode.DIRECT_SCORE,
-                direct_score=state.calculated_score,
+                direct_score=score,
             )
         )
-    await db.flush()
 
     a1 = _contribution_result(enrollment, "aporte_1", grouped["APORTE_1"])
     a2 = _contribution_result(enrollment, "aporte_2", grouped["APORTE_2"])
     is_complete = a1.is_complete and a2.is_complete
     final = calculate_final(a1.score_20, a2.score_20, is_complete=is_complete)
-    required = required_recovery_score(final.final_40) if is_complete else None
-
-    return CalculateOut(
-        aporte_1=_contribution_out("APORTE_1", a1),
-        aporte_2=_contribution_out("APORTE_2", a2),
-        final_40=display_str(final.final_40) or "0.00",
-        final_20=display_str(final.final_20) or "0.00",
-        display_final_20=display_str(final.final_20) or "0.00",
+    return OrdinaryResult(
+        aporte_1=a1,
+        aporte_2=a2,
+        final_40=final.final_40,
+        final_20=final.final_20,
         status=final.status,
         is_complete=is_complete,
-        required_recovery_score_40=display_str(required) if required is not None else None,
     )
+
+
+def _item_inputs(items: list[GradeItem]) -> list[ItemInput]:
+    return [
+        ItemInput(
+            score=i.score,
+            internal_weight_percent=i.internal_weight_percent,
+            score_scale=i.score_scale,
+        )
+        for i in items
+    ]
+
+
+async def calculate(
+    db: AsyncSession, profile: StudentProfile, enrollment_id: uuid.UUID
+) -> CalculateOut:
+    """Contributions, ordinary final grade and recovery outcome for an enrollment (ERS §16)."""
+    enrollment = await _owned_enrollment(db, profile, enrollment_id)
+    ordinary = await _ordinary_result(db, enrollment)
+    recovery = _recovery_view(ordinary, enrollment.recovery_score_40)
+
+    return CalculateOut(
+        aporte_1=_contribution_out("APORTE_1", ordinary.aporte_1),
+        aporte_2=_contribution_out("APORTE_2", ordinary.aporte_2),
+        final_40=display_str(ordinary.final_40) or "0.00",
+        final_20=display_str(ordinary.final_20) or "0.00",
+        display_final_20=display_str(ordinary.final_20) or "0.00",
+        status=recovery.status,
+        is_complete=ordinary.is_complete,
+        required_recovery_score_40=display_str(recovery.required_score_40),
+        recovery_score_40=display_str(enrollment.recovery_score_40),
+        recovery_passed=recovery.passed,
+        effective_final_40=display_str(recovery.effective_final_40) or "0.00",
+        effective_final_20=display_str(recovery.effective_final_20) or "0.00",
+    )
+
+
+@dataclass(slots=True)
+class _RecoveryView:
+    """How the recovery exam changes (or does not change) the reported outcome."""
+
+    status: CourseFinalStatus
+    required_score_40: Decimal | None
+    passed: bool | None
+    effective_final_40: Decimal
+    effective_final_20: Decimal
+
+
+def _recovery_view(ordinary: OrdinaryResult, recovery_score_40: Decimal | None) -> _RecoveryView:
+    """Fold the recovery score into the outcome (ERS §8.5-8.6).
+
+    Without a recovery score this reports the ordinary status plus the minimum still needed. With
+    one, the averaged grade replaces the ordinary final and decides pass or fail.
+    """
+    if not ordinary.is_complete:
+        return _RecoveryView(
+            status=ordinary.status,
+            required_score_40=None,
+            passed=None,
+            effective_final_40=ordinary.final_40,
+            effective_final_20=ordinary.final_20,
+        )
+
+    result = evaluate_recovery(ordinary.final_40, recovery_score_40)
+    if recovery_score_40 is None or result.averaged_final_40 is None:
+        return _RecoveryView(
+            status=ordinary.status,
+            required_score_40=result.required_recovery_score_40,
+            passed=None,
+            effective_final_40=ordinary.final_40,
+            effective_final_20=ordinary.final_20,
+        )
+
+    effective_40 = result.averaged_final_40
+    return _RecoveryView(
+        status=(
+            CourseFinalStatus.APPROVED if result.passed else CourseFinalStatus.FAILED_DIRECT
+        ),
+        required_score_40=result.required_recovery_score_40,
+        passed=result.passed,
+        effective_final_40=effective_40,
+        effective_final_20=effective_40 / Decimal("2"),
+    )
+
+
+async def _sync_course_state_from_gradebook(
+    db: AsyncSession, profile: StudentProfile, enrollment: StudentEnrollment
+) -> None:
+    """Mirror a decided gradebook outcome onto the malla (ERS §8.14).
+
+    The gradebook and the curriculum map are the two halves of the same fact, so a finished
+    course propagates automatically. A state the student set by hand is never overwritten: manual
+    intent wins over a derived one.
+    """
+    ordinary = await _ordinary_result(db, enrollment)
+    recovery = _recovery_view(ordinary, enrollment.recovery_score_40)
+    if not ordinary.is_complete:
+        return
+
+    new_state = _COURSE_STATE_BY_STATUS.get(recovery.status)
+    if new_state is None:
+        return
+
+    state = await crud.get_course_state_by_course(
+        db, profile.id, enrollment.curriculum_course_id
+    )
+    if state is None:
+        state = StudentCourseState(
+            student_profile_id=profile.id,
+            curriculum_course_id=enrollment.curriculum_course_id,
+        )
+        db.add(state)
+    elif state.source == CourseStateSource.MANUAL and state.state != CourseState.IN_PROGRESS:
+        # The student already decided this one by hand; leave it alone.
+        return
+
+    state.state = new_state
+    state.source = CourseStateSource.GRADEBOOK
+    state.final_score_40 = recovery.effective_final_40
+    state.academic_period_id = enrollment.academic_period_id
+    await db.flush()
+
+
+#: How a finished gradebook maps onto the malla. ``RECOVERY_ELIGIBLE`` is deliberately absent:
+#: the course is not decided until the recovery score is in.
+_COURSE_STATE_BY_STATUS: dict[CourseFinalStatus, CourseState] = {
+    CourseFinalStatus.APPROVED: CourseState.PASSED,
+    CourseFinalStatus.FAILED_DIRECT: CourseState.FAILED,
+}
 
 
 def _contribution_out(contribution: str, result) -> ContributionOut:  # noqa: ANN001
@@ -635,29 +852,22 @@ async def project(
 
     projection_components: list[ProjectionComponent] = []
     for state in states:
-        component = components[state.evaluation_component_id]
-        if overridden[component.contribution.value]:
+        component = components.get(state.evaluation_component_id)
+        if component is None or overridden[component.contribution.value]:
             # This bimestre's total was entered directly; its components don't count individually.
             continue
-        item_inputs = [
-            ItemInput(
-                score=i.score,
-                internal_weight_percent=i.internal_weight_percent,
-                score_scale=i.score_scale,
-            )
-            for i in items_by_state.get(state.id, [])
-        ]
-        state.calculated_score = calculate_component_score(
-            state.mode, state.direct_score, item_inputs, state.score_scale
-        )
         projection_components.append(
             ProjectionComponent(
                 contribution=component.contribution,
                 weight_percent=component.weight_percent,
-                calculated_score=state.calculated_score,
+                calculated_score=calculate_component_score(
+                    state.mode,
+                    state.direct_score,
+                    _item_inputs(items_by_state.get(state.id, [])),
+                    state.score_scale,
+                ),
             )
         )
-    await db.flush()
 
     for prefix, contribution in (
         ("aporte_1", Contribution.APORTE_1),

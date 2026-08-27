@@ -29,6 +29,7 @@ from app.modules.student.schema import (
     ProfileUpdateIn,
     ProgressOut,
     ProjectionOut,
+    RecoveryScoreIn,
 )
 
 router = APIRouter(prefix="/student", tags=["student"])
@@ -117,7 +118,27 @@ async def create_enrollment(
     payload: EnrollmentCreateIn, user: CurrentUser, db: DbSession
 ) -> EnrollmentOut:
     profile = await service.get_or_create_profile(db, user)
-    enrollment = await service.create_enrollment(db, profile, payload)
+    enrollment = await service.create_enrollment(db, user, profile, payload)
+    return EnrollmentOut.model_validate(enrollment)
+
+
+@router.delete("/enrollments/{enrollment_id}")
+async def delete_enrollment(
+    enrollment_id: uuid.UUID, user: CurrentUser, db: DbSession
+) -> dict[str, bool]:
+    """Drop the enrollment and its gradebook so a different course can be chosen."""
+    profile = await service.get_or_create_profile(db, user)
+    await service.delete_enrollment(db, profile, enrollment_id)
+    return {"deleted": True}
+
+
+@router.patch("/enrollments/{enrollment_id}/recovery", response_model=EnrollmentOut)
+async def set_recovery_score(
+    enrollment_id: uuid.UUID, payload: RecoveryScoreIn, user: CurrentUser, db: DbSession
+) -> EnrollmentOut:
+    """Record the makeup-exam grade over 40 (ERS §8.5-8.6)."""
+    profile = await service.get_or_create_profile(db, user)
+    enrollment = await service.set_recovery_score(db, profile, enrollment_id, payload)
     return EnrollmentOut.model_validate(enrollment)
 
 
@@ -136,8 +157,9 @@ async def get_gradebook(enrollment_id: uuid.UUID, user: CurrentUser, db: DbSessi
     return await service.get_gradebook(db, profile, enrollment_id)
 
 
-@router.post("/enrollments/{enrollment_id}/calculate", response_model=CalculateOut)
+@router.get("/enrollments/{enrollment_id}/calculate", response_model=CalculateOut)
 async def calculate(enrollment_id: uuid.UUID, user: CurrentUser, db: DbSession) -> CalculateOut:
+    """Read-only: computing a grade never mutates the gradebook."""
     profile = await service.get_or_create_profile(db, user)
     return await service.calculate(db, profile, enrollment_id)
 

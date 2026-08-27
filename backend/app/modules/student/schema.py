@@ -95,7 +95,14 @@ class EnrollmentOut(BaseModel):
     aporte_1_override_scale: Decimal | None
     aporte_2_override_score: Decimal | None
     aporte_2_override_scale: Decimal | None
+    recovery_score_40: Decimal | None
     model_config = {"from_attributes": True}
+
+
+class RecoveryScoreIn(BaseModel):
+    """Sets (or clears, with score=None) the makeup-exam grade, scored over 40 (ERS §8.5)."""
+
+    score: Decimal | None = Field(default=None, ge=0, le=40, decimal_places=2)
 
 
 class BimestreOverrideIn(BaseModel):
@@ -185,12 +192,19 @@ class ContributionOut(BaseModel):
 class CalculateOut(BaseModel):
     aporte_1: ContributionOut
     aporte_2: ContributionOut
+    #: Ordinary grade, before any recovery exam.
     final_40: str
     final_20: str
     display_final_20: str
+    #: Outcome after folding in the recovery score, when there is one.
     status: CourseFinalStatus
     is_complete: bool
     required_recovery_score_40: str | None = Field(default=None)
+    recovery_score_40: str | None = Field(default=None)
+    recovery_passed: bool | None = Field(default=None)
+    #: The grade that actually counts: the ordinary one, or the recovery average once taken.
+    effective_final_40: str = "0.00"
+    effective_final_20: str = "0.00"
 
 
 # --- Projection (RF-009) --------------------------------------------------------------------------

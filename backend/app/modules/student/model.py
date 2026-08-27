@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, Integer, String, Text
+from sqlalchemy import ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Boolean
 
@@ -66,6 +66,15 @@ class StudentEnrollment(UUIDMixin, TimestampMixin, Base):
     """A course the student is taking with its context (section/professor/scheme)."""
 
     __tablename__ = "student_enrollments"
+    __table_args__ = (
+        # One open gradebook per course: the service checks this too, but the constraint is
+        # what makes it true under concurrent requests.
+        UniqueConstraint(
+            "student_profile_id",
+            "curriculum_course_id",
+            name="uq_enrollment_student_course",
+        ),
+    )
 
     student_profile_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("student_profiles.id", ondelete="CASCADE"), index=True
@@ -90,6 +99,9 @@ class StudentEnrollment(UUIDMixin, TimestampMixin, Base):
     aporte_1_override_scale: Mapped[Decimal | None] = mapped_column(Score, nullable=True)
     aporte_2_override_score: Mapped[Decimal | None] = mapped_column(Score, nullable=True)
     aporte_2_override_scale: Mapped[Decimal | None] = mapped_column(Score, nullable=True)
+    # Makeup exam, scored over 40 (ERS §8.5-8.6). Only meaningful once the ordinary grade lands
+    # in the 18-28/40 recovery band; the service enforces that before storing it.
+    recovery_score_40: Mapped[Decimal | None] = mapped_column(Score, nullable=True)
 
 
 class GradeComponentState(UUIDMixin, TimestampMixin, Base):

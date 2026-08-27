@@ -51,6 +51,17 @@ async def list_enrollments(db: AsyncSession, profile_id: uuid.UUID) -> Sequence[
     return (await db.execute(stmt)).scalars().all()
 
 
+async def get_enrollment_by_course(
+    db: AsyncSession, profile_id: uuid.UUID, curriculum_course_id: uuid.UUID
+) -> StudentEnrollment | None:
+    """The student's enrollment for one curriculum course, if any (one open per course)."""
+    stmt = select(StudentEnrollment).where(
+        StudentEnrollment.student_profile_id == profile_id,
+        StudentEnrollment.curriculum_course_id == curriculum_course_id,
+    )
+    return (await db.execute(stmt)).scalars().first()
+
+
 async def get_component_states(
     db: AsyncSession, enrollment_id: uuid.UUID
 ) -> Sequence[GradeComponentState]:
