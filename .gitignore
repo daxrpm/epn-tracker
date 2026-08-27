@@ -9,7 +9,8 @@ dist/
 # Virtual envs / uv
 .venv/
 venv/
-.python-version
+# Ojo: `.python-version` NO va aquí. Con uv es el pin de versión del proyecto y tiene que
+# viajar con el repositorio; ignorarlo deja a cada clon resolviendo la versión que tenga a mano.
 
 # Environment
 .env
