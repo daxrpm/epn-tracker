@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Boolean
 
@@ -24,6 +24,10 @@ class Professor(UUIDMixin, TimestampMixin, Base):
 
 class CourseOffering(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "course_offerings"
+    __table_args__ = (
+        # One offering per course and period; duplicates would split a course's sections.
+        UniqueConstraint("course_id", "academic_period_id", name="uq_offering_course_period"),
+    )
 
     course_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("courses.id"))
     academic_period_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("academic_periods.id"))
@@ -37,6 +41,11 @@ class CourseOffering(UUIDMixin, TimestampMixin, Base):
 
 class Section(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "sections"
+    __table_args__ = (
+        UniqueConstraint(
+            "course_offering_id", "section_code", name="uq_section_offering_code"
+        ),
+    )
 
     course_offering_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("course_offerings.id"))
     section_code: Mapped[str] = mapped_column(String(50))

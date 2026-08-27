@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 
 from app.common.deps import CurrentUser, DbSession, require_admin
+from app.core.rate_limit import enforce_rate_limit
 from app.modules.offering import crud, service
 from app.modules.offering.schema import (
     CourseOfferingCreateIn,
@@ -36,6 +37,12 @@ async def search_professors(
 async def find_or_create_professor(
     payload: ProfessorFindOrCreateIn, user: CurrentUser, db: DbSession
 ) -> ProfessorOut:
+    """Any student may register the professor of a course they are entering (ERS §17.7).
+
+    Throttled per user: this writes to a shared catalog everyone sees, so it is the one open
+    write endpoint worth rate limiting.
+    """
+    await enforce_rate_limit(f"rate:professor-create:{user.id}", 20, 3600)
     professor = await service.find_or_create_professor(db, payload)
     return ProfessorOut.model_validate(professor)
 

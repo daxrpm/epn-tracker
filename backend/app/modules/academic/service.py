@@ -515,6 +515,7 @@ async def add_requirement(
     )
     if existing is not None:
         raise ConflictError("Ese requisito ya existe.")
+    await _reject_requirement_cycle(db, target.curriculum_id, target.id, required.id)
     requirement = CourseRequirement(
         curriculum_course_id=target.id,
         required_curriculum_course_id=required.id,
@@ -535,6 +536,43 @@ async def add_requirement(
         },
     )
     return requirement
+
+
+async def _reject_requirement_cycle(
+    db: AsyncSession,
+    curriculum_id: uuid.UUID,
+    target_id: uuid.UUID,
+    required_id: uuid.UUID,
+) -> None:
+    """Refuse an edge that would make the requirement graph cyclic.
+
+    ``target`` requires ``required``. If ``required`` already depends (transitively) on
+    ``target``, adding the edge creates a loop in which neither course can ever be taken — and
+    the visual editor makes that a single misclick away.
+    """
+    curriculum_courses = await crud.list_curriculum_courses(db, curriculum_id)
+    requirements = await crud.requirements_for_curriculum(
+        db, [cc.id for cc in curriculum_courses]
+    )
+    depends_on: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for requirement in requirements:
+        depends_on.setdefault(requirement.curriculum_course_id, []).append(
+            requirement.required_curriculum_course_id
+        )
+
+    # Walk what `required` transitively needs; reaching `target` means the new edge closes a loop.
+    seen: set[uuid.UUID] = set()
+    stack = [required_id]
+    while stack:
+        current = stack.pop()
+        if current == target_id:
+            raise ValidationAppError(
+                "Ese requisito crearía un ciclo: las materias quedarían bloqueadas entre sí."
+            )
+        if current in seen:
+            continue
+        seen.add(current)
+        stack.extend(depends_on.get(current, ()))
 
 
 async def remove_requirement(

@@ -5,10 +5,18 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.common.enums import Contribution, ResourceKind, ResourceStatus
+from app.common.enums import (
+    PUBLICLY_VISIBLE_RESOURCE_STATUSES,
+    Contribution,
+    ResourceKind,
+    ResourceStatus,
+    SchemeVote,
+)
+from app.common.pagination import DEFAULT_PAGE_SIZE
+from app.common.sql import escape_like
 from app.modules.academic.model import AcademicPeriod
 from app.modules.resources.model import Resource, ResourceVote
 
@@ -27,6 +35,12 @@ async def list_resources(
     kind: ResourceKind | None = None,
     tema: str | None = None,
     status_in: Sequence[ResourceStatus] | None = None,
+    visible_to_user_id: uuid.UUID | None = None,
+    include_hidden: bool = False,
+    owned_only: bool = False,
+    search: str | None = None,
+    limit: int = DEFAULT_PAGE_SIZE,
+    offset: int = 0,
 ) -> Sequence[Resource]:
     stmt = select(Resource).where(Resource.is_active.is_(True))
     if course_id is not None:
@@ -40,11 +54,38 @@ async def list_resources(
     if kind is not None:
         stmt = stmt.where(Resource.kind == kind)
     if tema:
-        stmt = stmt.where(Resource.tema.ilike(f"%{tema}%"))
+        stmt = stmt.where(Resource.tema.ilike(f"%{escape_like(tema)}%", escape="\\"))
+    if search:
+        pattern = f"%{escape_like(search)}%"
+        stmt = stmt.where(
+            or_(
+                Resource.title.ilike(pattern, escape="\\"),
+                Resource.tema.ilike(pattern, escape="\\"),
+                Resource.description.ilike(pattern, escape="\\"),
+            )
+        )
     if status_in is not None:
         stmt = stmt.where(Resource.status.in_(list(status_in)))
-    stmt = stmt.order_by(Resource.created_at.desc())
+    if owned_only:
+        stmt = stmt.where(Resource.created_by_user_id == visible_to_user_id)
+    elif not include_hidden:
+        # Visibility filtered in SQL: a caller sees public statuses plus their own drafts.
+        stmt = stmt.where(
+            or_(
+                Resource.status.in_(list(PUBLICLY_VISIBLE_RESOURCE_STATUSES)),
+                Resource.created_by_user_id == visible_to_user_id,
+            )
+        )
+    stmt = stmt.order_by(Resource.created_at.desc()).limit(limit).offset(offset)
     return (await db.execute(stmt)).scalars().all()
+
+
+async def count_votes(db: AsyncSession, resource_id: uuid.UUID, vote: SchemeVote) -> int:
+    """Count votes of one kind; the vote rows are the source of truth for ``approval_count``."""
+    stmt = select(func.count(ResourceVote.id)).where(
+        ResourceVote.resource_id == resource_id, ResourceVote.vote == vote
+    )
+    return (await db.execute(stmt)).scalar_one()
 
 
 async def get_user_vote(

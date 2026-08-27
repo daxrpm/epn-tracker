@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.common.enums import (
     Contribution,
@@ -15,26 +15,45 @@ from app.common.enums import (
     Visibility,
 )
 
+#: Only these schemes may be stored as a resource link. The value is rendered as an ``href`` in
+#: the viewer, so ``javascript:`` and ``data:`` would be a stored cross-site scripting vector.
+_ALLOWED_URL_SCHEMES = ("http://", "https://")
+_MAX_URL_LENGTH = 2048
+
+
+def _validate_external_url(value: str) -> str:
+    url = value.strip()
+    if len(url) > _MAX_URL_LENGTH:
+        raise ValueError("El enlace es demasiado largo.")
+    if not url.lower().startswith(_ALLOWED_URL_SCHEMES):
+        raise ValueError("El enlace debe empezar con http:// o https://.")
+    return url
+
 
 class LinkResourceCreateIn(BaseModel):
     """JSON body for a LINK resource (Drive/YouTube/URL — no file upload)."""
 
     course_id: uuid.UUID
     title: str = Field(min_length=1, max_length=255)
-    external_url: str = Field(min_length=1)
-    description: str | None = None
+    external_url: str = Field(min_length=1, max_length=_MAX_URL_LENGTH)
+    description: str | None = Field(default=None, max_length=2000)
     tema: str | None = Field(default=None, max_length=255)
     contribution: Contribution | None = None
     professor_id: uuid.UUID | None = None
     academic_period_id: uuid.UUID | None = None
     visibility: Visibility = Visibility.COMMUNITY
 
+    @field_validator("external_url")
+    @classmethod
+    def _url_scheme(cls, v: str) -> str:
+        return _validate_external_url(v)
+
 
 class ResourceUpdateIn(BaseModel):
     """Editable metadata (owner or admin). Advanced options include year/professor."""
 
     title: str | None = Field(default=None, min_length=1, max_length=255)
-    description: str | None = None
+    description: str | None = Field(default=None, max_length=2000)
     tema: str | None = Field(default=None, max_length=255)
     contribution: Contribution | None = None
     professor_id: uuid.UUID | None = None

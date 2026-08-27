@@ -6,10 +6,12 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.deps import CurrentUser, DbSession, require_admin
 from app.common.enums import RequirementType
 from app.common.exception.errors import NotFoundError
+from app.common.pagination import Page
 from app.modules.academic import crud, service
 from app.modules.academic.schema import (
     AcademicPeriodCreateIn,
@@ -80,10 +82,25 @@ async def get_curriculum_courses(
     if curriculum is None:
         raise NotFoundError("Malla no encontrada.")
 
+    return await _curriculum_courses_out(db, curriculum_id)
+
+
+async def _curriculum_courses_out(
+    db: AsyncSession, curriculum_id: uuid.UUID
+) -> list[CurriculumCourseOut]:
+    """Build the malla view with three queries total, regardless of how many courses it has."""
     curriculum_courses = list(await crud.list_curriculum_courses(db, curriculum_id))
-    course_ids = [cc.course_id for cc in curriculum_courses]
-    courses = {c.id: c for c in await crud.get_courses_by_ids(db, course_ids)}
-    cc_id_to_code = {cc.id: courses[cc.course_id].code for cc in curriculum_courses}
+    courses = {
+        c.id: c
+        for c in await crud.get_courses_by_ids(db, [cc.course_id for cc in curriculum_courses])
+    }
+    # A curriculum row whose catalog course vanished is data corruption, not a reason to 500 the
+    # whole malla: skip it and let the rest render.
+    cc_id_to_code = {
+        cc.id: courses[cc.course_id].code
+        for cc in curriculum_courses
+        if cc.course_id in courses
+    }
 
     requirements = await crud.requirements_for_curriculum(
         db, [cc.id for cc in curriculum_courses]
@@ -94,9 +111,9 @@ async def get_curriculum_courses(
         bucket = (
             prerequisites if req.requirement_type == RequirementType.PREREQUISITE else corequisites
         )
-        bucket.setdefault(req.curriculum_course_id, []).append(
-            cc_id_to_code.get(req.required_curriculum_course_id, "?")
-        )
+        code = cc_id_to_code.get(req.required_curriculum_course_id)
+        if code is not None:
+            bucket.setdefault(req.curriculum_course_id, []).append(code)
 
     return [
         CurriculumCourseOut(
@@ -113,12 +130,19 @@ async def get_curriculum_courses(
             corequisite_codes=corequisites.get(cc.id, []),
         )
         for cc in curriculum_courses
+        if cc.course_id in courses
     ]
 
 
 @router.get("/courses/search", response_model=list[CourseOut])
-async def search_courses(db: DbSession, q: Annotated[str, Query(min_length=1)]) -> list[CourseOut]:
-    return list(await crud.search_courses(db, q))
+async def search_courses(
+    db: DbSession,
+    q: Annotated[str, Query(min_length=1, max_length=120)],
+    page: Page,
+) -> list[CourseOut]:
+    """Search the catalog. The term is normalised the same way stored names are, so accents
+    and casing do not change the result."""
+    return list(await crud.search_courses(db, service.normalize_name(q), limit=page.limit))
 
 
 @router.get("/courses/{course_id}", response_model=CourseOut)
@@ -190,24 +214,36 @@ content_admin_router = APIRouter(
 )
 
 
-async def _curriculum_course_out(db: DbSession, cc) -> CurriculumCourseOut:
+async def _requirement_codes(
+    db: AsyncSession, curriculum_course_id: uuid.UUID
+) -> dict[uuid.UUID, str]:
+    """Resolve every requirement target of one course to its code in two queries, not 2N."""
+    reqs = await crud.requirements_for_curriculum(db, [curriculum_course_id])
+    required_ids = [r.required_curriculum_course_id for r in reqs]
+    required_ccs = await crud.get_curriculum_courses_by_ids(db, required_ids)
+    courses = {
+        c.id: c for c in await crud.get_courses_by_ids(db, [cc.course_id for cc in required_ccs])
+    }
+    return {
+        cc.id: courses[cc.course_id].code for cc in required_ccs if cc.course_id in courses
+    }
+
+
+async def _curriculum_course_out(db: DbSession, cc) -> CurriculumCourseOut:  # noqa: ANN001
     course = await crud.get_course(db, cc.course_id)
     reqs = await crud.requirements_for_curriculum(db, [cc.id])
-    code_of: dict = {}
-    for req in reqs:
-        required_cc = await crud.get_curriculum_course(db, req.required_curriculum_course_id)
-        if required_cc is not None:
-            rc = await crud.get_course(db, required_cc.course_id)
-            code_of[req.required_curriculum_course_id] = rc.code if rc else "?"
+    code_of = await _requirement_codes(db, cc.id)
     pre = [
-        code_of.get(r.required_curriculum_course_id, "?")
+        code_of[r.required_curriculum_course_id]
         for r in reqs
         if r.requirement_type == RequirementType.PREREQUISITE
+        and r.required_curriculum_course_id in code_of
     ]
     co = [
-        code_of.get(r.required_curriculum_course_id, "?")
+        code_of[r.required_curriculum_course_id]
         for r in reqs
         if r.requirement_type == RequirementType.COREQUISITE
+        and r.required_curriculum_course_id in code_of
     ]
     return CurriculumCourseOut(
         id=cc.id,
@@ -263,22 +299,16 @@ async def list_curriculum_course_requirements(
     curriculum_course_id: uuid.UUID, db: DbSession
 ) -> list[RequirementDetailOut]:
     reqs = await crud.requirements_for_curriculum(db, [curriculum_course_id])
-    out: list[RequirementDetailOut] = []
-    for req in reqs:
-        required_cc = await crud.get_curriculum_course(db, req.required_curriculum_course_id)
-        code = "?"
-        if required_cc is not None:
-            rc = await crud.get_course(db, required_cc.course_id)
-            code = rc.code if rc else "?"
-        out.append(
-            RequirementDetailOut(
-                id=req.id,
-                required_curriculum_course_id=req.required_curriculum_course_id,
-                required_code=code,
-                requirement_type=req.requirement_type,
-            )
+    code_of = await _requirement_codes(db, curriculum_course_id)
+    return [
+        RequirementDetailOut(
+            id=req.id,
+            required_curriculum_course_id=req.required_curriculum_course_id,
+            required_code=code_of.get(req.required_curriculum_course_id, "?"),
+            requirement_type=req.requirement_type,
         )
-    return out
+        for req in reqs
+    ]
 
 
 @content_admin_router.get(

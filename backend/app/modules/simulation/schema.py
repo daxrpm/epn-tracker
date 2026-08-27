@@ -17,12 +17,16 @@ class EnglishStateIn(BaseModel):
     has_exception_authorization: bool = False
 
 
+#: A malla is a few dozen courses; anything larger is abuse, not a student.
+MAX_COURSE_CODES = 400
+
+
 class SimulationRunIn(BaseModel):
     curriculum_id: uuid.UUID
-    passed_course_codes: list[str] = Field(default_factory=list)
-    failed_course_codes: list[str] = Field(default_factory=list)
-    annulled_course_codes: list[str] = Field(default_factory=list)
-    selected_course_codes: list[str] = Field(default_factory=list)
+    passed_course_codes: list[str] = Field(default_factory=list, max_length=MAX_COURSE_CODES)
+    failed_course_codes: list[str] = Field(default_factory=list, max_length=MAX_COURSE_CODES)
+    annulled_course_codes: list[str] = Field(default_factory=list, max_length=MAX_COURSE_CODES)
+    selected_course_codes: list[str] = Field(default_factory=list, max_length=MAX_COURSE_CODES)
     english: EnglishStateIn = Field(default_factory=EnglishStateIn)
     has_special_credit_authorization: bool = False
 
@@ -67,8 +71,10 @@ class StudentSimulationRunIn(BaseModel):
     """Only the assumptions and next-term selection travel over the wire; the base scenario
     (approved/current courses) and the English state come from the student's saved profile."""
 
-    assumptions: list[AssumptionIn] = Field(default_factory=list)
-    selected_course_ids: list[uuid.UUID] = Field(default_factory=list)
+    assumptions: list[AssumptionIn] = Field(default_factory=list, max_length=MAX_COURSE_CODES)
+    selected_course_ids: list[uuid.UUID] = Field(
+        default_factory=list, max_length=MAX_COURSE_CODES
+    )
     has_special_credit_authorization: bool = False
     # When omitted, the English state is read from the student's profile.
     english_override: EnglishStateIn | None = None

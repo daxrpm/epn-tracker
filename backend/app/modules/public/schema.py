@@ -33,16 +33,20 @@ class RecoveryOut(BaseModel):
     display_required_recovery_score_40: str | None
 
 
+#: The anonymous calculators take unauthenticated input, so every list and number is bounded.
+MAX_ANON_COMPONENTS = 40
+
+
 class AnonComponentIn(BaseModel):
     contribution: Contribution
-    name: str
-    weight_percent: Decimal
+    name: str = Field(max_length=255)
+    weight_percent: Decimal = Field(ge=0, le=100, decimal_places=2)
     evaluation_type: EvaluationType = EvaluationType.UNKNOWN
-    score: Decimal | None = None
+    score: Decimal | None = Field(default=None, ge=0, le=20, decimal_places=2)
 
 
 class AnonSchemeIn(BaseModel):
-    components: list[AnonComponentIn]
+    components: list[AnonComponentIn] = Field(max_length=MAX_ANON_COMPONENTS)
 
 
 class AnonSchemeOut(BaseModel):

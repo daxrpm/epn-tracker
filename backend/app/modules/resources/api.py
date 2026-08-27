@@ -22,7 +22,9 @@ from app.common.enums import (
     UserRole,
     Visibility,
 )
-from app.common.exception.errors import NotFoundError
+from app.common.exception.errors import NotFoundError, ValidationAppError
+from app.common.pagination import Page
+from app.core.conf import settings
 from app.modules.academic import crud as academic_crud
 from app.modules.offering import crud as offering_crud
 from app.modules.resources import crud, service, storage
@@ -56,9 +58,6 @@ async def _professor_names(
     return {p.id: p.full_name for p in professors}
 
 
-async def _period_codes(db: AsyncSession) -> dict[uuid.UUID, str]:
-    periods = await academic_crud.list_academic_periods(db)
-    return {p.id: p.code for p in periods}
 
 
 def _to_list_item(
@@ -99,21 +98,37 @@ def _to_list_item(
     )
 
 
-def _visible(resources: Sequence[Resource], user: CurrentUser) -> list[Resource]:
-    is_admin = user.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN)
-    visible_statuses = {
-        ResourceStatus.COMMUNITY_PENDING,
-        ResourceStatus.COMMUNITY_VERIFIED,
-        ResourceStatus.ADMIN_VERIFIED,
-    }
-    out: list[Resource] = []
-    for r in resources:
-        if is_admin or r.created_by_user_id == user.id or r.status in visible_statuses:
-            out.append(r)
-    return out
+async def _period_codes_for(
+    db: AsyncSession, resources: Sequence[Resource]
+) -> dict[uuid.UUID, str]:
+    """Resolve only the periods actually referenced, instead of the whole catalog per request."""
+    ids = [r.academic_period_id for r in resources if r.academic_period_id is not None]
+    periods = await academic_crud.get_academic_periods_by_ids(db, ids)
+    return {p.id: p.code for p in periods}
 
 
 # --- Create ----------------------------------------------------------------------------------
+
+
+_UPLOAD_CHUNK_BYTES = 64 * 1024
+
+
+async def _read_within_limit(file: UploadFile, max_bytes: int) -> bytes:
+    """Read an upload in chunks, aborting as soon as it exceeds ``max_bytes``.
+
+    Reading the whole part first and checking its size afterwards lets a single request pin
+    arbitrary memory before we ever get to reject it.
+    """
+    chunks: list[bytes] = []
+    total = 0
+    while chunk := await file.read(_UPLOAD_CHUNK_BYTES):
+        total += len(chunk)
+        if total > max_bytes:
+            raise ValidationAppError(
+                f"El archivo supera el límite de {settings.resource_max_upload_mb} MB."
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 @router.post("", response_model=ResourceCreateOut)
@@ -122,21 +137,20 @@ async def create_file_resource(
     db: DbSession,
     file: Annotated[UploadFile, File()],
     course_id: Annotated[uuid.UUID, Form()],
-    title: Annotated[str, Form()],
-    description: Annotated[str | None, Form()] = None,
-    tema: Annotated[str | None, Form()] = None,
+    title: Annotated[str, Form(min_length=1, max_length=255)],
+    description: Annotated[str | None, Form(max_length=2000)] = None,
+    tema: Annotated[str | None, Form(max_length=255)] = None,
     contribution: Annotated[Contribution | None, Form()] = None,
     professor_id: Annotated[uuid.UUID | None, Form()] = None,
     academic_period_id: Annotated[uuid.UUID | None, Form()] = None,
     visibility: Annotated[Visibility, Form()] = Visibility.COMMUNITY,
 ) -> ResourceCreateOut:
-    blob = await file.read()
+    blob = await _read_within_limit(file, settings.resource_max_upload_mb * 1024 * 1024)
     return await service.create_file_resource(
         db,
         user,
         blob=blob,
         filename=file.filename or "archivo",
-        content_type=file.content_type,
         course_id=course_id,
         title=title,
         description=description,
@@ -162,14 +176,17 @@ async def create_link_resource(
 async def list_resources(
     user: CurrentUser,
     db: DbSession,
+    page: Page,
     course_id: Annotated[uuid.UUID | None, Query()] = None,
     academic_period_id: Annotated[uuid.UUID | None, Query()] = None,
     professor_id: Annotated[uuid.UUID | None, Query()] = None,
     contribution: Annotated[Contribution | None, Query()] = None,
     kind: Annotated[ResourceKind | None, Query()] = None,
-    tema: Annotated[str | None, Query()] = None,
+    tema: Annotated[str | None, Query(max_length=255)] = None,
+    q: Annotated[str | None, Query(max_length=255)] = None,
     mine: Annotated[bool, Query()] = False,
 ) -> list[ResourceListItem]:
+    """Browse resources. Visibility and search both run in SQL, never over a full table read."""
     resources = await crud.list_resources(
         db,
         course_id=course_id,
@@ -178,13 +195,15 @@ async def list_resources(
         contribution=contribution,
         kind=kind,
         tema=tema,
+        search=q,
+        visible_to_user_id=user.id,
+        include_hidden=user.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN),
+        owned_only=mine,
+        limit=page.limit,
+        offset=page.offset,
     )
-    if mine:
-        resources = [r for r in resources if r.created_by_user_id == user.id]
-    else:
-        resources = _visible(resources, user)
     professor_names = await _professor_names(db, (r.professor_id for r in resources))
-    period_codes = await _period_codes(db)
+    period_codes = await _period_codes_for(db, resources)
     return [
         _to_list_item(
             r,
@@ -202,7 +221,7 @@ async def get_resource(
 ) -> ResourceDetail:
     resource, download_url = await service.get_download_url(db, user, resource_id)
     professor_names = await _professor_names(db, [resource.professor_id])
-    period_codes = await _period_codes(db)
+    period_codes = await _period_codes_for(db, [resource])
     base = _to_list_item(
         resource,
         professor_names=professor_names,
@@ -223,18 +242,35 @@ async def get_resource(
 async def get_resource_content(
     resource_id: uuid.UUID, user: CurrentUser, db: DbSession
 ) -> StreamingResponse:
-    """Same-origin inline preview proxy (avoids cross-origin CORS with MinIO)."""
-    resource = await crud.get_resource(db, resource_id)
-    if resource is None or not resource.is_active or resource.object_key is None:
+    """Same-origin preview proxy (avoids cross-origin CORS with MinIO).
+
+    The content type comes from our own validated metadata, and the response is served as an
+    attachment under the API's restrictive CSP, so a file whose bytes disagree with its extension
+    still cannot execute in the browser.
+    """
+    resource = await service.get_visible_resource(db, user, resource_id)
+    if resource.object_key is None:
         raise NotFoundError("Recurso no encontrado.")
-    if not service._is_visible_to(resource, user):
-        raise NotFoundError("Recurso no encontrado.")
-    body_iter, content_type = await storage.stream_object(resource.object_key)
+
+    filename = service.safe_filename(resource.original_filename or "archivo")
+    body_iter, content_length = await storage.stream_object(resource.object_key)
+    headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    if content_length is not None:
+        headers["Content-Length"] = str(content_length)
     return StreamingResponse(
         body_iter,
-        media_type=content_type,
-        headers={"Content-Disposition": f'inline; filename="{resource.original_filename}"'},
+        media_type=resource.content_type or "application/octet-stream",
+        headers=headers,
     )
+
+
+@router.delete("/{resource_id}")
+async def delete_own_resource(
+    resource_id: uuid.UUID, user: CurrentUser, db: DbSession
+) -> dict[str, bool]:
+    """Withdraw a resource you uploaded (moderators can withdraw any)."""
+    await service.delete_own_resource(db, user, resource_id)
+    return {"deleted": True}
 
 
 # --- Vote / update ---------------------------------------------------------------------------
@@ -259,12 +295,18 @@ async def update_resource(
 
 
 @admin_router.get("", response_model=list[ResourceListItem])
-async def list_pending(user: CurrentUser, db: DbSession) -> list[ResourceListItem]:
+async def list_pending(
+    user: CurrentUser, db: DbSession, page: Page
+) -> list[ResourceListItem]:
     resources = await crud.list_resources(
-        db, status_in=[ResourceStatus.COMMUNITY_PENDING]
+        db,
+        status_in=[ResourceStatus.COMMUNITY_PENDING],
+        include_hidden=True,
+        limit=page.limit,
+        offset=page.offset,
     )
     professor_names = await _professor_names(db, (r.professor_id for r in resources))
-    period_codes = await _period_codes(db)
+    period_codes = await _period_codes_for(db, resources)
     return [
         _to_list_item(
             r,

@@ -5,9 +5,11 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.common.pagination import DEFAULT_PAGE_SIZE
+from app.common.sql import escape_like
 from app.modules.academic.model import (
     AcademicPeriod,
     Career,
@@ -68,11 +70,26 @@ async def get_courses_by_ids(
     return (await db.execute(select(Course).where(Course.id.in_(course_ids)))).scalars().all()
 
 
-async def search_courses(db: AsyncSession, query: str, limit: int = 20) -> Sequence[Course]:
-    like = f"%{query.lower()}%"
+async def search_courses(
+    db: AsyncSession, normalized_query: str, limit: int = DEFAULT_PAGE_SIZE
+) -> Sequence[Course]:
+    """Search by code or accent-insensitive name.
+
+    ``normalized_query`` must already have been through the same normalisation as
+    ``Course.normalized_name`` (accents stripped, lowercased) — otherwise "Cálculo" would never
+    match the stored "calculo".
+    """
+    like = f"%{escape_like(normalized_query)}%"
     stmt = (
         select(Course)
-        .where((Course.normalized_name.like(like)) | (Course.code.ilike(like)))
+        .where(
+            Course.is_active.is_(True),
+            or_(
+                Course.normalized_name.like(like, escape="\\"),
+                Course.code.ilike(like, escape="\\"),
+            ),
+        )
+        .order_by(Course.code)
         .limit(limit)
     )
     return (await db.execute(stmt)).scalars().all()
@@ -82,6 +99,16 @@ async def get_curriculum_course(
     db: AsyncSession, curriculum_course_id: uuid.UUID
 ) -> CurriculumCourse | None:
     return await db.get(CurriculumCourse, curriculum_course_id)
+
+
+async def get_curriculum_courses_by_ids(
+    db: AsyncSession, curriculum_course_ids: Sequence[uuid.UUID]
+) -> Sequence[CurriculumCourse]:
+    unique = list(set(curriculum_course_ids))
+    if not unique:
+        return []
+    stmt = select(CurriculumCourse).where(CurriculumCourse.id.in_(unique))
+    return (await db.execute(stmt)).scalars().all()
 
 
 async def get_course_requirement(
@@ -125,6 +152,17 @@ async def get_academic_period(
     db: AsyncSession, period_id: uuid.UUID
 ) -> AcademicPeriod | None:
     return await db.get(AcademicPeriod, period_id)
+
+
+async def get_academic_periods_by_ids(
+    db: AsyncSession, period_ids: Sequence[uuid.UUID]
+) -> Sequence[AcademicPeriod]:
+    """Batch lookup so list endpoints do not read the whole period catalog per request."""
+    unique = list(set(period_ids))
+    if not unique:
+        return []
+    stmt = select(AcademicPeriod).where(AcademicPeriod.id.in_(unique))
+    return (await db.execute(stmt)).scalars().all()
 
 
 async def get_academic_period_by_code(

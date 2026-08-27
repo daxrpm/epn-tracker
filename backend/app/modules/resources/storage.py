@@ -94,17 +94,34 @@ async def presigned_get_url(
         )
 
 
-async def stream_object(key: str) -> tuple[AsyncIterator[bytes], str]:
-    """Yield the object's bytes (for same-origin inline preview) plus its content type."""
-    async with _client() as s3:
+STREAM_CHUNK_BYTES = 64 * 1024
+
+
+async def stream_object(key: str) -> tuple[AsyncIterator[bytes], int | None]:
+    """Stream an object's bytes for the same-origin preview proxy.
+
+    The client and the body stay open for the lifetime of the generator so a 50 MB file is never
+    materialised in the API process. The caller supplies the content type from our own metadata;
+    whatever the uploader claimed is deliberately not trusted here.
+    """
+    client_ctx = _client()
+    s3 = await client_ctx.__aenter__()
+    try:
         obj = await s3.get_object(Bucket=settings.s3_bucket, Key=key)
-        content_type = obj.get("ContentType", "application/octet-stream")
-        body = await obj["Body"].read()
+    except BaseException:
+        await client_ctx.__aexit__(None, None, None)
+        raise
+
+    content_length = obj.get("ContentLength")
 
     async def _iter() -> AsyncIterator[bytes]:
-        yield body
+        try:
+            async for chunk in obj["Body"].iter_chunks(STREAM_CHUNK_BYTES):
+                yield chunk
+        finally:
+            await client_ctx.__aexit__(None, None, None)
 
-    return _iter(), content_type
+    return _iter(), content_length
 
 
 # Re-exported for callers that want to serialize the CORS policy (e.g. an mc init job).
