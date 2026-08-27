@@ -69,7 +69,7 @@ export function SchemePicker({
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </div>
       ) : options.length === 0 ? (
-        <Card className="bg-card/65">
+        <Card className="bg-card">
           <CardContent className="p-6 text-sm text-muted-foreground">
             Todavía no hay cursos registrados para esta materia. Crea el primero.
           </CardContent>
@@ -83,13 +83,16 @@ export function SchemePicker({
             };
             const isPending = option.status === "COMMUNITY_PENDING";
             return (
-              <Card key={option.id} className="bg-card/65">
+              <Card key={option.id} className="bg-card">
                 <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-col gap-1.5">
                     <span className="text-sm font-medium">
                       {option.title}
                       {option.professor_name && (
-                        <span className="font-normal text-muted-foreground"> · {option.professor_name}</span>
+                        <span className="font-normal text-muted-foreground">
+                          {" "}
+                          · {option.professor_name}
+                        </span>
                       )}
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
@@ -118,7 +121,11 @@ export function SchemePicker({
                       </Button>
                     )}
                     <Button size="sm" onClick={() => onUse(option.id)} disabled={busy}>
-                      {busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+                      {busy ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Check className="size-4" />
+                      )}
                       Usar este
                     </Button>
                   </div>

@@ -38,7 +38,7 @@ export function ProfessorPicker({ value, onChange, placeholder }: Props) {
 
   if (value) {
     return (
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-input bg-transparent px-3 py-2">
+      <div className="flex items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 py-2">
         <span className="min-w-0 truncate text-sm">{value.full_name}</span>
         <button
           type="button"
@@ -66,7 +66,7 @@ export function ProfessorPicker({ value, onChange, placeholder }: Props) {
         className="h-9 pl-8"
       />
       {open && results.length > 0 && (
-        <ul className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-border bg-popover p-1 shadow-lg">
+        <ul className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border border-border bg-popover p-1 shadow-lg">
           {results.map((professor) => (
             <li key={professor.id}>
               <button

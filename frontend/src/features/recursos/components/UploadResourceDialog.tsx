@@ -36,6 +36,10 @@ import { ProfessorPicker } from "./ProfessorPicker";
 
 const NONE = "__none__";
 
+/** Mirrors RESOURCE_MAX_UPLOAD_MB on the server. Checked here so a 500 MB pick is refused
+ *  before it is uploaded, instead of after the whole transfer. */
+const MAX_UPLOAD_MB = 50;
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -55,6 +59,7 @@ export function UploadResourceDialog({ open, onOpenChange, initialCourse }: Prop
   const [tema, setTema] = useState("");
   const [contribution, setContribution] = useState<Contribution | typeof NONE>(NONE);
   const [file, setFile] = useState<File | null>(null);
+  const [visibility, setVisibility] = useState<"COMMUNITY" | "PRIVATE">("COMMUNITY");
   const [url, setUrl] = useState("");
   const [advanced, setAdvanced] = useState(false);
   const [periodId, setPeriodId] = useState<string>(NONE);
@@ -78,6 +83,7 @@ export function UploadResourceDialog({ open, onOpenChange, initialCourse }: Prop
     setTema("");
     setContribution(NONE);
     setFile(null);
+    setVisibility("COMMUNITY");
     setUrl("");
     setAdvanced(false);
     setPeriodId(NONE);
@@ -98,7 +104,7 @@ export function UploadResourceDialog({ open, onOpenChange, initialCourse }: Prop
     contribution: contribution === NONE ? undefined : contribution,
     professor_id: professor?.id,
     academic_period_id: periodId === NONE ? undefined : periodId,
-    visibility: "COMMUNITY" as const,
+    visibility,
   });
 
   async function submit() {
@@ -111,20 +117,30 @@ export function UploadResourceDialog({ open, onOpenChange, initialCourse }: Prop
       return;
     }
     try {
+      let created;
       if (tab === "file") {
         if (!file) {
           toast.error("Selecciona un archivo.");
           return;
         }
-        await createFile.mutateAsync({ file, ...commonMeta() });
+        created = await createFile.mutateAsync({ file, ...commonMeta() });
       } else {
-        if (!url.trim()) {
-          toast.error("Escribe un enlace.");
+        const trimmed = url.trim();
+        if (!/^https?:\/\//i.test(trimmed)) {
+          toast.error("El enlace debe empezar con http:// o https://.");
           return;
         }
-        await createLink.mutateAsync({ external_url: url.trim(), ...commonMeta() });
+        created = await createLink.mutateAsync({ external_url: trimmed, ...commonMeta() });
       }
-      toast.success("Recurso enviado. Quedará visible tras la aprobación de la comunidad.");
+      // The server decides the status (an admin's upload is verified immediately), so the
+      // message reports what actually happened instead of assuming.
+      toast.success(
+        created.status === "ADMIN_VERIFIED"
+          ? "Recurso publicado."
+          : created.status === "PERSONAL"
+            ? "Recurso guardado. Solo tú puedes verlo."
+            : "Recurso enviado. Será visible cuando la comunidad lo apruebe.",
+      );
       close();
     } catch (error) {
       toast.error(errorMessage(error, "No se pudo subir el recurso."));
@@ -139,7 +155,8 @@ export function UploadResourceDialog({ open, onOpenChange, initialCourse }: Prop
             <Upload className="size-4" /> Aportar recurso
           </DialogTitle>
           <DialogDescription>
-            Sube apuntes, exámenes o enlaces para una materia. El año se toma del periodo actual.
+            Sube apuntes, exámenes o enlaces para una materia. El año se toma del periodo
+            actual.
           </DialogDescription>
         </DialogHeader>
 
@@ -165,7 +182,18 @@ export function UploadResourceDialog({ open, onOpenChange, initialCourse }: Prop
                 id="resource-file"
                 type="file"
                 accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.md,.markdown,.txt,.csv,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
-                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+                onChange={(event) => {
+                  const picked = event.target.files?.[0] ?? null;
+                  if (picked && picked.size > MAX_UPLOAD_MB * 1024 * 1024) {
+                    toast.error(
+                      `“${picked.name}” pesa más de ${MAX_UPLOAD_MB} MB. Comprímelo o súbelo como enlace.`,
+                    );
+                    event.target.value = "";
+                    setFile(null);
+                    return;
+                  }
+                  setFile(picked);
+                }}
               />
             </TabsContent>
 
@@ -203,7 +231,10 @@ export function UploadResourceDialog({ open, onOpenChange, initialCourse }: Prop
             </div>
             <div className="space-y-1.5">
               <Label>Bimestre</Label>
-              <Select value={contribution} onValueChange={(value) => setContribution(value as Contribution | typeof NONE)}>
+              <Select
+                value={contribution}
+                onValueChange={(value) => setContribution(value as Contribution | typeof NONE)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Opcional" />
                 </SelectTrigger>
@@ -226,17 +257,35 @@ export function UploadResourceDialog({ open, onOpenChange, initialCourse }: Prop
             />
           </div>
 
+          <fieldset className="space-y-1.5">
+            <legend className="text-sm font-medium">¿Quién puede verlo?</legend>
+            <Select
+              value={visibility}
+              onValueChange={(value) => setVisibility(value as "COMMUNITY" | "PRIVATE")}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="COMMUNITY">La comunidad, tras aprobación</SelectItem>
+                <SelectItem value="PRIVATE">Solo yo</SelectItem>
+              </SelectContent>
+            </Select>
+          </fieldset>
+
           <button
             type="button"
             onClick={() => setAdvanced((value) => !value)}
             className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
-            <ChevronDown className={`size-4 transition-transform ${advanced ? "rotate-180" : ""}`} />
+            <ChevronDown
+              className={`size-4 transition-transform ${advanced ? "rotate-180" : ""}`}
+            />
             Opciones avanzadas
           </button>
 
           {advanced && (
-            <div className="space-y-4 rounded-lg border border-border/70 bg-muted/30 p-3">
+            <div className="space-y-4 rounded-md border border-border bg-muted/30 p-3">
               <div className="space-y-1.5">
                 <Label>Año / periodo académico</Label>
                 <Select value={periodId} onValueChange={setPeriodId}>

@@ -1,4 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+import { ApiError } from "@/lib/api/types";
+import { studentKeys } from "@/features/student/hooks";
 
 import {
   copySchemeToPersonal,
@@ -14,6 +18,7 @@ import {
   addItem,
   calculate,
   createEnrollment,
+  deleteEnrollment,
   deleteItem,
   type EnrollmentCreateInput,
   type GradeComponentMode,
@@ -23,6 +28,7 @@ import {
   patchItem,
   projection,
   setBimestreOverride,
+  setRecoveryScore,
 } from "./gradebook";
 
 export const evaluationKeys = {
@@ -33,6 +39,19 @@ export const evaluationKeys = {
   calculate: (enrollmentId: string) => ["evaluation", "calculate", enrollmentId] as const,
   projection: (enrollmentId: string) => ["evaluation", "projection", enrollmentId] as const,
 };
+
+/**
+ * Every gradebook write reports its own failure.
+ *
+ * These mutations were fired with `.mutate()` and no `onError`, so a rejected save left the
+ * typed value on screen until the next refetch quietly reverted it — the worst possible outcome
+ * in an app whose entire content is the user's grades.
+ */
+function errorToast(fallback: string) {
+  return (error: unknown) => {
+    toast.error(error instanceof ApiError ? error.message : fallback);
+  };
+}
 
 // --- Schemes --------------------------------------------------------------------------------------
 
@@ -53,7 +72,10 @@ export function useScheme(id: string | null) {
 }
 
 export function useCreateScheme() {
-  return useMutation({ mutationFn: (input: SchemeCreateInput) => createScheme(input) });
+  return useMutation({
+    mutationFn: (input: SchemeCreateInput) => createScheme(input),
+    onError: errorToast("No se pudo crear el curso."),
+  });
 }
 
 export function useVoteScheme() {
@@ -63,11 +85,15 @@ export function useVoteScheme() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["evaluation", "suggest"] });
     },
+    onError: errorToast("No se pudo registrar el voto."),
   });
 }
 
 export function useCopyScheme() {
-  return useMutation({ mutationFn: (id: string) => copySchemeToPersonal(id) });
+  return useMutation({
+    mutationFn: (id: string) => copySchemeToPersonal(id),
+    onError: errorToast("No se pudo copiar el curso."),
+  });
 }
 
 // --- Enrollments + gradebook ----------------------------------------------------------------------
@@ -83,6 +109,18 @@ export function useCreateEnrollment() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: evaluationKeys.enrollments });
     },
+    onError: errorToast("No se pudo iniciar la materia."),
+  });
+}
+
+export function useDeleteEnrollment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (enrollmentId: string) => deleteEnrollment(enrollmentId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: evaluationKeys.enrollments });
+    },
+    onError: errorToast("No se pudo cambiar de curso."),
   });
 }
 
@@ -110,13 +148,24 @@ export function useProjection(enrollmentId: string | null) {
   });
 }
 
-/** Invalidate the gradebook and its derived calculation/projection after an edit. */
+/**
+ * Invalidate the gradebook and everything derived from it.
+ *
+ * Course states are included because a finished gradebook now updates the malla server-side:
+ * without this the curriculum map would keep showing the old state until a reload.
+ */
 function useGradebookInvalidator(enrollmentId: string) {
   const queryClient = useQueryClient();
   return () => {
-    void queryClient.invalidateQueries({ queryKey: evaluationKeys.gradebook(enrollmentId) });
-    void queryClient.invalidateQueries({ queryKey: evaluationKeys.calculate(enrollmentId) });
-    void queryClient.invalidateQueries({ queryKey: evaluationKeys.projection(enrollmentId) });
+    for (const key of [
+      evaluationKeys.gradebook(enrollmentId),
+      evaluationKeys.calculate(enrollmentId),
+      evaluationKeys.projection(enrollmentId),
+      evaluationKeys.enrollments,
+      studentKeys.courseStates,
+    ]) {
+      void queryClient.invalidateQueries({ queryKey: key });
+    }
   };
 }
 
@@ -135,6 +184,7 @@ export function usePatchComponent(enrollmentId: string) {
       direct_score_scale?: string | null;
     }) => patchComponent(componentStateId, { mode, direct_score, direct_score_scale }),
     onSuccess: invalidate,
+    onError: errorToast("No se pudo guardar la nota."),
   });
 }
 
@@ -155,6 +205,7 @@ export function useAddItem(enrollmentId: string) {
       internal_weight_percent?: string | null;
     }) => addItem(componentStateId, { name, score, score_scale, internal_weight_percent }),
     onSuccess: invalidate,
+    onError: errorToast("No se pudo agregar el insumo."),
   });
 }
 
@@ -172,6 +223,7 @@ export function usePatchItem(enrollmentId: string) {
       internal_weight_percent?: string | null;
     }) => patchItem(itemId, payload),
     onSuccess: invalidate,
+    onError: errorToast("No se pudo guardar el cambio."),
   });
 }
 
@@ -180,11 +232,11 @@ export function useDeleteItem(enrollmentId: string) {
   return useMutation({
     mutationFn: (itemId: string) => deleteItem(itemId),
     onSuccess: invalidate,
+    onError: errorToast("No se pudo eliminar el insumo."),
   });
 }
 
 export function useSetBimestreOverride(enrollmentId: string) {
-  const queryClient = useQueryClient();
   const invalidate = useGradebookInvalidator(enrollmentId);
   return useMutation({
     mutationFn: ({
@@ -196,9 +248,16 @@ export function useSetBimestreOverride(enrollmentId: string) {
       score: string | null;
       score_scale?: string | null;
     }) => setBimestreOverride(enrollmentId, { contribution, score, score_scale }),
-    onSuccess: () => {
-      invalidate();
-      void queryClient.invalidateQueries({ queryKey: evaluationKeys.enrollments });
-    },
+    onSuccess: invalidate,
+    onError: errorToast("No se pudo guardar la nota del bimestre."),
+  });
+}
+
+export function useSetRecoveryScore(enrollmentId: string) {
+  const invalidate = useGradebookInvalidator(enrollmentId);
+  return useMutation({
+    mutationFn: (score: string | null) => setRecoveryScore(enrollmentId, score),
+    onSuccess: invalidate,
+    onError: errorToast("No se pudo guardar la nota de recuperación."),
   });
 }

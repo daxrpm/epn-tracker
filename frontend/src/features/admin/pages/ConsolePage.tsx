@@ -60,22 +60,23 @@ export function ConsolePage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          <ShieldCheck className="size-3.5" /> {isSuperAdmin ? "Superadministración" : "Administración"}
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <ShieldCheck className="size-3.5" />{" "}
+          {isSuperAdmin ? "Superadministración" : "Administración"}
         </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Consola</h1>
+        <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Consola</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Gestiona el contenido académico y, como superadmin, las cuentas del sistema. Los cambios
-          se aplican directamente y quedan registrados en la auditoría.
+          Gestiona el contenido académico y, como superadmin, las cuentas del sistema. Los
+          cambios se aplican directamente y quedan registrados en la auditoría.
         </p>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
           <Link key={card.href} to={card.href}>
-            <Card className="h-full border-border/80 bg-card/65 transition-colors hover:border-primary/50 hover:bg-accent">
+            <Card className="h-full border-border bg-card transition-colors hover:border-primary/50 hover:bg-accent">
               <CardContent className="flex h-full flex-col gap-3 p-6">
-                <span className="grid size-11 place-items-center rounded-xl bg-muted">
+                <span className="grid size-11 place-items-center rounded-md bg-muted">
                   <card.icon className="size-5" />
                 </span>
                 <div>
@@ -89,7 +90,7 @@ export function ConsolePage() {
       </div>
 
       {isSuperAdmin && (
-        <Card className="border-dashed border-border/70 bg-card/40">
+        <Card className="border-dashed border-border bg-card">
           <CardContent className="flex items-center gap-3 p-5 text-sm text-muted-foreground">
             <GraduationCap className="size-5 shrink-0" />
             Editor genérico de la base de datos: disponible próximamente para casos avanzados.

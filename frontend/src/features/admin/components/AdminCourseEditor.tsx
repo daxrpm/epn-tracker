@@ -102,8 +102,10 @@ export function AdminCourseEditor({
   const candidates = allCourses.filter((c) => c.id !== course.id);
 
   return (
-    <div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-primary">Editar (admin)</p>
+    <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+        Editar (admin)
+      </p>
       <div className="space-y-1.5">
         <Label htmlFor="admin-course-name">Nombre</Label>
         <Input
@@ -151,7 +153,9 @@ export function AdminCourseEditor({
       </Button>
 
       <div className="space-y-2 border-t border-primary/20 pt-3">
-        <p className="text-xs font-medium text-muted-foreground">Prerrequisitos y correquisitos</p>
+        <p className="text-xs font-medium text-muted-foreground">
+          Prerrequisitos y correquisitos
+        </p>
         {requirements.isLoading ? (
           <Loader2 className="size-4 animate-spin text-muted-foreground" />
         ) : (requirements.data ?? []).length === 0 ? (
@@ -161,7 +165,7 @@ export function AdminCourseEditor({
             {(requirements.data ?? []).map((req) => (
               <li
                 key={req.id}
-                className="flex items-center justify-between rounded-md bg-background/60 px-2 py-1 text-xs"
+                className="flex items-center justify-between rounded-md bg-card px-2 py-1 text-xs"
               >
                 <span>
                   <span className="font-medium">{req.required_code}</span>
@@ -184,7 +188,7 @@ export function AdminCourseEditor({
         )}
         <div className="flex gap-1.5">
           <Select value={reqTarget} onValueChange={setReqTarget}>
-            <SelectTrigger className="h-8 flex-1 bg-background/70 text-xs">
+            <SelectTrigger className="h-8 flex-1 bg-card text-xs">
               <SelectValue placeholder="Materia requisito" />
             </SelectTrigger>
             <SelectContent>
@@ -196,7 +200,7 @@ export function AdminCourseEditor({
             </SelectContent>
           </Select>
           <Select value={reqType} onValueChange={(v) => setReqType(v as typeof reqType)}>
-            <SelectTrigger className={cn("h-8 w-28 bg-background/70 text-xs")}>
+            <SelectTrigger className={cn("h-8 w-28 bg-card text-xs")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

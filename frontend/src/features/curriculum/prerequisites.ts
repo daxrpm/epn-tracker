@@ -40,7 +40,10 @@ export function coursesWithUnmetPrereqs(
   const flagged = new Set<string>();
   for (const course of courses) {
     const state = stateByCourse.get(course.id);
-    if ((state === "IN_PROGRESS" || state === "PASSED") && unmetPrerequisites(course, codeState).length > 0) {
+    if (
+      (state === "IN_PROGRESS" || state === "PASSED") &&
+      unmetPrerequisites(course, codeState).length > 0
+    ) {
       flagged.add(course.id);
     }
   }

@@ -18,7 +18,12 @@ import { useSearchProfessors } from "@/features/offering/hooks";
 import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
-import type { Contribution, EvaluationType, SchemeComponentInput, SchemeVisibility } from "../api";
+import type {
+  Contribution,
+  EvaluationType,
+  SchemeComponentInput,
+  SchemeVisibility,
+} from "../api";
 import { CONTRIBUTION_LABELS, CONTRIBUTION_ORDER } from "../constants";
 import { useCreateScheme } from "../hooks";
 import { isDecimalDraft } from "../scoreInput";
@@ -33,7 +38,12 @@ interface Row {
 let rowCounter = 0;
 function newRow(name = "", weight = ""): Row {
   rowCounter += 1;
-  return { key: `row-${rowCounter}`, name, weight_percent: weight, evaluation_type: "SUMMATIVE" };
+  return {
+    key: `row-${rowCounter}`,
+    name,
+    weight_percent: weight,
+    evaluation_type: "SUMMATIVE",
+  };
 }
 
 /** Default rows so a new course starts with a sensible, valid-ish shape per bimestre. */
@@ -234,14 +244,16 @@ export function SchemeForm({
                       isDecimalDraft(e.target.value) &&
                       updateRow(c, row.key, { weight_percent: e.target.value })
                     }
-                    className="tabular-nums"
+                    className="grade"
                   />
                 </div>
                 <div className="flex w-32 flex-col gap-1.5">
                   <Label className="text-xs text-muted-foreground">Tipo</Label>
                   <Select
                     value={row.evaluation_type}
-                    onValueChange={(v) => updateRow(c, row.key, { evaluation_type: v as EvaluationType })}
+                    onValueChange={(v) =>
+                      updateRow(c, row.key, { evaluation_type: v as EvaluationType })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -269,8 +281,10 @@ export function SchemeForm({
               </Button>
               <span
                 className={cn(
-                  "text-sm font-medium tabular-nums",
-                  sumIsComplete(sums[c]) ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400",
+                  "text-sm font-medium grade",
+                  sumIsComplete(sums[c])
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-amber-600 dark:text-amber-400",
                 )}
               >
                 Suma: {sumIsComplete(sums[c]) ? 100 : sums[c]}%
@@ -332,7 +346,7 @@ function ProfessorField({
         autoComplete="off"
       />
       {open && suggestions.length > 0 && (
-        <div className="absolute top-full z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-popover shadow-md">
+        <div className="absolute top-full z-10 mt-1 w-full overflow-hidden rounded-md border border-border bg-popover shadow-md">
           {suggestions.map((professor) => (
             <button
               key={professor.id}

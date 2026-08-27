@@ -49,13 +49,11 @@ export function SistemaPage() {
   return (
     <div className="space-y-8">
       <header>
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          Superadministración
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Sistema</h1>
+        <p className="text-sm text-muted-foreground">Superadministración</p>
+        <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Sistema</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Gestiona los periodos académicos y las carreras de la institución. Cada cambio se aplica al
-          instante y queda registrado en la auditoría.
+          Gestiona los periodos académicos y las carreras de la institución. Cada cambio se
+          aplica al instante y queda registrado en la auditoría.
         </p>
       </header>
 
@@ -98,7 +96,7 @@ function PeriodsSection() {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card/55 shadow-sm">
+      <div className="overflow-hidden rounded-md border border-border bg-card shadow-sm">
         {periods.isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -124,13 +122,17 @@ function PeriodsSection() {
                 <TableRow key={period.id}>
                   <TableCell className="font-medium">{period.code}</TableCell>
                   <TableCell>{period.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{period.starts_on ?? "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{period.ends_on ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {period.starts_on ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {period.ends_on ?? "—"}
+                  </TableCell>
                   <TableCell>
                     {period.is_current ? (
                       <Badge
                         variant="outline"
-                        className="bg-background/50 font-normal text-emerald-600 dark:text-emerald-400"
+                        className="bg-card font-normal text-emerald-600 dark:text-emerald-400"
                       >
                         Actual
                       </Badge>
@@ -141,7 +143,11 @@ function PeriodsSection() {
                   <TableCell>
                     <div className="flex justify-end gap-2">
                       {!period.is_current && (
-                        <Button variant="outline" size="sm" onClick={() => void setCurrent(period)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void setCurrent(period)}
+                        >
                           Marcar actual
                         </Button>
                       )}
@@ -321,7 +327,7 @@ function CareersSection() {
         <h2 className="text-lg font-semibold">Carreras</h2>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card/55 shadow-sm">
+      <div className="overflow-hidden rounded-md border border-border bg-card shadow-sm">
         {careers.isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />

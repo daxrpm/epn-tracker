@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 
 import type { CourseState } from "@/features/student/api";
 import { cn } from "@/lib/utils";
+import { creditsLabel } from "@/lib/format";
 
 import type { CurriculumCourse } from "../api";
 import { COURSE_STATE_META, UNIT_META, courseHours } from "../constants";
@@ -25,7 +26,14 @@ type EdgeKind = "prereq" | "coreq";
 type Edge = { key: string; d: string; kind: EdgeKind; from: string; to: string };
 type Rubber = { x1: number; y1: number; x2: number; y2: number };
 
-const KIND_COLOR: Record<EdgeKind, string> = { prereq: "#3b82f6", coreq: "#f59e0b" };
+// Arrow colours come from the design tokens rather than literal hex, so they follow the theme.
+// Prerequisite uses the accent (the "ink"); corequisite uses the annulled/warning hue, which is
+// the only other place a second signal colour is spent.
+const KIND_COLOR: Record<EdgeKind, string> = {
+  prereq: "var(--primary)",
+  coreq: "var(--state-annulled)",
+};
+const DELETE_COLOR = "var(--destructive)";
 
 export function CurriculumMap({
   courses,
@@ -63,10 +71,7 @@ export function CurriculumMap({
     }
     return [...grouped.entries()].sort((a, b) => a[0] - b[0]);
   }, [courses]);
-  const maxCols = useMemo(
-    () => Math.max(1, ...terms.map(([, list]) => list.length)),
-    [terms],
-  );
+  const maxCols = useMemo(() => Math.max(1, ...terms.map(([, list]) => list.length)), [terms]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef(new Map<string, HTMLElement>());
@@ -216,11 +221,7 @@ export function CurriculumMap({
 
   return (
     <div className="overflow-x-auto p-3 scrollbar-thin sm:p-4" onClick={clearInteraction}>
-      <div
-        ref={containerRef}
-        className="relative min-w-max"
-        onMouseMove={handleMove}
-      >
+      <div ref={containerRef} className="relative min-w-max" onMouseMove={handleMove}>
         <svg
           className="pointer-events-none absolute inset-0"
           width={size.w}
@@ -237,7 +238,7 @@ export function CurriculumMap({
               markerHeight="5"
               orient="auto-start-reverse"
             >
-              <path d="M0,0 L8,4 L0,8 z" fill="#3b82f6" />
+              <path d="M0,0 L8,4 L0,8 z" fill="var(--primary)" />
             </marker>
             <marker
               id="malla-arrow-coreq"
@@ -248,7 +249,7 @@ export function CurriculumMap({
               markerHeight="5"
               orient="auto-start-reverse"
             >
-              <path d="M0,0 L8,4 L0,8 z" fill="#f59e0b" />
+              <path d="M0,0 L8,4 L0,8 z" fill="var(--state-annulled)" />
             </marker>
             <marker
               id="malla-arrow-delete"
@@ -259,7 +260,7 @@ export function CurriculumMap({
               markerHeight="5"
               orient="auto-start-reverse"
             >
-              <path d="M0,0 L8,4 L0,8 z" fill="#ef4444" />
+              <path d="M0,0 L8,4 L0,8 z" fill="var(--destructive)" />
             </marker>
           </defs>
           {edges.map((edge) => {
@@ -269,7 +270,7 @@ export function CurriculumMap({
               <path
                 key={edge.key}
                 d={edge.d}
-                stroke={hovered ? "#ef4444" : KIND_COLOR[edge.kind]}
+                stroke={hovered ? DELETE_COLOR : KIND_COLOR[edge.kind]}
                 strokeWidth={hovered ? 2.5 : active && chain ? 2 : 1.5}
                 strokeOpacity={0.75}
                 opacity={active ? 1 : 0.08}
@@ -319,10 +320,8 @@ export function CurriculumMap({
           {terms.map(([term, termCourses]) => (
             <div key={term} className="flex items-stretch gap-3">
               <div className="flex w-9 shrink-0 flex-col items-center justify-center">
-                <span className="text-[9px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                  Sem
-                </span>
-                <span className="text-xl font-semibold tabular-nums">{term}</span>
+                <span className="text-xs text-muted-foreground">Sem</span>
+                <span className="text-xl font-semibold grade">{term}</span>
               </div>
               <div
                 className="grid flex-1 items-stretch gap-3"
@@ -398,7 +397,7 @@ function MapCard({
               : stateMeta.label
       }
       className={cn(
-        "group relative z-10 flex min-h-36 flex-col overflow-hidden rounded-lg border text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
+        "group relative z-10 flex min-h-36 flex-col overflow-hidden rounded-md border text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
         stateMeta.card,
         editMode && "cursor-copy",
         dimmed && "opacity-30 grayscale",
@@ -407,7 +406,7 @@ function MapCard({
       )}
     >
       <div className="flex shrink-0 items-center justify-between border-b border-current/10 px-2.5 py-1.5 text-[10px] text-muted-foreground">
-        <span>{Number(course.credits)} créditos</span>
+        <span>{creditsLabel(course.credits)}</span>
         <span>{courseHours(course)} h</span>
       </div>
       <div className="flex flex-1 flex-col gap-1 px-2.5 py-2">

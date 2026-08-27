@@ -81,12 +81,8 @@ export function RequirementsPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          Progreso académico
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-          Requisitos de graduación
-        </h1>
+        <p className="text-sm text-muted-foreground">Progreso académico</p>
+        <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Requisitos de graduación</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Actualiza el estado de cada requisito no crediticio para tu graduación.
         </p>
@@ -107,13 +103,13 @@ export function RequirementsPage() {
         </Card>
       ) : (
         <>
-          <Card className="rounded-2xl bg-card/65">
+          <Card className="rounded-md bg-card">
             <CardContent className="flex flex-col gap-3 p-5">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2 text-sm font-medium">
                   <GraduationCap className="size-4" /> Avance de requisitos
                 </span>
-                <span className="text-sm tabular-nums text-muted-foreground">
+                <span className="text-sm grade text-muted-foreground">
                   {completed}/{applicable} completados
                 </span>
               </div>
@@ -121,7 +117,7 @@ export function RequirementsPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl bg-card/65">
+          <Card className="rounded-md bg-card">
             <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col gap-1">
                 <span className="flex items-center gap-2 text-sm font-medium">
@@ -158,12 +154,14 @@ export function RequirementsPage() {
               {items.map((requirement) => {
                 const meta = GRAD_REQ_STATE_META[requirement.state];
                 return (
-                  <Card key={requirement.id} className="rounded-xl bg-card/65">
+                  <Card key={requirement.id} className="rounded-md bg-card">
                     <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex flex-col gap-1">
                         <span className="text-sm font-medium">{requirement.name}</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">{requirement.code}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {requirement.code}
+                          </span>
                           <Badge variant={meta.badge} className="w-fit">
                             {meta.label}
                           </Badge>

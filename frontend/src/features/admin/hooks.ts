@@ -187,8 +187,13 @@ export function useDeleteProfessor() {
 export function useUpdateCareer() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: { name?: string; degree_title?: string } }) =>
-      updateCareer(id, patch),
+    mutationFn: ({
+      id,
+      patch,
+    }: {
+      id: string;
+      patch: { name?: string; degree_title?: string };
+    }) => updateCareer(id, patch),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["careers"] }),
   });
 }

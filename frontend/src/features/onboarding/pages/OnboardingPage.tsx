@@ -36,9 +36,24 @@ const MAX_IN_PROGRESS_CREDITS = 15;
 /** The two states a student can paint onto a course during onboarding. */
 type PickMode = "PASSED" | "IN_PROGRESS";
 
-const PICK_MODES: { value: PickMode; label: string; icon: typeof CheckCircle2; classes: string }[] = [
-  { value: "PASSED", label: "Aprobada", icon: CheckCircle2, classes: "bg-emerald-500 text-white" },
-  { value: "IN_PROGRESS", label: "Cursando", icon: PlayCircle, classes: "bg-sky-500 text-white" },
+const PICK_MODES: {
+  value: PickMode;
+  label: string;
+  icon: typeof CheckCircle2;
+  classes: string;
+}[] = [
+  {
+    value: "PASSED",
+    label: "Aprobada",
+    icon: CheckCircle2,
+    classes: "bg-emerald-500 text-white",
+  },
+  {
+    value: "IN_PROGRESS",
+    label: "Cursando",
+    icon: PlayCircle,
+    classes: "bg-sky-500 text-white",
+  },
 ];
 
 export function OnboardingPage() {
@@ -167,12 +182,8 @@ export function OnboardingPage() {
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-8">
       <div>
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          Configuración inicial
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-          Configura tu malla
-        </h1>
+        <p className="text-sm text-muted-foreground">Configuración inicial</p>
+        <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Configura tu malla</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Tres pasos para tener tu avance académico al día.
         </p>
@@ -180,7 +191,7 @@ export function OnboardingPage() {
 
       <Stepper current={step} />
 
-      <Card className="rounded-2xl bg-card/65">
+      <Card className="rounded-md bg-card">
         <CardContent className="p-6">
           {step === 0 && (
             <div className="flex flex-col gap-5">
@@ -195,7 +206,9 @@ export function OnboardingPage() {
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue
-                      placeholder={careersQuery.isLoading ? "Cargando..." : "Selecciona tu carrera"}
+                      placeholder={
+                        careersQuery.isLoading ? "Cargando..." : "Selecciona tu carrera"
+                      }
                     />
                   </SelectTrigger>
                   <SelectContent>
@@ -210,7 +223,11 @@ export function OnboardingPage() {
 
               <div className="flex flex-col gap-1.5">
                 <Label>Pénsum</Label>
-                <Select value={curriculumId} onValueChange={setCurriculumId} disabled={!careerId}>
+                <Select
+                  value={curriculumId}
+                  onValueChange={setCurriculumId}
+                  disabled={!careerId}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Selecciona tu pénsum" />
                   </SelectTrigger>
@@ -239,11 +256,11 @@ export function OnboardingPage() {
                   cuando termines con un grupo. Puedes ajustarlo después en tu malla.
                 </p>
                 <ModePicker mode={pickMode} onChange={setPickMode} />
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
                   <span className="text-muted-foreground">Créditos cursando</span>
                   <span
                     className={cn(
-                      "font-semibold tabular-nums",
+                      "font-semibold grade",
                       inProgressCredits > MAX_IN_PROGRESS_CREDITS && "text-destructive",
                     )}
                   >
@@ -263,7 +280,7 @@ export function OnboardingPage() {
                 </div>
               )}
               {coursesQuery.data && coursesQuery.data.length > 0 && (
-                <div className="overflow-hidden rounded-2xl border border-border/80 bg-card/40">
+                <div className="overflow-hidden rounded-md border border-border bg-card">
                   <CurriculumGrid
                     courses={coursesQuery.data}
                     stateByCourse={stateByCourse}
@@ -282,7 +299,9 @@ export function OnboardingPage() {
                           onClick={() => applyModeToTerm(courseIds)}
                         >
                           <activeMode.icon className="size-3.5" />
-                          {allMarked ? `Quitar ${activeMode.label.toLowerCase()}` : `Marcar semestre`}
+                          {allMarked
+                            ? `Quitar ${activeMode.label.toLowerCase()}`
+                            : `Marcar semestre`}
                         </Button>
                       );
                     }}
@@ -336,7 +355,11 @@ export function OnboardingPage() {
           </Button>
         ) : (
           <Button onClick={() => void finish()} disabled={submitting}>
-            {submitting ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+            {submitting ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Check className="size-4" />
+            )}
             Finalizar
           </Button>
         )}
@@ -346,9 +369,15 @@ export function OnboardingPage() {
 }
 
 /** Segmented "brush" control: choose what tapping a course will mark it as. */
-function ModePicker({ mode, onChange }: { mode: PickMode; onChange: (mode: PickMode) => void }) {
+function ModePicker({
+  mode,
+  onChange,
+}: {
+  mode: PickMode;
+  onChange: (mode: PickMode) => void;
+}) {
   return (
-    <div className="inline-flex w-fit gap-1 rounded-lg border border-border bg-muted/40 p-1">
+    <div className="inline-flex w-fit gap-1 rounded-md border border-border bg-muted/40 p-1">
       {PICK_MODES.map((option) => {
         const active = option.value === mode;
         return (
@@ -359,7 +388,9 @@ function ModePicker({ mode, onChange }: { mode: PickMode; onChange: (mode: PickM
             aria-pressed={active}
             className={cn(
               "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-              active ? cn(option.classes, "shadow-sm") : "text-muted-foreground hover:text-foreground",
+              active
+                ? cn(option.classes, "shadow-sm")
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             <option.icon className="size-4" />

@@ -14,9 +14,7 @@ import { fetchResourceBlob, type ResourceKind, type ResourceListItem } from "../
 
 /** Extract a YouTube video id from common URL shapes, or null. */
 function youtubeId(url: string): string | null {
-  const match = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/,
-  );
+  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/);
   return match ? match[1] : null;
 }
 
@@ -71,14 +69,22 @@ export function ResourceViewer({ resource, className }: Props) {
   }, [resource.id, resource.kind, isFile]);
 
   const ytId = useMemo(
-    () => (resource.kind === "LINK" && resource.external_url ? youtubeId(resource.external_url) : null),
+    () =>
+      resource.kind === "LINK" && resource.external_url
+        ? youtubeId(resource.external_url)
+        : null,
     [resource.kind, resource.external_url],
   );
 
   if (resource.kind === "LINK") {
     if (ytId) {
       return (
-        <div className={cn("aspect-video w-full overflow-hidden rounded-xl border border-border", className)}>
+        <div
+          className={cn(
+            "aspect-video w-full overflow-hidden rounded-md border border-border",
+            className,
+          )}
+        >
           <iframe
             src={`https://www.youtube.com/embed/${ytId}`}
             title={resource.title}
@@ -95,16 +101,18 @@ export function ResourceViewer({ resource, className }: Props) {
         target="_blank"
         rel="noreferrer"
         className={cn(
-          "flex items-center gap-3 rounded-xl border border-border bg-card/60 p-4 transition-colors hover:border-primary/50 hover:bg-accent",
+          "flex items-center gap-3 rounded-md border border-border bg-card p-4 transition-colors hover:border-primary/50 hover:bg-accent",
           className,
         )}
       >
-        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted">
+        <span className="grid size-10 shrink-0 place-items-center rounded-md bg-muted">
           <ExternalLink className="size-5" />
         </span>
         <span className="min-w-0">
           <span className="block truncate text-sm font-medium">{resource.title}</span>
-          <span className="block truncate text-xs text-muted-foreground">{resource.external_url}</span>
+          <span className="block truncate text-xs text-muted-foreground">
+            {resource.external_url}
+          </span>
         </span>
       </a>
     );
@@ -112,7 +120,12 @@ export function ResourceViewer({ resource, className }: Props) {
 
   if (loading) {
     return (
-      <div className={cn("grid min-h-40 place-items-center rounded-xl border border-border bg-card/40", className)}>
+      <div
+        className={cn(
+          "grid min-h-40 place-items-center rounded-md border border-border bg-card",
+          className,
+        )}
+      >
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </div>
     );
@@ -120,7 +133,12 @@ export function ResourceViewer({ resource, className }: Props) {
 
   if (error || !objectUrl) {
     return (
-      <div className={cn("grid min-h-40 place-items-center rounded-xl border border-border bg-card/40 text-sm text-muted-foreground", className)}>
+      <div
+        className={cn(
+          "grid min-h-40 place-items-center rounded-md border border-border bg-card text-sm text-muted-foreground",
+          className,
+        )}
+      >
         {error ?? "Sin vista previa."}
       </div>
     );
@@ -132,8 +150,12 @@ export function ResourceViewer({ resource, className }: Props) {
   if (resource.kind === "IMAGE") {
     return (
       <div className={cn("space-y-2", className)}>
-        <div className="overflow-hidden rounded-xl border border-border bg-card/40">
-          <img src={objectUrl} alt={resource.title} className="mx-auto max-h-[70vh] w-auto max-w-full" />
+        <div className="overflow-hidden rounded-md border border-border bg-card">
+          <img
+            src={objectUrl}
+            alt={resource.title}
+            className="mx-auto max-h-[70vh] w-auto max-w-full"
+          />
         </div>
         <Button variant="outline" size="sm" onClick={download}>
           <Download className="size-4" /> Descargar
@@ -148,7 +170,7 @@ export function ResourceViewer({ resource, className }: Props) {
         <iframe
           src={objectUrl}
           title={resource.title}
-          className="h-[75vh] w-full rounded-xl border border-border bg-card"
+          className="h-[75vh] w-full rounded-md border border-border bg-card"
         />
         <Button variant="outline" size="sm" onClick={download}>
           <Download className="size-4" /> Descargar
@@ -160,7 +182,7 @@ export function ResourceViewer({ resource, className }: Props) {
   if (resource.kind === "MARKDOWN") {
     return (
       <div className={cn("space-y-2", className)}>
-        <div className="md-body rounded-xl border border-border bg-card/40 p-5">
+        <div className="md-body rounded-md border border-border bg-card p-5">
           <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
             {text ?? ""}
           </Markdown>
@@ -175,7 +197,7 @@ export function ResourceViewer({ resource, className }: Props) {
   if (resource.kind === "TEXT") {
     return (
       <div className={cn("space-y-2", className)}>
-        <pre className="max-h-[70vh] overflow-auto rounded-xl border border-border bg-card/40 p-4 text-xs leading-5">
+        <pre className="max-h-[70vh] overflow-auto rounded-md border border-border bg-card p-4 text-xs leading-5">
           <code>{text}</code>
         </pre>
         <Button variant="outline" size="sm" onClick={download}>
@@ -187,7 +209,12 @@ export function ResourceViewer({ resource, className }: Props) {
 
   // OFFICE and anything else: no inline preview.
   return (
-    <div className={cn("flex flex-col items-center gap-3 rounded-xl border border-border bg-card/40 p-8 text-center", className)}>
+    <div
+      className={cn(
+        "flex flex-col items-center gap-3 rounded-md border border-border bg-card p-8 text-center",
+        className,
+      )}
+    >
       <FileText className="size-10 text-muted-foreground" />
       <p className="text-sm text-muted-foreground">
         Este tipo de documento no tiene vista previa. Descárgalo para abrirlo.

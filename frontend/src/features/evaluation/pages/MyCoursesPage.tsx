@@ -45,10 +45,8 @@ export function MyCoursesPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          Gestión de notas
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Mis materias</h1>
+        <p className="text-sm text-muted-foreground">Gestión de notas</p>
+        <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Mis materias</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Registra las notas de las materias que estás cursando y proyecta tu resultado final.
         </p>
@@ -59,12 +57,12 @@ export function MyCoursesPage() {
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </div>
       ) : inProgress.length === 0 ? (
-        <Card className="bg-card/65">
+        <Card className="bg-card">
           <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
             <BookOpen className="size-8 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              No tienes materias marcadas como “cursando”. Márcalas en tu malla para gestionarlas
-              aquí.
+              No tienes materias marcadas como “cursando”. Márcalas en tu malla para
+              gestionarlas aquí.
             </p>
             <Button asChild variant="outline">
               <Link to="/app/curriculum">
@@ -78,27 +76,27 @@ export function MyCoursesPage() {
           {inProgress.map((course) => {
             const Icon = subjectIcon(course.name, course.organization_unit);
             return (
-            <Card key={course.id} className="bg-card/65 transition-colors hover:bg-card">
-              <CardContent className="flex items-center justify-between gap-3 p-5">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted">
-                    <Icon className="size-4 text-muted-foreground" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{course.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {course.code} · Semestre {course.reference_term}
-                    </p>
-                    <CourseGrade enrollmentId={enrollmentByCourse.get(course.id) ?? null} />
+              <Card key={course.id} className="bg-card transition-colors hover:bg-card">
+                <CardContent className="flex items-center justify-between gap-3 p-5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-md bg-muted">
+                      <Icon className="size-4 text-muted-foreground" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{course.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {course.code} · Semestre {course.reference_term}
+                      </p>
+                      <CourseGrade enrollmentId={enrollmentByCourse.get(course.id) ?? null} />
+                    </div>
                   </div>
-                </div>
-                <Button asChild size="sm">
-                  <Link to={`/app/notas/${course.id}`}>
-                    <NotebookPen className="size-4" /> Notas
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+                  <Button asChild size="sm">
+                    <Link to={`/app/notas/${course.id}`}>
+                      <NotebookPen className="size-4" /> Notas
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
             );
           })}
         </div>
@@ -120,7 +118,7 @@ function CourseGrade({ enrollmentId }: { enrollmentId: string | null }) {
     (Number(calculationQuery.data.aporte_1.evaluated_weight_percent) > 0 ||
       Number(calculationQuery.data.aporte_2.evaluated_weight_percent) > 0);
   return (
-    <p className="mt-1 text-xs font-medium tabular-nums">
+    <p className="mt-1 text-xs font-medium grade">
       Nota: {hasGrades ? `${calculationQuery.data?.final_40}/40` : "—"}
     </p>
   );

@@ -16,9 +16,6 @@ export interface RecoveryResult {
 
 /** Anonymous recovery calculator (ERS §17.11, §RF-010). No authentication required. */
 export async function calculateRecovery(input: RecoveryInput): Promise<RecoveryResult> {
-  const { data } = await apiClient.post<RecoveryResult>(
-    "/public/calculators/recovery",
-    input,
-  );
+  const { data } = await apiClient.post<RecoveryResult>("/public/calculators/recovery", input);
   return data;
 }

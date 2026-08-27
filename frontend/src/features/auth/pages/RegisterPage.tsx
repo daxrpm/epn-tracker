@@ -21,7 +21,9 @@ export function RegisterPage() {
   if (!email) {
     return <RequestStep onSent={setEmail} />;
   }
-  return <VerifyStep email={email} onDone={() => navigate("/app/dashboard", { replace: true })} />;
+  return (
+    <VerifyStep email={email} onDone={() => navigate("/app/dashboard", { replace: true })} />
+  );
 }
 
 function RequestStep({ onSent }: { onSent: (email: string) => void }) {

@@ -24,7 +24,8 @@ export function useLoginController() {
   const onSubmit = form.handleSubmit(async (values) => {
     try {
       await login.mutateAsync(values);
-      const destination = (location.state as LoginLocationState | null)?.from ?? "/app/dashboard";
+      const destination =
+        (location.state as LoginLocationState | null)?.from ?? "/app/dashboard";
       navigate(destination, { replace: true });
     } catch {
       // React Query exposes the normalized error below; avoid an unhandled promise rejection.

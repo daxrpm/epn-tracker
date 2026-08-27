@@ -4,6 +4,7 @@ import {
   bulkCourseStates,
   type CourseStateBulkItem,
   getCourseStates,
+  getProgress,
   getGradRequirements,
   getProfile,
   type GradRequirementState,
@@ -15,6 +16,7 @@ import {
 export const studentKeys = {
   profile: ["student", "profile"] as const,
   courseStates: ["student", "course-states"] as const,
+  progress: ["student", "progress"] as const,
   gradRequirements: ["student", "graduation-requirements"] as const,
 };
 
@@ -32,6 +34,16 @@ export function useUpdateProfile() {
   });
 }
 
+/**
+ * Malla progress from the server.
+ *
+ * The dashboard used to recompute this in the browser with `Number()`, duplicating the rule in
+ * float while the backend computes it in Decimal. One implementation, one answer.
+ */
+export function useProgress(enabled = true) {
+  return useQuery({ queryKey: studentKeys.progress, queryFn: getProgress, enabled });
+}
+
 export function useCourseStates() {
   return useQuery({ queryKey: studentKeys.courseStates, queryFn: getCourseStates });
 }
@@ -42,6 +54,7 @@ export function useBulkCourseStates() {
     mutationFn: (items: CourseStateBulkItem[]) => bulkCourseStates(items),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: studentKeys.courseStates });
+      void queryClient.invalidateQueries({ queryKey: studentKeys.progress });
     },
   });
 }

@@ -166,7 +166,10 @@ export async function updateAcademicPeriod(
   id: string,
   patch: Partial<AcademicPeriodInput>,
 ): Promise<AcademicPeriod> {
-  const { data } = await apiClient.patch<AcademicPeriod>(`/admin/academic-periods/${id}`, patch);
+  const { data } = await apiClient.patch<AcademicPeriod>(
+    `/admin/academic-periods/${id}`,
+    patch,
+  );
   return data;
 }
 

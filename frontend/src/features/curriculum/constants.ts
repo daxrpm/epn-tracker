@@ -4,46 +4,68 @@ import type { CurriculumCourse, OrganizationUnit } from "./api";
 
 /** Visual + copy metadata for each organization unit, shared across malla and onboarding. */
 export const UNIT_META: Record<OrganizationUnit, { label: string; stripe: string }> = {
-  BASIC: { label: "Unidad básica", stripe: "bg-yellow-400 dark:bg-yellow-500" },
-  PROFESSIONAL: { label: "Unidad profesional", stripe: "bg-blue-600" },
-  CAPSTONE: { label: "Integración curricular", stripe: "bg-emerald-600" },
-  OTHER: { label: "Otra", stripe: "bg-zinc-500" },
+  BASIC: { label: "Unidad básica", stripe: "bg-state-annulled" },
+  PROFESSIONAL: { label: "Unidad profesional", stripe: "bg-primary" },
+  CAPSTONE: { label: "Integración curricular", stripe: "bg-state-passed" },
+  OTHER: { label: "Otra", stripe: "bg-muted-foreground" },
 };
 
-/** Hours for a course, falling back to a credits-based estimate when unknown. */
-export function courseHours(course: CurriculumCourse): number {
-  return course.hours ?? Number(course.credits) * 48;
+/**
+ * Hours for a course. The API sends 0 when the malla did not declare them, which is not the
+ * same as "unknown" — returning null lets the caller say "—" instead of a confident zero.
+ */
+export function courseHours(course: CurriculumCourse): number | null {
+  return course.hours && course.hours > 0 ? course.hours : null;
 }
 
-/** Visual + copy metadata for each course state, shared across malla and dashboard. */
+/**
+ * Academic state: label, badge variant, and the marks that carry the state without relying on
+ * colour alone (a dot, and the left edge of a card).
+ */
 export const COURSE_STATE_META: Record<
   CourseState,
-  { label: string; card: string; dot: string }
+  {
+    label: string;
+    badge: "passed" | "progress" | "failed" | "annulled" | "outline";
+    dot: string;
+    edge: string;
+    card: string;
+  }
 > = {
   PASSED: {
     label: "Aprobada",
-    card: "border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20",
-    dot: "bg-emerald-500",
+    badge: "passed",
+    dot: "bg-state-passed",
+    edge: "border-l-state-passed",
+    card: "bg-state-passed-soft/60 hover:bg-state-passed-soft",
   },
   IN_PROGRESS: {
     label: "En curso",
-    card: "border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20",
-    dot: "bg-sky-500",
+    badge: "progress",
+    dot: "bg-state-progress",
+    edge: "border-l-state-progress",
+    card: "bg-state-progress-soft/60 hover:bg-state-progress-soft",
   },
   FAILED: {
     label: "Reprobada",
-    card: "border-red-500/40 bg-red-500/10 hover:bg-red-500/20",
-    dot: "bg-red-500",
+    badge: "failed",
+    dot: "bg-state-failed",
+    edge: "border-l-state-failed",
+    card: "bg-state-failed-soft/60 hover:bg-state-failed-soft",
   },
   ANNULLED: {
     label: "Anulada",
-    card: "border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20",
-    dot: "bg-amber-500",
+    badge: "annulled",
+    dot: "bg-state-annulled",
+    edge: "border-l-state-annulled",
+    card: "bg-state-annulled-soft/60 hover:bg-state-annulled-soft",
   },
   NOT_TAKEN: {
     label: "Sin tomar",
-    card: "border-border bg-card hover:bg-accent",
+    badge: "outline",
     dot: "bg-muted-foreground/40",
+    edge: "border-l-border",
+    card: "bg-card hover:bg-muted",
   },
 };
 

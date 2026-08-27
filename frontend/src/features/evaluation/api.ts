@@ -154,7 +154,9 @@ export async function createScheme(input: SchemeCreateInput): Promise<SchemeCrea
   return data;
 }
 
-export async function copySchemeToPersonal(id: string): Promise<{ id: string; status: string }> {
+export async function copySchemeToPersonal(
+  id: string,
+): Promise<{ id: string; status: string }> {
   const { data } = await apiClient.post<{ id: string; status: string }>(
     `/evaluation-schemes/${id}/copy-to-personal`,
   );
@@ -167,7 +169,10 @@ export interface VoteResult {
   approval_count: number;
 }
 
-export async function voteScheme(id: string, vote: "APPROVE" | "REJECT" = "APPROVE"): Promise<VoteResult> {
+export async function voteScheme(
+  id: string,
+  vote: "APPROVE" | "REJECT" = "APPROVE",
+): Promise<VoteResult> {
   const { data } = await apiClient.post<VoteResult>(`/evaluation-schemes/${id}/vote`, { vote });
   return data;
 }

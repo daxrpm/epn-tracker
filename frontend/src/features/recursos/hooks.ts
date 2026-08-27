@@ -4,6 +4,7 @@ import {
   approveResource,
   createFileResource,
   createLinkResource,
+  deleteOwnResource,
   deleteResource,
   type FileResourceInput,
   type LinkResourceInput,
@@ -62,6 +63,14 @@ export function useVoteResource() {
   });
 }
 
+export function useDeleteOwnResource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteOwnResource(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: recursoKeys.all }),
+  });
+}
+
 export function usePendingResources(enabled = true) {
   return useQuery({
     queryKey: recursoKeys.pending,
@@ -73,7 +82,13 @@ export function usePendingResources(enabled = true) {
 export function useModerateResource() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, action }: { id: string; action: "approve" | "reject" | "delete" }) => {
+    mutationFn: async ({
+      id,
+      action,
+    }: {
+      id: string;
+      action: "approve" | "reject" | "delete";
+    }) => {
       if (action === "approve") await approveResource(id);
       else if (action === "reject") await rejectResource(id);
       else await deleteResource(id);

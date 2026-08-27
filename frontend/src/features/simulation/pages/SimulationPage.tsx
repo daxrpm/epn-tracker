@@ -12,7 +12,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -34,6 +34,7 @@ import { useCourseStates, useProfile } from "@/features/student/hooks";
 import { useCurriculumCourses } from "@/features/curriculum/hooks";
 import { ApiError } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
+import { creditsLabel } from "@/lib/format";
 
 import { getSimulation, type SimulationResult } from "../api";
 import {
@@ -62,10 +63,7 @@ export function SimulationPage() {
   const deleteSim = useDeleteSimulation();
 
   const courses = useMemo(() => coursesQuery.data ?? [], [coursesQuery.data]);
-  const courseById = useMemo(
-    () => new Map(courses.map((c) => [c.id, c])),
-    [courses],
-  );
+  const courseById = useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
   const stateByCourse = useMemo(
     () =>
       new Map<string, CourseState>(
@@ -109,11 +107,7 @@ export function SimulationPage() {
     });
   }, [currentCourses]);
 
-  function buildPayload(
-    a: Record<string, CourseState>,
-    sel: Set<string>,
-    special: boolean,
-  ) {
+  function buildPayload(a: Record<string, CourseState>, sel: Set<string>, special: boolean) {
     return {
       assumptions: currentCourses.map((c) => ({
         curriculum_course_id: c.id,
@@ -134,6 +128,27 @@ export function SimulationPage() {
     }
   }
 
+  /**
+   * Re-simulate after a change, coalescing bursts.
+   *
+   * Every checkbox used to fire a full simulation immediately, so building a six-course cart
+   * meant six round trips that each walked the whole malla server-side — and out-of-order
+   * responses could paint a stale result.
+   */
+  const rerunTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (rerunTimer.current) clearTimeout(rerunTimer.current);
+    },
+    [],
+  );
+
+  function scheduleRerun(a: Record<string, CourseState>, sel: Set<string>, special: boolean) {
+    if (!hasRun) return;
+    if (rerunTimer.current) clearTimeout(rerunTimer.current);
+    rerunTimer.current = setTimeout(() => void runWith(a, sel, special), 300);
+  }
+
   function changeAssumption(courseId: string, state: CourseState) {
     const next = { ...assumptions, [courseId]: state };
     const nextSelected = new Set(selectedIds);
@@ -142,9 +157,9 @@ export function SimulationPage() {
     setAssumptions(next);
     setSelectedIds(nextSelected);
     if (state === "FAILED") {
-      toast.info("La materia reprobada se agregó obligatoriamente al próximo semestre.");
+      toast.info("Las materias reprobadas se matriculan primero, así que ya está en la lista.");
     }
-    if (hasRun) void runWith(next, nextSelected, specialAuth);
+    scheduleRerun(next, nextSelected, specialAuth);
   }
 
   function toggleSelect(courseId: string) {
@@ -152,12 +167,12 @@ export function SimulationPage() {
     if (next.has(courseId)) next.delete(courseId);
     else next.add(courseId);
     setSelectedIds(next);
-    if (hasRun) void runWith(assumptions, next, specialAuth);
+    scheduleRerun(assumptions, next, specialAuth);
   }
 
   function toggleSpecial(value: boolean) {
     setSpecialAuth(value);
-    if (hasRun) void runWith(assumptions, selectedIds, value);
+    scheduleRerun(assumptions, selectedIds, value);
   }
 
   async function save() {
@@ -167,11 +182,16 @@ export function SimulationPage() {
       return;
     }
     try {
-      await saveSim.mutateAsync({ name, ...buildPayload(assumptions, selectedIds, specialAuth) });
+      await saveSim.mutateAsync({
+        name,
+        ...buildPayload(assumptions, selectedIds, specialAuth),
+      });
       toast.success("Escenario guardado.");
       setScenarioName("");
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : "No se pudo guardar el escenario.");
+      toast.error(
+        error instanceof ApiError ? error.message : "No se pudo guardar el escenario.",
+      );
     }
   }
 
@@ -188,7 +208,9 @@ export function SimulationPage() {
       setScenarioName(s.name);
       toast.success(`Escenario “${name}” cargado.`);
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : "No se pudo cargar el escenario.");
+      toast.error(
+        error instanceof ApiError ? error.message : "No se pudo cargar el escenario.",
+      );
     }
   }
 
@@ -205,9 +227,9 @@ export function SimulationPage() {
 
   if (!curriculumId) {
     return (
-      <Card className="border-border/80 bg-card/70">
+      <Card className="border-border bg-card">
         <CardContent className="flex flex-col items-start gap-4 p-8">
-          <div className="grid size-11 place-items-center rounded-xl bg-muted">
+          <div className="grid size-11 place-items-center rounded-md bg-muted">
             <GraduationCap className="size-5" />
           </div>
           <div>
@@ -236,22 +258,24 @@ export function SimulationPage() {
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          Simulador de matrícula
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
+        <p className="text-sm text-muted-foreground">Simulador de matrícula</p>
+        <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">
           ¿Qué puedo tomar el próximo semestre?
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Marca cómo crees que terminarán tus materias en curso. Con tus créditos aprobados y las
-          reglas de la EPN, calculamos qué materias quedan habilitadas y armas tu próxima matrícula.
+          Marca cómo crees que terminarán tus materias en curso. Con tus créditos aprobados y
+          las reglas de la EPN, calculamos qué materias quedan habilitadas y armas tu próxima
+          matrícula.
         </p>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
           {/* Step 1 — mark current courses */}
-          <Section title="1 · Tus materias en curso" hint={`${approvedCredits} créditos aprobados`}>
+          <Section
+            title="1 · Tus materias en curso"
+            hint={`${approvedCredits} créditos aprobados`}
+          >
             {currentCourses.length === 0 ? (
               <EmptyHint>
                 No tienes materias marcadas como “En curso”. Márcalas en tu{" "}
@@ -265,19 +289,19 @@ export function SimulationPage() {
                 {currentCourses.map((course) => (
                   <div
                     key={course.id}
-                    className="flex flex-col gap-3 rounded-xl border border-border/70 bg-background/50 p-3 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-3 rounded-md border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{course.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {course.code} · {Number(course.credits)} créditos
+                        {course.code} · {creditsLabel(course.credits)}
                       </p>
                     </div>
                     <Select
                       value={assumptions[course.id] ?? "PASSED"}
                       onValueChange={(v) => changeAssumption(course.id, v as CourseState)}
                     >
-                      <SelectTrigger className="w-full bg-background/70 sm:w-40">
+                      <SelectTrigger className="w-full bg-card sm:w-40">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -340,7 +364,7 @@ export function SimulationPage() {
                   return (
                     <div
                       key={id}
-                      className="flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-background/50 px-3 py-2"
+                      className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">{course.name}</p>
@@ -366,9 +390,7 @@ export function SimulationPage() {
               <div className="mt-4 space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Créditos seleccionados</span>
-                  <span
-                    className={cn("font-semibold tabular-nums", overLimit && "text-destructive")}
-                  >
+                  <span className={cn("font-semibold grade", overLimit && "text-destructive")}>
                     {selectedCreditsLive} / {maxCredits}
                   </span>
                 </div>
@@ -400,9 +422,14 @@ export function SimulationPage() {
                 value={scenarioName}
                 onChange={(e) => setScenarioName(e.target.value)}
                 placeholder="Nombra este escenario"
-                className="h-9 bg-background/70"
+                className="h-9 bg-card"
               />
-              <Button size="icon" onClick={() => void save()} disabled={saveSim.isPending} aria-label="Guardar escenario">
+              <Button
+                size="icon"
+                onClick={() => void save()}
+                disabled={saveSim.isPending}
+                aria-label="Guardar escenario"
+              >
                 {saveSim.isPending ? <Loader2 className="animate-spin" /> : <Save />}
               </Button>
             </div>
@@ -418,10 +445,7 @@ export function SimulationPage() {
             ) : (
               <div className="space-y-2">
                 {(savedQuery.data ?? []).map((s) => (
-                  <div
-                    key={s.id}
-                    className="rounded-lg border border-border/70 bg-background/50 p-3"
-                  >
+                  <div key={s.id} className="rounded-md border border-border bg-card p-3">
                     <div className="flex items-start justify-between gap-2">
                       <button
                         type="button"
@@ -456,13 +480,11 @@ export function SimulationPage() {
 
 function RestrictionBanner({ result }: { result: SimulationResult }) {
   return (
-    <Card className="border-border/80 bg-card/60">
+    <Card className="border-border bg-card">
       <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-            Créditos máximos este periodo
-          </p>
-          <p className="mt-1 text-3xl font-semibold tabular-nums">{result.max_credits}</p>
+          <p className="text-sm text-muted-foreground">Créditos máximos este periodo</p>
+          <p className="mt-1 text-3xl font-semibold grade">{result.max_credits}</p>
         </div>
         <div className="flex-1 space-y-1.5 sm:max-w-md">
           {result.restriction_reasons.length === 0 ? (
@@ -520,7 +542,7 @@ function EligibleCourses({
       <div className="space-y-5">
         {byTerm.map(([term, list]) => (
           <div key={term}>
-            <p className="mb-2 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            <p className="mb-2 text-sm text-muted-foreground">
               {term > 0 ? `Semestre ${term}` : "Otras"}
             </p>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -534,16 +556,16 @@ function EligibleCourses({
                     disabled={id == null}
                     onClick={() => id != null && onToggle(id)}
                     className={cn(
-                      "flex items-center justify-between gap-2 rounded-xl border p-3 text-left transition-colors",
+                      "flex items-center justify-between gap-2 rounded-md border p-3 text-left transition-colors",
                       selected
                         ? "border-emerald-500/50 bg-emerald-500/10"
-                        : "border-border/70 bg-background/50 hover:bg-accent",
+                        : "border-border bg-card hover:bg-accent",
                     )}
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{course.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {course.code} · {Number(course.credits)} créditos
+                        {course.code} · {creditsLabel(course.credits)}
                       </p>
                     </div>
                     <span
@@ -554,7 +576,11 @@ function EligibleCourses({
                           : "border-border text-muted-foreground",
                       )}
                     >
-                      {selected ? <CheckCircle2 className="size-4" /> : <Plus className="size-4" />}
+                      {selected ? (
+                        <CheckCircle2 className="size-4" />
+                      ) : (
+                        <Plus className="size-4" />
+                      )}
                     </span>
                   </button>
                 );
@@ -586,7 +612,7 @@ function BlockedCourses({ result }: { result: SimulationResult }) {
       {open && (
         <div className="mt-3 space-y-2">
           {result.blocked_courses.map((course) => (
-            <div key={course.code} className="rounded-lg border border-border/60 bg-background/40 p-3">
+            <div key={course.code} className="rounded-md border border-border bg-card p-3">
               <p className="text-sm font-medium">
                 {course.name}{" "}
                 <span className="font-normal text-muted-foreground">· {course.code}</span>
@@ -616,10 +642,10 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-border/80 bg-card/55 p-5 shadow-sm">
+    <section className="rounded-md border border-border bg-card p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold">{title}</h2>
-        {hint && <span className="text-xs text-muted-foreground tabular-nums">{hint}</span>}
+        {hint && <span className="text-xs text-muted-foreground grade">{hint}</span>}
       </div>
       {children}
     </section>

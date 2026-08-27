@@ -13,11 +13,7 @@ export type EnglishLevel =
   | "ADVANCED_2"
   | "SUFFICIENCY_B1";
 
-export type GradRequirementState =
-  | "PENDING"
-  | "IN_PROGRESS"
-  | "COMPLETED"
-  | "NOT_APPLICABLE";
+export type GradRequirementState = "PENDING" | "IN_PROGRESS" | "COMPLETED" | "NOT_APPLICABLE";
 
 export interface StudentProfile {
   id: string;
@@ -64,6 +60,26 @@ export interface GradRequirementRecord {
   name: string;
   requirement_type: GradRequirementType;
   state: GradRequirementState;
+}
+
+export interface ProgressTerm {
+  term: number;
+  approved_credits: string;
+  total_credits: string;
+}
+
+/** Malla progress, computed server-side with Decimal (see GET /student/progress). */
+export interface Progress {
+  total_credits: string;
+  approved_credits: string;
+  percent: string;
+  counts_by_state: Record<CourseState, number>;
+  by_term: ProgressTerm[];
+}
+
+export async function getProgress(): Promise<Progress> {
+  const { data } = await apiClient.get<Progress>("/student/progress");
+  return data;
 }
 
 export async function getProfile(): Promise<StudentProfile> {

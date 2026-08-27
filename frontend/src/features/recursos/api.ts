@@ -57,7 +57,11 @@ export interface ResourceFilters {
   contribution?: Contribution;
   kind?: ResourceKind;
   tema?: string;
+  /** Full-text search across title, tema and description. Runs in SQL, not in the browser. */
+  q?: string;
   mine?: boolean;
+  limit?: number;
+  offset?: number;
 }
 
 export interface FileResourceInput {
@@ -141,7 +145,12 @@ export async function createLinkResource(input: LinkResourceInput): Promise<Reso
 
 export async function updateResource(
   id: string,
-  patch: Partial<Pick<LinkResourceInput, "title" | "description" | "tema" | "contribution" | "professor_id" | "academic_period_id">>,
+  patch: Partial<
+    Pick<
+      LinkResourceInput,
+      "title" | "description" | "tema" | "contribution" | "professor_id" | "academic_period_id"
+    >
+  >,
 ): Promise<ResourceCreateOut> {
   const { data } = await apiClient.patch<ResourceCreateOut>(`/resources/${id}`, patch);
   return data;
@@ -165,6 +174,11 @@ export async function fetchResourceBlob(id: string): Promise<{ url: string; blob
     responseType: "blob",
   });
   return { url: URL.createObjectURL(data), blob: data };
+}
+
+/** Withdraw your own upload. Moderators can withdraw any (see `deleteResource`). */
+export async function deleteOwnResource(id: string): Promise<void> {
+  await apiClient.delete(`/resources/${id}`);
 }
 
 // --- Admin moderation -----------------------------------------------------------------------------

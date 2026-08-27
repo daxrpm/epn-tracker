@@ -36,7 +36,9 @@ export function ResourceViewerDialog({ resource, onClose }: Props) {
               {resource.academic_period_code && (
                 <Badge variant="outline">{resource.academic_period_code}</Badge>
               )}
-              {resource.professor_name && <Badge variant="outline">{resource.professor_name}</Badge>}
+              {resource.professor_name && (
+                <Badge variant="outline">{resource.professor_name}</Badge>
+              )}
             </div>
             <ResourceViewer resource={resource} className="mt-1" />
           </>

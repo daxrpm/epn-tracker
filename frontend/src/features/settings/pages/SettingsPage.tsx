@@ -64,19 +64,15 @@ export function SettingsPage() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <div>
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          Ajustes
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-          Tu cuenta
-        </h1>
+        <p className="text-sm text-muted-foreground">Ajustes</p>
+        <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Tu cuenta</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Administra tu carrera y pénsum. El resto de tu progreso se organiza a partir de esta
           selección.
         </p>
       </div>
 
-      <Card className="rounded-2xl bg-card/65">
+      <Card className="rounded-md bg-card">
         <CardHeader>
           <CardTitle className="text-lg">Carrera y pénsum</CardTitle>
         </CardHeader>
@@ -122,11 +118,11 @@ export function SettingsPage() {
           </div>
 
           {changed && (
-            <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+            <div className="flex items-start gap-2.5 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               <p>
-                Cambiar de pénsum reorganiza tu malla. El estado de materias que no existan en el
-                nuevo pénsum dejará de mostrarse.
+                Cambiar de pénsum reorganiza tu malla. El estado de materias que no existan en
+                el nuevo pénsum dejará de mostrarse.
               </p>
             </div>
           )}

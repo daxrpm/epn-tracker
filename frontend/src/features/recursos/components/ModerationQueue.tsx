@@ -21,7 +21,11 @@ export function ModerationQueue() {
     try {
       await moderate.mutateAsync({ id, action });
       toast.success(
-        action === "approve" ? "Recurso aprobado." : action === "reject" ? "Recurso rechazado." : "Recurso eliminado.",
+        action === "approve"
+          ? "Recurso aprobado."
+          : action === "reject"
+            ? "Recurso rechazado."
+            : "Recurso eliminado.",
       );
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "No se pudo moderar.");
@@ -49,19 +53,23 @@ export function ModerationQueue() {
     <>
       <div className="space-y-3">
         {items.map((resource) => (
-          <Card key={resource.id} className="border-border/80 bg-card/65">
+          <Card key={resource.id} className="border-border bg-card">
             <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{resource.title}</p>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {resource.contribution && (
-                    <Badge variant="outline">{CONTRIBUTION_LABELS[resource.contribution]}</Badge>
+                    <Badge variant="outline">
+                      {CONTRIBUTION_LABELS[resource.contribution]}
+                    </Badge>
                   )}
                   {resource.tema && <Badge variant="outline">{resource.tema}</Badge>}
                   {resource.academic_period_code && (
                     <Badge variant="outline">{resource.academic_period_code}</Badge>
                   )}
-                  {resource.professor_name && <Badge variant="outline">{resource.professor_name}</Badge>}
+                  {resource.professor_name && (
+                    <Badge variant="outline">{resource.professor_name}</Badge>
+                  )}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">

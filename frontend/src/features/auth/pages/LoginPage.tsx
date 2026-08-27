@@ -2,7 +2,6 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,8 +18,7 @@ export function LoginPage() {
 
   return (
     <section aria-labelledby="login-title">
-      <BrandMark className="mb-6" />
-      <h1 id="login-title" className="text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">
+      <h1 id="login-title" className="font-heading text-3xl font-semibold sm:text-4xl">
         Qué bueno verte de nuevo
       </h1>
       <p className="mt-3 max-w-sm text-sm leading-6 text-muted-foreground sm:text-base">
@@ -37,7 +35,7 @@ export function LoginPage() {
             type="email"
             autoComplete="email"
             placeholder="tu.nombre@epn.edu.ec"
-            className="h-11 border-border/70 bg-muted/55 px-3.5"
+            className="h-11"
             aria-invalid={Boolean(errors.email)}
             aria-describedby={errors.email ? "email-error" : "email-hint"}
             {...register("email")}
@@ -63,7 +61,7 @@ export function LoginPage() {
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               placeholder="Ingresa tu contraseña"
-              className="h-11 border-border/70 bg-muted/55 px-3.5 pr-11"
+              className="h-11 border-border bg-muted/55 px-3.5 pr-11"
               aria-invalid={Boolean(errors.password)}
               aria-describedby={errors.password ? "password-error" : undefined}
               {...register("password")}
@@ -85,7 +83,10 @@ export function LoginPage() {
         </div>
 
         {serverError && (
-          <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive" role="alert">
+          <p
+            className="rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+            role="alert"
+          >
             {serverError}
           </p>
         )}
@@ -96,7 +97,10 @@ export function LoginPage() {
         </Button>
       </form>
 
-      <div className="my-7 flex items-center gap-4 text-xs text-muted-foreground" aria-hidden="true">
+      <div
+        className="my-7 flex items-center gap-4 text-xs text-muted-foreground"
+        aria-hidden="true"
+      >
         <span className="h-px flex-1 bg-border" />
         o
         <span className="h-px flex-1 bg-border" />
@@ -106,12 +110,6 @@ export function LoginPage() {
         ¿Aún no tienes cuenta?{" "}
         <Link to="/registro" className="font-medium text-foreground hover:underline">
           Crear cuenta
-        </Link>
-      </p>
-      <p className="mt-3 text-center text-xs text-muted-foreground">
-        Comparar con{" "}
-        <Link to="/login/hero" className="font-medium text-foreground hover:underline">
-          la versión HeroUI
         </Link>
       </p>
     </section>

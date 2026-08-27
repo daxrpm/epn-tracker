@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from "react";
 
 import type { CourseState } from "@/features/student/api";
 import { cn } from "@/lib/utils";
+import { creditsLabel } from "@/lib/format";
 
 import type { CurriculumCourse } from "../api";
 import { COURSE_STATE_META, UNIT_META, courseHours } from "../constants";
@@ -96,13 +97,13 @@ function TermRow({
 
   if (layout === "wrap") {
     return (
-      <div className="flex flex-col gap-3 bg-background/25 p-4">
+      <div className="flex flex-col gap-3 bg-card p-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-baseline gap-2">
             <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
               Semestre
             </span>
-            <span className="text-lg font-semibold tabular-nums">{term}</span>
+            <span className="text-lg font-semibold grade">{term}</span>
           </div>
           {renderTermExtra?.(
             term,
@@ -117,12 +118,12 @@ function TermRow({
   }
 
   return (
-    <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] bg-background/25">
-      <div className="flex flex-col items-center justify-center border-r border-border/70 px-2 py-5">
+    <div className="grid grid-cols-[4.5rem_minmax(0,1fr)] bg-card">
+      <div className="flex flex-col items-center justify-center border-r border-border px-2 py-5">
         <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
           Sem
         </span>
-        <span className="text-2xl font-semibold tabular-nums">{term}</span>
+        <span className="text-2xl font-semibold grade">{term}</span>
       </div>
       <div className="overflow-x-auto p-3 scrollbar-thin">
         <div className="flex min-w-max gap-3">{cards}</div>
@@ -169,7 +170,7 @@ function CourseCard({
         onClick={() => onSelect(course)}
         aria-pressed={state !== "NOT_TAKEN"}
         className={cn(
-          "group relative flex h-32 flex-col justify-between rounded-xl border-2 p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
+          "group relative flex h-32 flex-col justify-between rounded-md border-2 p-3 text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
           PICK_CARD_META[state],
         )}
       >
@@ -193,7 +194,7 @@ function CourseCard({
           </span>
         </span>
         <div className="flex items-center justify-between gap-2 text-[10px]">
-          <span className="text-muted-foreground">{Number(course.credits)} créditos</span>
+          <span className="text-muted-foreground">{creditsLabel(course.credits)}</span>
           <span
             className={cn(
               "font-semibold",
@@ -216,12 +217,12 @@ function CourseCard({
       type="button"
       onClick={() => onSelect(course)}
       className={cn(
-        "group relative flex h-36 w-44 shrink-0 flex-col overflow-hidden rounded-lg border text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
+        "group relative flex h-36 w-44 shrink-0 flex-col overflow-hidden rounded-md border text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
         stateMeta.card,
       )}
     >
       <div className="flex items-center justify-between border-b border-current/10 px-3 py-2 text-[10px] text-muted-foreground">
-        <span>{Number(course.credits)} créditos</span>
+        <span>{creditsLabel(course.credits)}</span>
         <span>{courseHours(course)} h</span>
       </div>
       <div className="flex flex-1 flex-col gap-1 px-3 py-2.5">

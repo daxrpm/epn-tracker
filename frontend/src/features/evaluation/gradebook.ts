@@ -7,10 +7,7 @@ import type { Contribution } from "./api";
 export type GradeComponentMode = "DIRECT_SCORE" | "EQUAL_AVERAGE" | "CUSTOM_WEIGHTS";
 
 export type CourseFinalStatus =
-  | "APPROVED"
-  | "RECOVERY_ELIGIBLE"
-  | "FAILED_DIRECT"
-  | "IN_PROGRESS";
+  "APPROVED" | "RECOVERY_ELIGIBLE" | "FAILED_DIRECT" | "IN_PROGRESS";
 
 export interface Enrollment {
   id: string;
@@ -20,6 +17,8 @@ export interface Enrollment {
   aporte_1_override_scale: string | null;
   aporte_2_override_score: string | null;
   aporte_2_override_scale: string | null;
+  /** Makeup exam over 40, once the ordinary grade lands in the 18-28 band. */
+  recovery_score_40: string | null;
 }
 
 export interface EnrollmentCreateInput {
@@ -66,12 +65,19 @@ export interface ContributionResult {
 export interface CalculateResult {
   aporte_1: ContributionResult;
   aporte_2: ContributionResult;
+  /** The ordinary grade, before any makeup exam. */
   final_40: string;
   final_20: string;
   display_final_20: string;
+  /** The outcome after folding in the recovery score, when there is one. */
   status: CourseFinalStatus;
   is_complete: boolean;
   required_recovery_score_40: string | null;
+  recovery_score_40: string | null;
+  recovery_passed: boolean | null;
+  /** The grade that actually counts: ordinary, or the recovery average once taken. */
+  effective_final_40: string;
+  effective_final_20: string;
 }
 
 export interface ProjectionResult {
@@ -101,9 +107,26 @@ export async function getGradebook(enrollmentId: string): Promise<Gradebook> {
   return data;
 }
 
+/** A read: computing a grade does not mutate the gradebook. */
 export async function calculate(enrollmentId: string): Promise<CalculateResult> {
-  const { data } = await apiClient.post<CalculateResult>(
+  const { data } = await apiClient.get<CalculateResult>(
     `/student/enrollments/${enrollmentId}/calculate`,
+  );
+  return data;
+}
+
+export async function deleteEnrollment(enrollmentId: string): Promise<void> {
+  await apiClient.delete(`/student/enrollments/${enrollmentId}`);
+}
+
+/** Sets (or clears, with score=null) the makeup-exam grade over 40. */
+export async function setRecoveryScore(
+  enrollmentId: string,
+  score: string | null,
+): Promise<Enrollment> {
+  const { data } = await apiClient.patch<Enrollment>(
+    `/student/enrollments/${enrollmentId}/recovery`,
+    { score },
   );
   return data;
 }

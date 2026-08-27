@@ -109,12 +109,10 @@ export function UsersPage() {
     <div className="space-y-6">
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <ShieldCheck className="size-3.5" /> Superadministración
           </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-            Usuarios y roles
-          </h1>
+          <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Usuarios y roles</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             Crea administradores, cambia roles y suspende cuentas. No puedes modificar tu propia
             cuenta ni dejar al sistema sin un superadministrador activo.
@@ -125,7 +123,7 @@ export function UsersPage() {
         </Button>
       </header>
 
-      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card/55 shadow-sm">
+      <div className="overflow-hidden rounded-md border border-border bg-card shadow-sm">
         {usersQuery.isLoading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -160,7 +158,7 @@ export function UsersPage() {
                         onValueChange={(value) => void changeRole(user, value as UserRole)}
                         disabled={locked || updateRole.isPending}
                       >
-                        <SelectTrigger className="h-9 bg-background/70">
+                        <SelectTrigger className="h-9 bg-card">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -175,7 +173,10 @@ export function UsersPage() {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={cn("bg-background/50 font-normal", STATUS_META[user.status].className)}
+                        className={cn(
+                          "bg-card font-normal",
+                          STATUS_META[user.status].className,
+                        )}
                       >
                         {STATUS_META[user.status].label}
                       </Badge>
@@ -232,8 +233,8 @@ export function UsersPage() {
           <DialogHeader>
             <DialogTitle>Eliminar cuenta</DialogTitle>
             <DialogDescription>
-              Se marcará <span className="font-medium">{toDelete?.email}</span> como eliminada. Su
-              historial se conserva, pero no podrá iniciar sesión.
+              Se marcará <span className="font-medium">{toDelete?.email}</span> como eliminada.
+              Su historial se conserva, pero no podrá iniciar sesión.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -245,7 +246,8 @@ export function UsersPage() {
               onClick={() => void confirmDelete()}
               disabled={deleteUser.isPending}
             >
-              {deleteUser.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />} Eliminar
+              {deleteUser.isPending ? <Loader2 className="animate-spin" /> : <Trash2 />}{" "}
+              Eliminar
             </Button>
           </DialogFooter>
         </DialogContent>

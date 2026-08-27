@@ -4,8 +4,13 @@ import {
   Image as ImageIcon,
   Link as LinkIcon,
   ThumbsUp,
+  Trash2,
   User,
 } from "lucide-react";
+import { toast } from "sonner";
+
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useDeleteOwnResource } from "../hooks";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,12 +39,17 @@ export function ResourceCard({ resource, onView, onVote, voting }: Props) {
   const Icon = KIND_ICON[resource.kind];
   const status = STATUS_META[resource.status];
   const canVote = onVote && !resource.is_owner && resource.status === "COMMUNITY_PENDING";
+  const deleteResource = useDeleteOwnResource();
+  // Once the community has verified it, taking it down is a moderator decision.
+  const canWithdraw =
+    resource.is_owner &&
+    (resource.status === "COMMUNITY_PENDING" || resource.status === "PERSONAL");
 
   return (
-    <Card className="flex h-full flex-col border-border/80 bg-card/65 transition-colors hover:border-primary/50">
+    <Card className="flex h-full flex-col border-border bg-card transition-colors hover:border-primary/50">
       <CardContent className="flex h-full flex-col gap-3 p-4">
         <div className="flex items-start gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted">
+          <span className="grid size-10 shrink-0 place-items-center rounded-md bg-muted">
             <Icon className="size-5" />
           </span>
           <div className="min-w-0 flex-1">
@@ -84,6 +94,27 @@ export function ResourceCard({ resource, onView, onVote, voting }: Props) {
               >
                 <ThumbsUp className="size-4" /> {resource.approval_count}
               </Button>
+            )}
+            {canWithdraw && (
+              <ConfirmDialog
+                title="¿Retirar este recurso?"
+                description={`Se elimina “${resource.title}” y el archivo asociado. No se puede deshacer.`}
+                confirmLabel="Retirar"
+                pending={deleteResource.isPending}
+                onConfirm={async () => {
+                  await deleteResource.mutateAsync(resource.id);
+                  toast.success("Recurso retirado.");
+                }}
+                trigger={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Retirar ${resource.title}`}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                }
+              />
             )}
             <Button variant="outline" size="sm" onClick={() => onView(resource)}>
               <Eye className="size-4" /> Ver

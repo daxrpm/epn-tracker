@@ -1,205 +1,263 @@
-import {
-  ArrowRight,
-  Calculator,
-  GitBranch,
-  GraduationCap,
-  ListChecks,
-  Loader2,
-  NotebookPen,
-} from "lucide-react";
-import { useMemo } from "react";
+import { ArrowRight, GraduationCap, Loader2, NotebookPen } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { useCurriculumCourses } from "@/features/curriculum/hooks";
+import { COURSE_STATE_META } from "@/features/curriculum/constants";
 import type { CourseState } from "@/features/student/api";
-import { useCourseStates, useProfile } from "@/features/student/hooks";
+import { useCourseStates, useProfile, useProgress } from "@/features/student/hooks";
+import { useEnrollments } from "@/features/evaluation/hooks";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth.store";
+import { creditsLabel } from "@/lib/format";
 
+/**
+ * The screen's job: answer "where am I, and what should I open next?".
+ *
+ * The focal element is the malla progress; everything else defers to it. It is deliberately not
+ * the default dashboard shell (stat row + chart + table): there is one number that matters and a
+ * short list of courses in flight, so that is what the page is.
+ */
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user);
   const profileQuery = useProfile();
   const curriculumId = profileQuery.data?.current_curriculum_id ?? null;
+
+  const progressQuery = useProgress(Boolean(curriculumId));
   const coursesQuery = useCurriculumCourses(curriculumId);
   const statesQuery = useCourseStates();
+  const enrollmentsQuery = useEnrollments();
 
-  const stats = useMemo(() => {
-    const courses = coursesQuery.data ?? [];
-    const stateByCourse = new Map<string, CourseState>(
-      (statesQuery.data ?? []).map((s) => [s.curriculum_course_id, s.state]),
+  const firstName = user?.email.split("@")[0] ?? "";
+
+  if (profileQuery.isLoading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" aria-hidden />
+      </div>
     );
-    const counts: Record<CourseState, number> = {
-      NOT_TAKEN: 0,
-      IN_PROGRESS: 0,
-      PASSED: 0,
-      FAILED: 0,
-      ANNULLED: 0,
-    };
-    let totalCredits = 0;
-    let approvedCredits = 0;
-    for (const course of courses) {
-      const credits = Number(course.credits) || 0;
-      totalCredits += credits;
-      const state = stateByCourse.get(course.id) ?? "NOT_TAKEN";
-      counts[state] += 1;
-      if (state === "PASSED") approvedCredits += credits;
-    }
-    const percent = totalCredits > 0 ? Math.round((approvedCredits / totalCredits) * 100) : 0;
-    return { counts, totalCredits, approvedCredits, percent, totalCourses: courses.length };
-  }, [coursesQuery.data, statesQuery.data]);
+  }
 
-  const greeting = user ? `, ${user.email.split("@")[0]}` : "";
+  if (!curriculumId) return <OnboardingCta name={firstName} />;
+
+  const progress = progressQuery.data;
+  const counts = progress?.counts_by_state;
+
+  // Courses the student is taking right now, with a direct link into their gradebook.
+  const inProgress = (coursesQuery.data ?? []).filter(
+    (course) =>
+      (statesQuery.data ?? []).find((s) => s.curriculum_course_id === course.id)?.state ===
+      "IN_PROGRESS",
+  );
+  const enrollmentByCourse = new Map(
+    (enrollmentsQuery.data ?? []).map((e) => [e.curriculum_course_id, e.id]),
+  );
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">Panel académico</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Hola{greeting}</h1>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Tu panel académico: avance de malla, materias, requisitos y simulaciones.
+    <div className="flex flex-col gap-10">
+      <header className="margin-rule">
+        <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Hola, {firstName}</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Tu cuaderno académico: avance, materias en curso y herramientas.
         </p>
-      </div>
+      </header>
 
-      {profileQuery.isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="size-6 animate-spin text-muted-foreground" />
-        </div>
-      ) : !curriculumId ? (
-        <OnboardingCta />
-      ) : (
-        <>
-          <Card className="rounded-2xl bg-card/65">
-            <CardContent className="flex flex-col gap-4 p-6">
-              <div className="flex items-end justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Avance de malla</p>
-                  <p className="text-3xl font-bold tabular-nums">{stats.percent}%</p>
-                </div>
-                <p className="text-sm text-muted-foreground tabular-nums">
-                  {stats.approvedCredits} / {stats.totalCredits} créditos
+      {/* Focal element: how much of the malla is done. */}
+      <section aria-labelledby="avance">
+        <Card focal className="overflow-hidden">
+          <CardContent className="flex flex-col gap-5 p-6 sm:p-8">
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 id="avance" className="text-sm font-medium text-muted-foreground">
+                  Avance de la malla
+                </h2>
+                <p className="mt-1 flex items-baseline gap-1.5">
+                  <span className="grade text-5xl text-primary sm:text-6xl">
+                    {progress ? Number(progress.percent).toFixed(0) : "—"}
+                  </span>
+                  <span className="text-xl text-muted-foreground">%</span>
                 </p>
               </div>
-              <Progress value={stats.percent} className="h-2" />
-            </CardContent>
-          </Card>
+              <p className="grade text-sm text-muted-foreground">
+                {progress
+                  ? `${progress.approved_credits} / ${progress.total_credits}`
+                  : "— / —"}{" "}
+                créditos
+              </p>
+            </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <StatItem label="Aprobadas" value={stats.counts.PASSED} accent="text-emerald-500" />
-            <StatItem label="En curso" value={stats.counts.IN_PROGRESS} accent="text-sky-500" />
-            <StatItem
-              label="Reprobadas"
-              value={stats.counts.FAILED + stats.counts.ANNULLED}
-              accent="text-red-500"
-            />
-          </div>
+            <ProgressBar percent={progress ? Number(progress.percent) : 0} />
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            <DashboardAction
-              to="/app/curriculum"
-              title="Malla interactiva"
-              description="Explora tu pénsum por semestre y actualiza el estado de tus materias."
-              icon={GraduationCap}
-            />
-            <DashboardAction
-              to="/app/simulacion"
-              title="Simulador de matrícula"
-              description="Proyecta tus materias y arma tu próximo semestre según las reglas EPN."
-              icon={GitBranch}
-            />
-            <DashboardAction
-              to="/app/notas"
-              title="Gestión de notas"
-              description="Registra tus notas por bimestre y proyecta tu resultado final."
-              icon={NotebookPen}
-            />
-            <DashboardAction
-              to="/app/requisitos"
-              title="Requisitos de graduación"
-              description="Revisa y actualiza el estado de todos tus requisitos."
-              icon={ListChecks}
-            />
-            <DashboardAction
-              to="/app/calculadora"
-              title="Calculadora de recuperación"
-              description="Calcula tu nota final sobre 40 y cuánto necesitas para aprobar."
-              icon={Calculator}
-            />
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+            {counts && (
+              <dl className="flex flex-wrap gap-x-8 gap-y-3 pt-1">
+                <CountItem state="PASSED" value={counts.PASSED} />
+                <CountItem state="IN_PROGRESS" value={counts.IN_PROGRESS} />
+                <CountItem state="FAILED" value={counts.FAILED} />
+                {/* Annulled is its own count: the rules treat it as neither passed nor failed,
+                    so folding it into "reprobadas" told the student something untrue. */}
+                <CountItem state="ANNULLED" value={counts.ANNULLED} />
+                <CountItem state="NOT_TAKEN" value={counts.NOT_TAKEN} />
+              </dl>
+            )}
+          </CardContent>
+        </Card>
+      </section>
 
-function OnboardingCta() {
-  return (
-    <Card className="rounded-2xl border-border/80 bg-card/65">
-      <CardContent className="flex flex-col items-start gap-4 p-8">
-        <GraduationCap className="size-10 text-primary" />
-        <div>
-          <h2 className="text-lg font-semibold">Configura tu malla</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Aún no has seleccionado tu carrera y pénsum. Complétalo para ver tu avance
-            académico.
-          </p>
-        </div>
-        <Button asChild>
-          <Link to="/app/onboarding">
-            Empezar
-            <ArrowRight className="size-4" />
+      {/* Different composition on purpose: a ruled list, not another grid of cards. */}
+      <section aria-labelledby="en-curso" className="flex flex-col gap-3">
+        <div className="flex items-baseline justify-between gap-4 border-b border-border pb-2">
+          <h2 id="en-curso" className="font-heading text-lg font-semibold">
+            Materias en curso
+          </h2>
+          <Link
+            to="/app/notas"
+            className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Ver todas
           </Link>
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
+        </div>
 
-function StatItem({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: number;
-  accent: string;
-}) {
-  return (
-    <div className="flex min-h-28 flex-col justify-between rounded-2xl border border-border/80 bg-card/65 p-5 shadow-sm">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className={`text-3xl font-semibold tabular-nums ${accent}`}>{value}</span>
+        {inProgress.length === 0 ? (
+          <EmptyInProgress />
+        ) : (
+          <ul className="rule-list">
+            {inProgress.map((course) => (
+              <li key={course.id}>
+                <Link
+                  to={`/app/notas/${course.id}`}
+                  className="flex items-center justify-between gap-4 py-3 transition-colors hover:bg-muted/60"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{course.name}</p>
+                    <p className="grade text-xs text-muted-foreground">
+                      {course.code} · {creditsLabel(course.credits)}
+                    </p>
+                  </div>
+                  <span className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground">
+                    {enrollmentByCourse.has(course.id) ? "Ver notas" : "Empezar"}
+                    <ArrowRight className="size-4" aria-hidden />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section aria-labelledby="herramientas" className="flex flex-col gap-3">
+        <h2
+          id="herramientas"
+          className="border-b border-border pb-2 font-heading text-lg font-semibold"
+        >
+          Herramientas
+        </h2>
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ToolLink
+            to="/app/simulacion"
+            title="Simulador de matrícula"
+            description="Qué materias quedan habilitadas para el próximo semestre."
+          />
+          <ToolLink
+            to="/app/calculadora"
+            title="Calculadora del suple"
+            description="Cuánto necesitas para aprobar según tus dos bimestres."
+          />
+          <ToolLink
+            to="/app/requisitos"
+            title="Requisitos de graduación"
+            description="Inglés, deportes, vinculación y el resto del checklist."
+          />
+        </ul>
+      </section>
     </div>
   );
 }
 
-function DashboardAction({
+function ProgressBar({ percent }: { percent: number }) {
+  const clamped = Math.min(100, Math.max(0, percent));
+  return (
+    <div
+      className="h-2 w-full overflow-hidden rounded-full bg-muted"
+      role="progressbar"
+      aria-valuenow={Math.round(clamped)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label="Avance de la malla"
+    >
+      <div
+        className="h-full rounded-full bg-primary transition-[width] duration-500"
+        style={{ width: `${clamped}%` }}
+      />
+    </div>
+  );
+}
+
+function CountItem({ state, value }: { state: CourseState; value: number }) {
+  const meta = COURSE_STATE_META[state];
+  return (
+    <div className="flex items-center gap-2">
+      <span className={cn("size-2 shrink-0 rounded-full", meta.dot)} aria-hidden />
+      <dt className="text-sm text-muted-foreground">{meta.label}</dt>
+      <dd className="grade text-sm font-medium">{value}</dd>
+    </div>
+  );
+}
+
+function EmptyInProgress() {
+  return (
+    <div className="flex flex-col items-start gap-3 py-6">
+      <p className="text-sm text-muted-foreground">
+        No tienes materias marcadas como “En curso”. Márcalas en tu malla y aparecerán aquí con
+        acceso directo a sus notas.
+      </p>
+      <Button asChild variant="outline" size="sm">
+        <Link to="/app/curriculum">
+          <NotebookPen /> Ir a mi malla
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
+function ToolLink({
   to,
   title,
   description,
-  icon: Icon,
 }: {
   to: string;
   title: string;
   description: string;
-  icon: typeof GraduationCap;
 }) {
   return (
-    <Link to={to} className="group block h-full rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      <Card className="h-full min-h-40 rounded-2xl border-border/80 bg-card/65 py-0 shadow-sm transition-all duration-200 group-hover:-translate-y-0.5 group-hover:border-primary/25 group-hover:shadow-md">
-        <CardContent className="flex h-full items-start gap-4 p-5">
-          <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-            <Icon className="size-5" />
-          </span>
-          <div className="flex min-w-0 flex-1 flex-col self-stretch">
-            <h2 className="text-base font-semibold leading-snug">{title}</h2>
-            <p className="mt-2 text-sm leading-5 text-muted-foreground">{description}</p>
-            <span className="mt-auto flex items-center gap-1 pt-4 text-xs font-medium text-muted-foreground transition-colors group-hover:text-foreground">
-              Abrir <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
+    <li>
+      <Link
+        to={to}
+        className="flex h-full flex-col gap-1 rounded-md border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-muted/50"
+      >
+        <span className="font-heading text-base font-semibold">{title}</span>
+        <span className="text-sm leading-5 text-muted-foreground">{description}</span>
+      </Link>
+    </li>
+  );
+}
+
+function OnboardingCta({ name }: { name: string }) {
+  return (
+    <div className="mx-auto flex max-w-lg flex-col items-start gap-5 py-16">
+      <GraduationCap className="size-8 text-primary" aria-hidden />
+      <div>
+        <h1 className="font-heading text-2xl font-semibold">Hola, {name}</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          Para armar tu cuaderno necesitamos tu carrera y tu pénsum. Son dos minutos y después
+          puedes ajustar todo desde la malla.
+        </p>
+      </div>
+      <Button asChild>
+        <Link to="/app/onboarding">
+          Configurar mi malla <ArrowRight />
+        </Link>
+      </Button>
+    </div>
   );
 }

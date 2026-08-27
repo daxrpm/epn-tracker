@@ -82,10 +82,8 @@ export function ProfessorsPage() {
     <div className="space-y-6">
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            Administración
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Profesores</h1>
+          <p className="text-sm text-muted-foreground">Administración</p>
+          <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">Profesores</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             Registra y edita el catálogo de docentes de la institución.
           </p>
@@ -95,7 +93,7 @@ export function ProfessorsPage() {
         </Button>
       </header>
 
-      <div className="overflow-hidden rounded-2xl border border-border/80 bg-card/55 shadow-sm">
+      <div className="overflow-hidden rounded-md border border-border bg-card shadow-sm">
         {professors.isLoading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
@@ -116,14 +114,19 @@ export function ProfessorsPage() {
             </TableHeader>
             <TableBody>
               {(professors.data ?? []).map((professor) => (
-                <TableRow key={professor.id} className={cn(!professor.is_active && "opacity-50")}>
+                <TableRow
+                  key={professor.id}
+                  className={cn(!professor.is_active && "opacity-50")}
+                >
                   <TableCell className="font-medium">{professor.full_name}</TableCell>
-                  <TableCell className="text-muted-foreground">{professor.email ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {professor.email ?? "—"}
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
                       className={cn(
-                        "bg-background/50 font-normal",
+                        "bg-card font-normal",
                         professor.is_active
                           ? "text-emerald-600 dark:text-emerald-400"
                           : "text-muted-foreground",
@@ -134,7 +137,11 @@ export function ProfessorsPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => void toggleActive(professor)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void toggleActive(professor)}
+                      >
                         {professor.is_active ? "Desactivar" : "Activar"}
                       </Button>
                       <Button
@@ -194,8 +201,8 @@ export function ProfessorsPage() {
             <DialogTitle>Eliminar profesor</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Se desactivará <span className="font-medium">{toDelete?.full_name}</span>. Sus ofertas y
-            esquemas se conservan.
+            Se desactivará <span className="font-medium">{toDelete?.full_name}</span>. Sus
+            ofertas y esquemas se conservan.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setToDelete(null)}>

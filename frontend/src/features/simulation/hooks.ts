@@ -48,9 +48,10 @@ export function useDeleteSimulation() {
   return useMutation({
     mutationFn: (id: string) => deleteSimulation(id),
     onSuccess: (_data, id) => {
-      queryClient.setQueryData<
-        Awaited<ReturnType<typeof listSimulations>>
-      >(simulationKeys.saved, (current) => current?.filter((item) => item.id !== id));
+      queryClient.setQueryData<Awaited<ReturnType<typeof listSimulations>>>(
+        simulationKeys.saved,
+        (current) => current?.filter((item) => item.id !== id),
+      );
       queryClient.removeQueries({ queryKey: simulationKeys.detail(id) });
       void queryClient.invalidateQueries({ queryKey: simulationKeys.saved });
     },
