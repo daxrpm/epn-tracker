@@ -52,6 +52,46 @@ def fake_redis(monkeypatch) -> fakeredis.aioredis.FakeRedis:
     return client
 
 
+@pytest.fixture
+def fake_storage(monkeypatch) -> dict[str, bytes]:
+    """In-memory replacement for the MinIO/S3 layer.
+
+    Mirrors the real ``storage`` contract exactly — including ``stream_object`` returning the
+    object's length rather than a content type — so a change to that contract breaks here first.
+    """
+    store: dict[str, bytes] = {}
+
+    async def put_object(key, data, content_type):  # noqa: ANN001
+        store[key] = data
+
+    async def delete_object(key):  # noqa: ANN001
+        store.pop(key, None)
+
+    async def presigned_get_url(key, *, filename=None, expires=600):  # noqa: ANN001
+        return f"https://minio.local/{key}?sig=fake"
+
+    async def stream_object(key):  # noqa: ANN001
+        data = store.get(key, b"")
+
+        async def _iter():
+            yield data
+
+        return _iter(), len(data)
+
+    async def ensure_bucket():
+        return None
+
+    for name, impl in (
+        ("put_object", put_object),
+        ("delete_object", delete_object),
+        ("presigned_get_url", presigned_get_url),
+        ("stream_object", stream_object),
+        ("ensure_bucket", ensure_bucket),
+    ):
+        monkeypatch.setattr(f"app.modules.resources.storage.{name}", impl)
+    return store
+
+
 @pytest_asyncio.fixture
 async def client(db_engine) -> AsyncGenerator[AsyncClient]:
     factory = async_sessionmaker(db_engine, expire_on_commit=False, autoflush=False)

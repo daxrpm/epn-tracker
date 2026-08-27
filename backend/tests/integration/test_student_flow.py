@@ -27,6 +27,22 @@ def _auth(token):
     return {"Authorization": f"Bearer {token}"}
 
 
+async def _student_on_curriculum(client, db_session, email, curriculum_id):
+    """A verified student whose profile already points at ``curriculum_id``.
+
+    Enrolling requires the course to belong to the student's own malla, so every gradebook test
+    needs the profile wired up first.
+    """
+    token = await _make_user(db_session, email)
+    resp = await client.put(
+        "/api/v1/student/profile",
+        json={"current_curriculum_id": curriculum_id},
+        headers=_auth(token),
+    )
+    assert resp.status_code == 200, resp.text
+    return token
+
+
 _MALLA = {
     "institution": {"name": "Escuela Politécnica Nacional", "acronym": "EPN"},
     "faculty": {"name": "Facultad de Ingeniería de Sistemas", "acronym": "FIS"},
@@ -101,12 +117,12 @@ async def _seed_course(client, db_session):
     assert resp.status_code == 200, resp.text
     curriculum_id = resp.json()["curriculum_id"]
     courses = (await client.get(f"/api/v1/curricula/{curriculum_id}/courses")).json()
-    return courses[0]["course_id"], courses[0]["id"]
+    return courses[0]["course_id"], courses[0]["id"], curriculum_id
 
 
 async def test_gradebook_calculate_flow(client, db_session):
-    course_id, curriculum_course_id = await _seed_course(client, db_session)
-    student = await _make_user(db_session, "student@epn.edu.ec")
+    course_id, curriculum_course_id, curriculum_id = await _seed_course(client, db_session)
+    student = await _student_on_curriculum(client, db_session, "student@epn.edu.ec", curriculum_id)
 
     scheme = await client.post(
         "/api/v1/evaluation-schemes", json=_four_component_scheme(course_id), headers=_auth(student)
@@ -138,7 +154,7 @@ async def test_gradebook_calculate_flow(client, db_session):
         )
         assert resp.status_code == 200
 
-    result = await client.post(
+    result = await client.get(
         f"/api/v1/student/enrollments/{enrollment_id}/calculate", headers=_auth(student)
     )
     assert result.status_code == 200, result.text
@@ -151,8 +167,8 @@ async def test_gradebook_calculate_flow(client, db_session):
 
 async def test_gradebook_accepts_scores_on_custom_scales(client, db_session):
     """Students can enter 7/10 instead of being forced onto /20 (ERS §17.6)."""
-    course_id, curriculum_course_id = await _seed_course(client, db_session)
-    student = await _make_user(db_session, "scales@epn.edu.ec")
+    course_id, curriculum_course_id, curriculum_id = await _seed_course(client, db_session)
+    student = await _student_on_curriculum(client, db_session, "scales@epn.edu.ec", curriculum_id)
 
     scheme = await client.post(
         "/api/v1/evaluation-schemes", json=_four_component_scheme(course_id), headers=_auth(student)
@@ -239,8 +255,8 @@ async def test_gradebook_accepts_scores_on_custom_scales(client, db_session):
 
 async def test_bimestre_override_skips_component_breakdown(client, db_session):
     """A student can enter a bimestre's total directly instead of per-component (ERS §17.6)."""
-    course_id, curriculum_course_id = await _seed_course(client, db_session)
-    student = await _make_user(db_session, "override@epn.edu.ec")
+    course_id, curriculum_course_id, curriculum_id = await _seed_course(client, db_session)
+    student = await _student_on_curriculum(client, db_session, "override@epn.edu.ec", curriculum_id)
 
     scheme = await client.post(
         "/api/v1/evaluation-schemes", json=_four_component_scheme(course_id), headers=_auth(student)
@@ -269,7 +285,7 @@ async def test_bimestre_override_skips_component_breakdown(client, db_session):
     )
     assert impossible.status_code == 422
 
-    result = await client.post(
+    result = await client.get(
         f"/api/v1/student/enrollments/{enrollment_id}/calculate", headers=_auth(student)
     )
     assert result.status_code == 200, result.text
@@ -286,14 +302,14 @@ async def test_bimestre_override_skips_component_breakdown(client, db_session):
     assert cleared.status_code == 200, cleared.text
     assert cleared.json()["aporte_1_override_score"] is None
 
-    result_after_clear = await client.post(
+    result_after_clear = await client.get(
         f"/api/v1/student/enrollments/{enrollment_id}/calculate", headers=_auth(student)
     )
     assert Decimal(result_after_clear.json()["aporte_1"]["score_20"]) == Decimal("0")
 
 
 async def test_scheme_rounds_a_99_99_weight_total_to_100(client, db_session):
-    course_id, _ = await _seed_course(client, db_session)
+    course_id, _, curriculum_id = await _seed_course(client, db_session)
     student = await _make_user(db_session, "weights@epn.edu.ec")
     components = []
     for contribution in ("APORTE_1", "APORTE_2"):
@@ -331,7 +347,7 @@ async def test_scheme_rounds_a_99_99_weight_total_to_100(client, db_session):
 
 
 async def test_community_verification_at_three_votes(client, db_session):
-    course_id, _ = await _seed_course(client, db_session)
+    course_id, _, curriculum_id = await _seed_course(client, db_session)
     creator = await _make_user(db_session, "creator@epn.edu.ec")
 
     created = await client.post(
@@ -359,7 +375,7 @@ async def test_community_verification_at_three_votes(client, db_session):
 
 
 async def test_duplicate_vote_rejected(client, db_session):
-    course_id, _ = await _seed_course(client, db_session)
+    course_id, _, curriculum_id = await _seed_course(client, db_session)
     creator = await _make_user(db_session, "c2@epn.edu.ec")
     scheme_id = (
         await client.post(
@@ -381,7 +397,7 @@ async def test_duplicate_vote_rejected(client, db_session):
 
 
 async def test_admin_created_scheme_is_verified(client, db_session):
-    course_id, _ = await _seed_course(client, db_session)
+    course_id, _, curriculum_id = await _seed_course(client, db_session)
     admin = await _make_user(db_session, "admin2@epn.edu.ec", role=UserRole.ADMIN)
 
     created = await client.post(
@@ -393,7 +409,7 @@ async def test_admin_created_scheme_is_verified(client, db_session):
 
 
 async def test_suggest_returns_scheme_for_course(client, db_session):
-    course_id, _ = await _seed_course(client, db_session)
+    course_id, _, curriculum_id = await _seed_course(client, db_session)
     creator = await _make_user(db_session, "creator2@epn.edu.ec")
     scheme_id = (
         await client.post(
@@ -403,14 +419,18 @@ async def test_suggest_returns_scheme_for_course(client, db_session):
         )
     ).json()["id"]
 
-    resp = await client.get("/api/v1/evaluation-schemes/suggest", params={"course_id": course_id})
+    resp = await client.get(
+        "/api/v1/evaluation-schemes/suggest",
+        params={"course_id": course_id},
+        headers=_auth(creator),
+    )
     assert resp.status_code == 200, resp.text
     ids = [item["id"] for item in resp.json()]
     assert scheme_id in ids
 
 
 async def test_copy_scheme_to_personal(client, db_session):
-    course_id, _ = await _seed_course(client, db_session)
+    course_id, _, curriculum_id = await _seed_course(client, db_session)
     creator = await _make_user(db_session, "creator3@epn.edu.ec")
     scheme_id = (
         await client.post(

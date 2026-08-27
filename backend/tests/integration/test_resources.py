@@ -52,39 +52,6 @@ async def _token(db_session, email: str, role: UserRole) -> str:
     return create_access_token(str(user.id), role=role.value)
 
 
-@pytest.fixture(autouse=True)
-def fake_storage(monkeypatch):
-    """In-memory replacement for the MinIO/S3 layer."""
-    store: dict[str, bytes] = {}
-
-    async def put_object(key, data, content_type):
-        store[key] = data
-
-    async def delete_object(key):
-        store.pop(key, None)
-
-    async def presigned_get_url(key, *, filename=None, expires=600):
-        return f"https://minio.local/{key}?sig=fake"
-
-    async def stream_object(key):
-        data = store.get(key, b"")
-
-        async def _iter():
-            yield data
-
-        return _iter(), "application/octet-stream"
-
-    async def ensure_bucket():
-        return None
-
-    monkeypatch.setattr("app.modules.resources.storage.put_object", put_object)
-    monkeypatch.setattr("app.modules.resources.storage.delete_object", delete_object)
-    monkeypatch.setattr("app.modules.resources.storage.presigned_get_url", presigned_get_url)
-    monkeypatch.setattr("app.modules.resources.storage.stream_object", stream_object)
-    monkeypatch.setattr("app.modules.resources.storage.ensure_bucket", ensure_bucket)
-    return store
-
-
 async def _setup(client, db_session):
     admin = await _token(db_session, "admin@epn.edu.ec", UserRole.ADMIN)
     await client.post("/api/v1/admin/curricula/import/commit", json=_MALLA, headers=_auth(admin))
