@@ -50,6 +50,19 @@ async function refreshTokens(): Promise<TokenPair> {
   return data;
 }
 
+/**
+ * Refresh the session on demand, sharing the in-flight request.
+ *
+ * Exported so the auth store can refresh *before* the first authenticated request instead of
+ * letting every parallel query 401 and retry.
+ */
+export async function refreshSession(): Promise<TokenPair> {
+  refreshPromise ??= refreshTokens().finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
+}
+
 /** Hook invoked when the session cannot be recovered (set by the auth store). */
 let onAuthFailure: (() => void) | null = null;
 export function setAuthFailureHandler(handler: () => void): void {
@@ -65,13 +78,11 @@ apiClient.interceptors.response.use(
     if (status === 401 && original && !original._retry && tokenStorage.getRefreshToken()) {
       original._retry = true;
       try {
-        refreshPromise ??= refreshTokens();
-        await refreshPromise;
-        refreshPromise = null;
+        // Single-flight: concurrent 401s wait on the same refresh instead of stampeding it.
+        await refreshSession();
         original.headers.Authorization = `Bearer ${tokenStorage.getAccessToken()}`;
         return apiClient(original);
       } catch (refreshError) {
-        refreshPromise = null;
         tokenStorage.clear();
         onAuthFailure?.();
         return Promise.reject(toApiError(refreshError));
