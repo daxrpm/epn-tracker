@@ -1,159 +1,231 @@
+/* Design system — see DESIGN.md at the repo root for the direction this implements.
+ *
+ * Visual language: "a student's notebook, annotated in politécnico-blue ink."
+ * Dials: ENERGY 2 / RHYTHM 3 / MOTION 1.
+ *
+ * Three deliberate absences, because they were what made the old UI read as generic:
+ *   - no backdrop blur (it was on the sidebar, the header and the cards at once, so nothing
+ *     was foreground),
+ *   - no ambient animation (beams, spotlights, aurora),
+ *   - no shadow except on things that genuinely float (dialogs, menus, the mobile drawer).
+ */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
 
-@plugin "../hero.ts";
-@source "../../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}";
+/* Headings: warm, bookish, with a real optical-size axis. */
+@import "@fontsource-variable/fraunces";
+/* Interface and body: humanist, legible at the 13-14px where most of this app lives. */
+@import "@fontsource-variable/source-sans-3";
+/* Grades, credits, percentages. Tabular figures so notes line up in a column. */
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
 
-/* Dark mode is toggled via a `dark` class on the <html> element (see stores/theme.store.ts). */
+/* Dark mode is toggled via a `dark` class on <html> (see stores/theme.store.ts). */
 @custom-variant dark (&:is(.dark *));
 
-html,
-body,
-#root {
-  height: 100%;
-}
-
-body {
-  @apply bg-background text-foreground antialiased;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-}
-
-/* Aurora keyframes used by the Aceternity AuroraBackground component. */
-@keyframes aurora {
-  from {
-    background-position: 50% 50%, 50% 50%;
-  }
-  to {
-    background-position: 350% 50%, 350% 50%;
-  }
-}
-
-.animate-aurora {
-  animation: aurora 60s linear infinite;
-}
-
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: 'Geist Variable', sans-serif;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --color-foreground: var(--foreground);
+  --font-sans: "Source Sans 3 Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+
   --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Academic state. Semantic, never decorative — every use also carries a shape or a label. */
+  --color-state-passed: var(--state-passed);
+  --color-state-passed-soft: var(--state-passed-soft);
+  --color-state-progress: var(--state-progress);
+  --color-state-progress-soft: var(--state-progress-soft);
+  --color-state-failed: var(--state-failed);
+  --color-state-failed-soft: var(--state-failed-soft);
+  --color-state-annulled: var(--state-annulled);
+  --color-state-annulled-soft: var(--state-annulled-soft);
+
+  /* Three radii and no more. The largest is reserved for the one focal element per screen. */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  /* Paper: a warm grey, deliberately not the editorial cream. */
+  --background: oklch(0.966 0.004 85);
+  --foreground: oklch(0.208 0.008 260);
+  /* The page you write on. */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.208 0.008 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.208 0.008 260);
+
+  /* Politécnico blue: the ink. One moment per screen. */
+  --primary: oklch(0.415 0.113 250);
+  --primary-foreground: oklch(0.99 0.002 85);
+
+  --secondary: oklch(0.938 0.005 85);
+  --secondary-foreground: oklch(0.294 0.01 260);
+  --muted: oklch(0.945 0.004 85);
+  --muted-foreground: oklch(0.505 0.014 260);
+  --accent: oklch(0.928 0.012 250);
+  --accent-foreground: oklch(0.335 0.09 250);
+
+  --destructive: oklch(0.478 0.152 25);
+  --destructive-foreground: oklch(0.99 0.002 85);
+
+  /* The rule line: the app's main separator. */
+  --border: oklch(0.885 0.008 85);
+  --input: oklch(0.885 0.008 85);
+  --ring: oklch(0.415 0.113 250);
+
+  --state-passed: oklch(0.482 0.086 158);
+  --state-passed-soft: oklch(0.945 0.03 158);
+  --state-progress: oklch(0.415 0.113 250);
+  --state-progress-soft: oklch(0.943 0.028 250);
+  --state-failed: oklch(0.478 0.152 25);
+  --state-failed-soft: oklch(0.945 0.032 25);
+  --state-annulled: oklch(0.523 0.101 78);
+  --state-annulled-soft: oklch(0.949 0.041 78);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.181 0.007 260);
+  --foreground: oklch(0.921 0.006 85);
+  --card: oklch(0.224 0.009 260);
+  --card-foreground: oklch(0.921 0.006 85);
+  --popover: oklch(0.224 0.009 260);
+  --popover-foreground: oklch(0.921 0.006 85);
+
+  --primary: oklch(0.749 0.098 250);
+  --primary-foreground: oklch(0.181 0.007 260);
+
+  --secondary: oklch(0.276 0.011 260);
+  --secondary-foreground: oklch(0.921 0.006 85);
+  --muted: oklch(0.268 0.01 260);
+  --muted-foreground: oklch(0.679 0.014 260);
+  --accent: oklch(0.302 0.033 250);
+  --accent-foreground: oklch(0.83 0.075 250);
+
+  --destructive: oklch(0.712 0.135 25);
+  --destructive-foreground: oklch(0.181 0.007 260);
+
+  --border: oklch(0.311 0.011 260);
+  --input: oklch(0.336 0.012 260);
+  --ring: oklch(0.749 0.098 250);
+
+  --state-passed: oklch(0.792 0.099 158);
+  --state-passed-soft: oklch(0.29 0.04 158);
+  --state-progress: oklch(0.749 0.098 250);
+  --state-progress-soft: oklch(0.293 0.041 250);
+  --state-failed: oklch(0.712 0.135 25);
+  --state-failed-soft: oklch(0.297 0.05 25);
+  --state-annulled: oklch(0.804 0.108 78);
+  --state-annulled-soft: oklch(0.297 0.045 78);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground;
-  }
+
   html {
     @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    /* Source Sans 3's own text figures read better than lining ones in running prose. */
+    font-feature-settings: "kern";
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-heading;
+    font-variation-settings:
+      "SOFT" 20,
+      "WONK" 0;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  /* Every grade, credit and percentage goes through this, so columns of numbers line up. */
+  .tabular,
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Focus is always visible; the app has to be usable from the keyboard alone. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+    border-radius: var(--radius-sm);
+  }
+
+  /* MOTION 1: transitions only, and none of them for people who asked for less. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* The identity motif: a ruled line, the way a notebook separates one entry from the next.
+     Used instead of wrapping everything in a bordered card. */
+  .rule-list > * + * {
+    border-top: 1px solid var(--border);
+  }
+
+  /* The margin rule down the left edge of a page, as on ruled paper. It marks the start of a
+     screen's main content and appears once per screen, never on every card. */
+  .margin-rule {
+    position: relative;
+    padding-left: 1.25rem;
+  }
+
+  .margin-rule::before {
+    content: "";
+    position: absolute;
+    inset-block: 0.15em 0.15em;
+    inset-inline-start: 0;
+    width: 2px;
+    border-radius: 1px;
+    background: var(--primary);
+  }
+
+  /* A number that is a grade. Large, mono, tabular — the thing the student came to read. */
+  .grade {
+    @apply font-mono tabular-nums;
+    font-weight: 500;
+    letter-spacing: -0.02em;
   }
 }
