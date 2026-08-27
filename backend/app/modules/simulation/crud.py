@@ -36,9 +36,7 @@ async def create_simulation(
     return simulation
 
 
-async def list_simulations(
-    db: AsyncSession, student_profile_id: uuid.UUID
-) -> Sequence[Simulation]:
+async def list_simulations(db: AsyncSession, student_profile_id: uuid.UUID) -> Sequence[Simulation]:
     stmt = (
         select(Simulation)
         .where(Simulation.student_profile_id == student_profile_id)

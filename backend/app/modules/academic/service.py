@@ -114,8 +114,7 @@ def validate_import(payload: CurriculumImportIn) -> ImportValidationOut:
             ImportIssue(
                 path="curriculum.total_courses_reported",
                 message=(
-                    f"Se reportaron {reported} materias pero se cargaron "
-                    f"{len(payload.courses)}."
+                    f"Se reportaron {reported} materias pero se cargaron {len(payload.courses)}."
                 ),
             )
         )
@@ -132,9 +131,7 @@ async def create_academic_period(
     """Create a real academic period; codes are unique per institution."""
     if await db.get(Institution, payload.institution_id) is None:
         raise NotFoundError("Institución no encontrada.")
-    existing = await crud.get_academic_period_by_code(
-        db, payload.institution_id, payload.code
-    )
+    existing = await crud.get_academic_period_by_code(db, payload.institution_id, payload.code)
     if existing is not None:
         raise ConflictError(f"Ya existe un periodo con el código {payload.code}.")
 
@@ -163,9 +160,7 @@ async def update_academic_period(
     data = payload.model_dump(exclude_unset=True)
     new_code = data.get("code")
     if new_code is not None and new_code != period.code:
-        clash = await crud.get_academic_period_by_code(
-            db, period.institution_id, new_code
-        )
+        clash = await crud.get_academic_period_by_code(db, period.institution_id, new_code)
         if clash is not None:
             raise ConflictError(f"Ya existe un periodo con el código {new_code}.")
 
@@ -313,9 +308,7 @@ async def _get_or_create_faculty(
     db: AsyncSession, institution_id: uuid.UUID, name: str, acronym: str
 ) -> Faculty:
     result = await db.execute(
-        select(Faculty).where(
-            Faculty.institution_id == institution_id, Faculty.acronym == acronym
-        )
+        select(Faculty).where(Faculty.institution_id == institution_id, Faculty.acronym == acronym)
     )
     fac = result.scalar_one_or_none()
     if fac is None:
@@ -551,9 +544,7 @@ async def _reject_requirement_cycle(
     the visual editor makes that a single misclick away.
     """
     curriculum_courses = await crud.list_curriculum_courses(db, curriculum_id)
-    requirements = await crud.requirements_for_curriculum(
-        db, [cc.id for cc in curriculum_courses]
-    )
+    requirements = await crud.requirements_for_curriculum(db, [cc.id for cc in curriculum_courses])
     depends_on: dict[uuid.UUID, list[uuid.UUID]] = {}
     for requirement in requirements:
         depends_on.setdefault(requirement.curriculum_course_id, []).append(

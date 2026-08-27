@@ -96,9 +96,7 @@ class CurriculumCourse(UUIDMixin, TimestampMixin, Base):
     """A course placed within a curriculum (with its reference term and credits)."""
 
     __tablename__ = "curriculum_courses"
-    __table_args__ = (
-        UniqueConstraint("curriculum_id", "course_id", name="uq_curriculum_course"),
-    )
+    __table_args__ = (UniqueConstraint("curriculum_id", "course_id", name="uq_curriculum_course"),)
 
     curriculum_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("curricula.id", ondelete="CASCADE"), index=True

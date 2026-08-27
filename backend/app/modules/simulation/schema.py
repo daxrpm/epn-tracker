@@ -72,9 +72,7 @@ class StudentSimulationRunIn(BaseModel):
     (approved/current courses) and the English state come from the student's saved profile."""
 
     assumptions: list[AssumptionIn] = Field(default_factory=list, max_length=MAX_COURSE_CODES)
-    selected_course_ids: list[uuid.UUID] = Field(
-        default_factory=list, max_length=MAX_COURSE_CODES
-    )
+    selected_course_ids: list[uuid.UUID] = Field(default_factory=list, max_length=MAX_COURSE_CODES)
     has_special_credit_authorization: bool = False
     # When omitted, the English state is read from the student's profile.
     english_override: EnglishStateIn | None = None

@@ -29,6 +29,7 @@ dev = [
     "httpx>=0.28",
     "aiosqlite>=0.20",
     "fakeredis>=2.36.2",
+    "mypy>=2.3.1",
 ]
 
 [tool.uv]
@@ -37,7 +38,14 @@ package = false
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Generated migrations keep whatever Alembic emitted; hand-written ones follow the same style
+# as the rest of the code, so only the auto-generated bodies are excluded from linting.
 extend-exclude = ["alembic/versions"]
+
+[tool.ruff.format]
+# One formatter, no debate. `docstring-code-format` keeps the examples inside docstrings
+# consistent with the code around them.
+docstring-code-format = true
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "C4", "SIM", "TID"]
@@ -50,3 +58,23 @@ known-first-party = ["app", "seeds", "tests"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
+# Fail on an unraisable warning rather than letting it scroll past.
+filterwarnings = ["error::RuntimeWarning"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["app", "seeds"]
+# Pragmatic rather than strict: the value here is catching a wrong attribute or a None that is
+# not handled, not annotating every local. Tightening happens module by module, not by flipping
+# `strict` and drowning in noise.
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+no_implicit_optional = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+# Alembic revision files are generated and are not part of the app's type surface.
+module = "alembic.*"
+ignore_errors = true

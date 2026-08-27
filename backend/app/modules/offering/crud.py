@@ -16,9 +16,7 @@ from app.modules.offering.model import (
 )
 
 
-async def search_professors(
-    db: AsyncSession, query: str, limit: int = 20
-) -> Sequence[Professor]:
+async def search_professors(db: AsyncSession, query: str, limit: int = 20) -> Sequence[Professor]:
     like = f"%{query.lower()}%"
     stmt = (
         select(Professor)
@@ -34,9 +32,7 @@ async def get_professor(db: AsyncSession, professor_id: uuid.UUID) -> Professor 
 
 
 async def list_professors(db: AsyncSession) -> Sequence[Professor]:
-    return (
-        (await db.execute(select(Professor).order_by(Professor.full_name))).scalars().all()
-    )
+    return (await db.execute(select(Professor).order_by(Professor.full_name))).scalars().all()
 
 
 async def get_professor_by_name(
@@ -59,9 +55,7 @@ async def get_professors_by_ids(
     return (await db.execute(stmt)).scalars().all()
 
 
-async def get_course_offering(
-    db: AsyncSession, offering_id: uuid.UUID
-) -> CourseOffering | None:
+async def get_course_offering(db: AsyncSession, offering_id: uuid.UUID) -> CourseOffering | None:
     return await db.get(CourseOffering, offering_id)
 
 

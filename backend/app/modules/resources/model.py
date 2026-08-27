@@ -79,9 +79,7 @@ class ResourceVote(UUIDMixin, TimestampMixin, Base):
     """One community vote per user per resource (mirrors ``EvaluationSchemeVote``)."""
 
     __tablename__ = "resource_votes"
-    __table_args__ = (
-        UniqueConstraint("resource_id", "user_id", name="uq_resource_vote_user"),
-    )
+    __table_args__ = (UniqueConstraint("resource_id", "user_id", name="uq_resource_vote_user"),)
 
     resource_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("resources.id", ondelete="CASCADE"), index=True

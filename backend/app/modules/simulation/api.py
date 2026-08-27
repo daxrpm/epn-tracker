@@ -63,9 +63,7 @@ async def save_simulation(
 
 
 @student_router.get("/simulations", response_model=list[SavedSimulationListItem])
-async def list_simulations(
-    user: CurrentUser, db: DbSession
-) -> list[SavedSimulationListItem]:
+async def list_simulations(user: CurrentUser, db: DbSession) -> list[SavedSimulationListItem]:
     profile = await student_service.get_or_create_profile(db, user)
     return await service.list_saved_simulations(db, profile)
 

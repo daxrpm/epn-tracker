@@ -50,8 +50,11 @@ async def update_professor(
     professor = await crud.get_professor(db, professor_id)
     if professor is None:
         raise NotFoundError("Profesor no encontrado.")
-    before = {"full_name": professor.full_name, "email": professor.email,
-              "is_active": professor.is_active}
+    before = {
+        "full_name": professor.full_name,
+        "email": professor.email,
+        "is_active": professor.is_active,
+    }
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(professor, field, value)
     await db.flush()
@@ -62,15 +65,16 @@ async def update_professor(
         entity_type="professor",
         entity_id=str(professor.id),
         before=before,
-        after={"full_name": professor.full_name, "email": professor.email,
-               "is_active": professor.is_active},
+        after={
+            "full_name": professor.full_name,
+            "email": professor.email,
+            "is_active": professor.is_active,
+        },
     )
     return professor
 
 
-async def delete_professor(
-    db: AsyncSession, actor_id: uuid.UUID, professor_id: uuid.UUID
-) -> None:
+async def delete_professor(db: AsyncSession, actor_id: uuid.UUID, professor_id: uuid.UUID) -> None:
     professor = await crud.get_professor(db, professor_id)
     if professor is None:
         raise NotFoundError("Profesor no encontrado.")
@@ -89,9 +93,7 @@ async def delete_professor(
     )
 
 
-async def find_or_create_professor(
-    db: AsyncSession, payload: ProfessorFindOrCreateIn
-) -> Professor:
+async def find_or_create_professor(db: AsyncSession, payload: ProfessorFindOrCreateIn) -> Professor:
     """Any authenticated user can register a professor while creating a course scheme.
 
     Scoped to the course's institution and de-duplicated by name so students typing
@@ -152,9 +154,7 @@ async def create_section_professor(
         raise NotFoundError("Paralelo no encontrado.")
     if await crud.get_professor(db, payload.professor_id) is None:
         raise NotFoundError("Docente no encontrado.")
-    existing = await crud.get_section_professor(
-        db, payload.section_id, payload.professor_id
-    )
+    existing = await crud.get_section_professor(db, payload.section_id, payload.professor_id)
     if existing is not None:
         raise ConflictError("El docente ya está asignado a este paralelo.")
 

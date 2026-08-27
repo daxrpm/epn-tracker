@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -56,7 +56,7 @@ async def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
-def require_roles(*roles: UserRole) -> Callable[[User], User]:
+def require_roles(*roles: UserRole) -> Callable[[User], Awaitable[User]]:
     async def _guard(user: CurrentUser) -> User:
         if user.role not in roles:
             raise ForbiddenError("No tienes permiso para esta acción.")

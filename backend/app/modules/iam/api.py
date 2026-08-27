@@ -35,9 +35,7 @@ async def request_code(payload: RequestCodeIn, db: DbSession, client_ip: ClientI
 
 @router.post("/register/verify-code", response_model=TokenOut)
 async def verify_code(payload: VerifyCodeIn, db: DbSession) -> TokenOut:
-    return await service.verify_code_and_register(
-        db, payload.email, payload.code, payload.password
-    )
+    return await service.verify_code_and_register(db, payload.email, payload.code, payload.password)
 
 
 @router.post("/login", response_model=TokenOut)
@@ -102,8 +100,6 @@ async def update_status(
 
 
 @admin_users_router.delete("/{user_id}")
-async def delete_user(
-    user_id: uuid.UUID, actor: CurrentUser, db: DbSession
-) -> dict[str, bool]:
+async def delete_user(user_id: uuid.UUID, actor: CurrentUser, db: DbSession) -> dict[str, bool]:
     await admin_service.delete_user(db, actor, user_id)
     return {"deleted": True}

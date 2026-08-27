@@ -40,17 +40,17 @@ router = APIRouter(tags=["academic"])
 
 @router.get("/institutions", response_model=list[InstitutionOut])
 async def list_institutions(db: DbSession) -> list[InstitutionOut]:
-    return list(await crud.list_institutions(db))
+    return [InstitutionOut.model_validate(row) for row in await crud.list_institutions(db)]
 
 
 @router.get("/faculties", response_model=list[FacultyOut])
 async def list_faculties(db: DbSession) -> list[FacultyOut]:
-    return list(await crud.list_faculties(db))
+    return [FacultyOut.model_validate(row) for row in await crud.list_faculties(db)]
 
 
 @router.get("/careers", response_model=list[CareerOut])
 async def list_careers(db: DbSession) -> list[CareerOut]:
-    return list(await crud.list_careers(db))
+    return [CareerOut.model_validate(row) for row in await crud.list_careers(db)]
 
 
 @router.get("/careers/{career_id}", response_model=CareerOut)
@@ -63,7 +63,7 @@ async def get_career(career_id: uuid.UUID, db: DbSession) -> CareerOut:
 
 @router.get("/curricula", response_model=list[CurriculumOut])
 async def list_curricula(db: DbSession) -> list[CurriculumOut]:
-    return list(await crud.list_curricula(db))
+    return [CurriculumOut.model_validate(row) for row in await crud.list_curricula(db)]
 
 
 @router.get("/curricula/{curriculum_id}", response_model=CurriculumOut)
@@ -97,14 +97,10 @@ async def _curriculum_courses_out(
     # A curriculum row whose catalog course vanished is data corruption, not a reason to 500 the
     # whole malla: skip it and let the rest render.
     cc_id_to_code = {
-        cc.id: courses[cc.course_id].code
-        for cc in curriculum_courses
-        if cc.course_id in courses
+        cc.id: courses[cc.course_id].code for cc in curriculum_courses if cc.course_id in courses
     }
 
-    requirements = await crud.requirements_for_curriculum(
-        db, [cc.id for cc in curriculum_courses]
-    )
+    requirements = await crud.requirements_for_curriculum(db, [cc.id for cc in curriculum_courses])
     prerequisites: dict[uuid.UUID, list[str]] = {}
     corequisites: dict[uuid.UUID, list[str]] = {}
     for req in requirements:
@@ -142,7 +138,8 @@ async def search_courses(
 ) -> list[CourseOut]:
     """Search the catalog. The term is normalised the same way stored names are, so accents
     and casing do not change the result."""
-    return list(await crud.search_courses(db, service.normalize_name(q), limit=page.limit))
+    rows = await crud.search_courses(db, service.normalize_name(q), limit=page.limit)
+    return [CourseOut.model_validate(row) for row in rows]
 
 
 @router.get("/courses/{course_id}", response_model=CourseOut)
@@ -155,7 +152,7 @@ async def get_course(course_id: uuid.UUID, db: DbSession) -> CourseOut:
 
 @router.get("/academic-periods", response_model=list[AcademicPeriodOut])
 async def list_academic_periods(db: DbSession) -> list[AcademicPeriodOut]:
-    return list(await crud.list_academic_periods(db))
+    return [AcademicPeriodOut.model_validate(row) for row in await crud.list_academic_periods(db)]
 
 
 # --- Admin: academic periods ----------------------------------------------------------------------
@@ -224,9 +221,7 @@ async def _requirement_codes(
     courses = {
         c.id: c for c in await crud.get_courses_by_ids(db, [cc.course_id for cc in required_ccs])
     }
-    return {
-        cc.id: courses[cc.course_id].code for cc in required_ccs if cc.course_id in courses
-    }
+    return {cc.id: courses[cc.course_id].code for cc in required_ccs if cc.course_id in courses}
 
 
 async def _curriculum_course_out(db: DbSession, cc) -> CurriculumCourseOut:  # noqa: ANN001
@@ -264,18 +259,14 @@ async def _curriculum_course_out(db: DbSession, cc) -> CurriculumCourseOut:  # n
 async def update_career(
     career_id: uuid.UUID, payload: CareerUpdateIn, actor: CurrentUser, db: DbSession
 ) -> CareerOut:
-    return CareerOut.model_validate(
-        await service.update_career(db, actor.id, career_id, payload)
-    )
+    return CareerOut.model_validate(await service.update_career(db, actor.id, career_id, payload))
 
 
 @content_admin_router.patch("/courses/{course_id}", response_model=CourseOut)
 async def update_course(
     course_id: uuid.UUID, payload: CourseUpdateIn, actor: CurrentUser, db: DbSession
 ) -> CourseOut:
-    return CourseOut.model_validate(
-        await service.update_course(db, actor.id, course_id, payload)
-    )
+    return CourseOut.model_validate(await service.update_course(db, actor.id, course_id, payload))
 
 
 @content_admin_router.patch(

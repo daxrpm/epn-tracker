@@ -193,7 +193,7 @@ async def _consume_verification_code(email: str, code: str) -> None:
         await redis_client.delete(_code_key(email))
         raise RateLimitError("Superaste el número de intentos. Solicita un código nuevo.")
 
-    if not secrets.compare_digest(stored, code):
+    if not secrets.compare_digest(str(stored), code):
         raise AuthError("Código incorrecto.")
 
     await redis_client.delete(_code_key(email))

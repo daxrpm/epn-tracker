@@ -7,6 +7,7 @@ adapts between ORM rows and domain inputs. User-facing messages stay in Spanish.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -316,9 +317,7 @@ async def create_enrollment(
     The scheme goes through the evaluation module's visibility policy: seeding a gradebook from
     a scheme would otherwise expose another student's private components (ERS §8.9).
     """
-    curriculum_course = await academic_crud.get_curriculum_course(
-        db, payload.curriculum_course_id
-    )
+    curriculum_course = await academic_crud.get_curriculum_course(db, payload.curriculum_course_id)
     if curriculum_course is None or (
         curriculum_course.curriculum_id != profile.current_curriculum_id
     ):
@@ -328,9 +327,7 @@ async def create_enrollment(
     if existing is not None:
         raise ConflictError("Ya tienes una matrícula abierta para esta materia.")
 
-    scheme = await evaluation_service.get_readable_scheme(
-        db, user, payload.evaluation_scheme_id
-    )
+    scheme = await evaluation_service.get_readable_scheme(db, user, payload.evaluation_scheme_id)
 
     enrollment = StudentEnrollment(
         student_profile_id=profile.id,
@@ -510,7 +507,7 @@ async def get_gradebook(
 
 
 async def _load_components(
-    db: AsyncSession, states: list[GradeComponentState]
+    db: AsyncSession, states: Sequence[GradeComponentState]
 ) -> dict[uuid.UUID, EvaluationComponent]:
     component_ids = [s.evaluation_component_id for s in states]
     if not component_ids:
@@ -528,7 +525,7 @@ async def _load_components(
 
 
 async def _load_items_by_state(
-    db: AsyncSession, states: list[GradeComponentState]
+    db: AsyncSession, states: Sequence[GradeComponentState]
 ) -> dict[uuid.UUID, list[GradeItem]]:
     items = await crud.get_items_for_states(db, [s.id for s in states])
     grouped: dict[uuid.UUID, list[GradeItem]] = {}
@@ -679,7 +676,7 @@ async def _ordinary_result(db: AsyncSession, enrollment: StudentEnrollment) -> O
     )
 
 
-def _item_inputs(items: list[GradeItem]) -> list[ItemInput]:
+def _item_inputs(items: Sequence[GradeItem]) -> list[ItemInput]:
     return [
         ItemInput(
             score=i.score,
@@ -699,8 +696,8 @@ async def calculate(
     recovery = _recovery_view(ordinary, enrollment.recovery_score_40)
 
     return CalculateOut(
-        aporte_1=_contribution_out("APORTE_1", ordinary.aporte_1),
-        aporte_2=_contribution_out("APORTE_2", ordinary.aporte_2),
+        aporte_1=_contribution_out(Contribution.APORTE_1, ordinary.aporte_1),
+        aporte_2=_contribution_out(Contribution.APORTE_2, ordinary.aporte_2),
         final_40=display_str(ordinary.final_40) or "0.00",
         final_20=display_str(ordinary.final_20) or "0.00",
         display_final_20=display_str(ordinary.final_20) or "0.00",
@@ -752,9 +749,7 @@ def _recovery_view(ordinary: OrdinaryResult, recovery_score_40: Decimal | None) 
 
     effective_40 = result.averaged_final_40
     return _RecoveryView(
-        status=(
-            CourseFinalStatus.APPROVED if result.passed else CourseFinalStatus.FAILED_DIRECT
-        ),
+        status=(CourseFinalStatus.APPROVED if result.passed else CourseFinalStatus.FAILED_DIRECT),
         required_score_40=result.required_recovery_score_40,
         passed=result.passed,
         effective_final_40=effective_40,
@@ -780,9 +775,7 @@ async def _sync_course_state_from_gradebook(
     if new_state is None:
         return
 
-    state = await crud.get_course_state_by_course(
-        db, profile.id, enrollment.curriculum_course_id
-    )
+    state = await crud.get_course_state_by_course(db, profile.id, enrollment.curriculum_course_id)
     if state is None:
         state = StudentCourseState(
             student_profile_id=profile.id,
@@ -808,7 +801,7 @@ _COURSE_STATE_BY_STATUS: dict[CourseFinalStatus, CourseState] = {
 }
 
 
-def _contribution_out(contribution: str, result) -> ContributionOut:  # noqa: ANN001
+def _contribution_out(contribution: Contribution, result: ContributionResult) -> ContributionOut:
     return ContributionOut(
         contribution=contribution,
         score_20=display_str(result.score_20) or "0.00",

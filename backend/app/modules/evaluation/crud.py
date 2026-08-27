@@ -21,9 +21,7 @@ async def get_scheme(db: AsyncSession, scheme_id: uuid.UUID) -> EvaluationScheme
     return await db.get(EvaluationScheme, scheme_id)
 
 
-async def get_components(
-    db: AsyncSession, scheme_id: uuid.UUID
-) -> Sequence[EvaluationComponent]:
+async def get_components(db: AsyncSession, scheme_id: uuid.UUID) -> Sequence[EvaluationComponent]:
     stmt = (
         select(EvaluationComponent)
         .where(EvaluationComponent.evaluation_scheme_id == scheme_id)

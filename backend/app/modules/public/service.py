@@ -26,7 +26,7 @@ def calculate_final_grade(payload: AportesIn) -> FinalGradeOut:
     return FinalGradeOut(
         final_40=display_str(result.final_40) or "0.00",
         final_20=display_str(result.final_20) or "0.00",
-        display_final_20=display_str(result.final_20),
+        display_final_20=display_str(result.final_20) or "0.00",
         status=result.status,
         is_recovery_eligible=is_recovery_eligible(result.final_40),
         required_recovery_score_40=None if required is None else str(required),
@@ -40,7 +40,7 @@ def calculate_recovery(payload: AportesIn) -> RecoveryOut:
     return RecoveryOut(
         final_40=display_str(result.final_40) or "0.00",
         final_20=display_str(result.final_20) or "0.00",
-        display_final_20=display_str(result.final_20),
+        display_final_20=display_str(result.final_20) or "0.00",
         status=result.status,
         required_recovery_score_40=None if required is None else str(required),
         display_required_recovery_score_40=display_str(required),

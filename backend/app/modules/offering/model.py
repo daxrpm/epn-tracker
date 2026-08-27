@@ -42,9 +42,7 @@ class CourseOffering(UUIDMixin, TimestampMixin, Base):
 class Section(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "sections"
     __table_args__ = (
-        UniqueConstraint(
-            "course_offering_id", "section_code", name="uq_section_offering_code"
-        ),
+        UniqueConstraint("course_offering_id", "section_code", name="uq_section_offering_code"),
     )
 
     course_offering_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("course_offerings.id"))

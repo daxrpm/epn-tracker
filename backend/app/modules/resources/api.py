@@ -58,8 +58,6 @@ async def _professor_names(
     return {p.id: p.full_name for p in professors}
 
 
-
-
 def _to_list_item(
     resource: Resource,
     *,
@@ -84,9 +82,7 @@ def _to_list_item(
         ),
         academic_period_id=resource.academic_period_id,
         academic_period_code=(
-            period_codes.get(resource.academic_period_id)
-            if resource.academic_period_id
-            else None
+            period_codes.get(resource.academic_period_id) if resource.academic_period_id else None
         ),
         original_filename=resource.original_filename,
         content_type=resource.content_type,
@@ -216,9 +212,7 @@ async def list_resources(
 
 
 @router.get("/{resource_id}", response_model=ResourceDetail)
-async def get_resource(
-    resource_id: uuid.UUID, user: CurrentUser, db: DbSession
-) -> ResourceDetail:
+async def get_resource(resource_id: uuid.UUID, user: CurrentUser, db: DbSession) -> ResourceDetail:
     resource, download_url = await service.get_download_url(db, user, resource_id)
     professor_names = await _professor_names(db, [resource.professor_id])
     period_codes = await _period_codes_for(db, [resource])
@@ -295,9 +289,7 @@ async def update_resource(
 
 
 @admin_router.get("", response_model=list[ResourceListItem])
-async def list_pending(
-    user: CurrentUser, db: DbSession, page: Page
-) -> list[ResourceListItem]:
+async def list_pending(user: CurrentUser, db: DbSession, page: Page) -> list[ResourceListItem]:
     resources = await crud.list_resources(
         db,
         status_in=[ResourceStatus.COMMUNITY_PENDING],

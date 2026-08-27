@@ -223,7 +223,7 @@ async def create_file_resource(
 
     ext = _extension_of(filename)
     object_key = f"resources/{course_id}/{resource.id}/{uuid.uuid4().hex}.{ext}"
-    await storage.put_object(object_key, blob, resource.content_type)
+    await storage.put_object(object_key, blob, content_type_for(filename))
     resource.object_key = object_key
 
     # Cheap synchronous text extraction for small files; large files are deferred (Phase 5).
@@ -248,10 +248,7 @@ async def _validate_optional_context(
     """Turn unknown optional foreign keys into 404s instead of a 500 at commit time."""
     if professor_id is not None and await db.get(Professor, professor_id) is None:
         raise NotFoundError("Docente no encontrado.")
-    if (
-        academic_period_id is not None
-        and await db.get(AcademicPeriod, academic_period_id) is None
-    ):
+    if academic_period_id is not None and await db.get(AcademicPeriod, academic_period_id) is None:
         raise NotFoundError("Periodo académico no encontrado.")
 
 
@@ -355,9 +352,7 @@ async def update_resource(
     if resource.created_by_user_id != user.id and not _can_moderate(user):
         raise ForbiddenError("No puedes editar este recurso.")
     data = payload.model_dump(exclude_unset=True)
-    await _validate_optional_context(
-        db, data.get("professor_id"), data.get("academic_period_id")
-    )
+    await _validate_optional_context(db, data.get("professor_id"), data.get("academic_period_id"))
     for field, value in data.items():
         setattr(resource, field, value)
     await db.flush()
@@ -391,9 +386,7 @@ def is_visible_to(resource: Resource, user: User) -> bool:
     return resource.status in PUBLICLY_VISIBLE_RESOURCE_STATUSES
 
 
-async def get_visible_resource(
-    db: AsyncSession, user: User, resource_id: uuid.UUID
-) -> Resource:
+async def get_visible_resource(db: AsyncSession, user: User, resource_id: uuid.UUID) -> Resource:
     """Load a resource the caller may see, or 404. Hidden and missing look identical."""
     resource = await crud.get_resource(db, resource_id)
     if resource is None or not resource.is_active or not is_visible_to(resource, user):
@@ -409,7 +402,5 @@ async def get_download_url(
         return resource, resource.external_url
     if resource.object_key is None:
         return resource, None
-    url = await storage.presigned_get_url(
-        resource.object_key, filename=resource.original_filename
-    )
+    url = await storage.presigned_get_url(resource.object_key, filename=resource.original_filename)
     return resource, url

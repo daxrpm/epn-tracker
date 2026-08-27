@@ -100,9 +100,7 @@ def check_course_eligibility(
 
 
 def calculate_approved_credits(courses: list[CourseNode], scenario: ScenarioState) -> Decimal:
-    return sum(
-        (c.credit_value for c in courses if c.key in scenario.passed), start=Decimal("0")
-    )
+    return sum((c.credit_value for c in courses if c.key in scenario.passed), start=Decimal("0"))
 
 
 def simulate_next_courses(

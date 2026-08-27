@@ -62,9 +62,7 @@ async def get_course(db: AsyncSession, course_id: uuid.UUID) -> Course | None:
     return await db.get(Course, course_id)
 
 
-async def get_courses_by_ids(
-    db: AsyncSession, course_ids: list[uuid.UUID]
-) -> Sequence[Course]:
+async def get_courses_by_ids(db: AsyncSession, course_ids: list[uuid.UUID]) -> Sequence[Course]:
     if not course_ids:
         return []
     return (await db.execute(select(Course).where(Course.id.in_(course_ids)))).scalars().all()
@@ -148,9 +146,7 @@ async def list_academic_periods(db: AsyncSession) -> Sequence[AcademicPeriod]:
     return (await db.execute(stmt)).scalars().all()
 
 
-async def get_academic_period(
-    db: AsyncSession, period_id: uuid.UUID
-) -> AcademicPeriod | None:
+async def get_academic_period(db: AsyncSession, period_id: uuid.UUID) -> AcademicPeriod | None:
     return await db.get(AcademicPeriod, period_id)
 
 

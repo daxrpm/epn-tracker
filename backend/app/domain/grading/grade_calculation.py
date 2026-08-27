@@ -97,25 +97,29 @@ def calculate_component_score(
     if mode == GradeComponentMode.DIRECT_SCORE:
         return normalize_score(direct_score, direct_score_scale)
 
-    valid = [it for it in items if to_decimal(it.score) is not None]
-    if not valid:
+    # Pair each scored item with its /20 value, so the "has a score" filter and the values
+    # derived from it cannot drift apart the way two separate comprehensions can.
+    scored: list[tuple[ItemInput, Decimal]] = []
+    for item in items:
+        normalized_score = normalize_score(item.score, item.score_scale)
+        if normalized_score is not None:
+            scored.append((item, normalized_score))
+    if not scored:
         return None
 
-    normalized = [normalize_score(it.score, it.score_scale) for it in valid]
-
     if mode == GradeComponentMode.EQUAL_AVERAGE:
-        total = sum(normalized, start=ZERO)
-        return total / Decimal(len(valid))
+        total = sum((score for _, score in scored), start=ZERO)
+        return total / Decimal(len(scored))
 
     if mode == GradeComponentMode.CUSTOM_WEIGHTS:
         total_weight = sum(
-            (to_decimal(it.internal_weight_percent) or ZERO for it in valid), start=ZERO
+            (to_decimal(item.internal_weight_percent) or ZERO for item, _ in scored), start=ZERO
         )
         if total_weight == ZERO:
             return None
         weighted = ZERO
-        for it, score_20 in zip(valid, normalized, strict=True):
-            item_weight = to_decimal(it.internal_weight_percent) or ZERO
+        for item, score_20 in scored:
+            item_weight = to_decimal(item.internal_weight_percent) or ZERO
             weighted += score_20 * item_weight / FULL_WEIGHT
         # Normalise by the registered weight to support partially filled items.
         return weighted * FULL_WEIGHT / total_weight

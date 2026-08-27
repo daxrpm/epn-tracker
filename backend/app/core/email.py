@@ -42,13 +42,22 @@ class SMTPEmailSender(EmailSender):
         message["Subject"] = subject
         message.set_content(body)
 
-        context = ssl.create_default_context()
-        smtp_class = smtplib.SMTP_SSL if settings.smtp_use_ssl else smtplib.SMTP
-        kwargs = {"timeout": settings.smtp_timeout_seconds}
-        if settings.smtp_use_ssl:
-            kwargs["context"] = context
+        # Settings validation guarantees these when EMAIL_BACKEND=smtp, but this runs in a
+        # worker thread far from that check, so assert rather than pass None to smtplib.
+        host = settings.smtp_host
+        if host is None:
+            raise RuntimeError("SMTP_HOST is required when EMAIL_BACKEND=smtp.")
 
-        with smtp_class(settings.smtp_host, settings.smtp_port, **kwargs) as client:
+        context = ssl.create_default_context()
+        timeout = settings.smtp_timeout_seconds
+
+        client: smtplib.SMTP
+        if settings.smtp_use_ssl:
+            client = smtplib.SMTP_SSL(host, settings.smtp_port, timeout=timeout, context=context)
+        else:
+            client = smtplib.SMTP(host, settings.smtp_port, timeout=timeout)
+
+        with client:
             if not settings.smtp_use_ssl:
                 client.ehlo()
                 if settings.smtp_starttls:

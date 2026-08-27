@@ -60,9 +60,7 @@ async def ensure_bucket() -> None:
             with contextlib.suppress(ClientError):
                 await s3.create_bucket(Bucket=settings.s3_bucket)
         with contextlib.suppress(ClientError):
-            await s3.put_bucket_cors(
-                Bucket=settings.s3_bucket, CORSConfiguration=_CORS_CONFIG
-            )
+            await s3.put_bucket_cors(Bucket=settings.s3_bucket, CORSConfiguration=_CORS_CONFIG)
 
 
 async def put_object(key: str, data: bytes, content_type: str) -> None:
@@ -81,17 +79,13 @@ async def delete_object(key: str) -> None:
             await s3.delete_object(Bucket=settings.s3_bucket, Key=key)
 
 
-async def presigned_get_url(
-    key: str, *, filename: str | None = None, expires: int = 600
-) -> str:
+async def presigned_get_url(key: str, *, filename: str | None = None, expires: int = 600) -> str:
     """Presigned GET signed with the public endpoint, forcing an attachment download."""
     params: dict[str, Any] = {"Bucket": settings.s3_bucket, "Key": key}
     if filename:
         params["ResponseContentDisposition"] = f'attachment; filename="{filename}"'
     async with _client(public=True) as s3:
-        return await s3.generate_presigned_url(
-            "get_object", Params=params, ExpiresIn=expires
-        )
+        return await s3.generate_presigned_url("get_object", Params=params, ExpiresIn=expires)
 
 
 STREAM_CHUNK_BYTES = 64 * 1024

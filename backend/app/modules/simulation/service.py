@@ -65,9 +65,7 @@ async def load_curriculum_data(db: AsyncSession, curriculum_id: uuid.UUID) -> Cu
     }
     cc_id_to_code = {cc.id: courses[cc.course_id].code for cc in curriculum_courses}
 
-    requirements = await crud.requirements_for_curriculum(
-        db, [cc.id for cc in curriculum_courses]
-    )
+    requirements = await crud.requirements_for_curriculum(db, [cc.id for cc in curriculum_courses])
     prerequisites: dict[uuid.UUID, list[str]] = {}
     corequisites: dict[uuid.UUID, list[str]] = {}
     for req in requirements:

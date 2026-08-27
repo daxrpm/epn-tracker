@@ -30,7 +30,7 @@ router = APIRouter(tags=["offering"])
 async def search_professors(
     db: DbSession, q: Annotated[str, Query(min_length=1)]
 ) -> list[ProfessorOut]:
-    return list(await crud.search_professors(db, q))
+    return [ProfessorOut.model_validate(row) for row in await crud.search_professors(db, q)]
 
 
 @router.post("/professors", response_model=ProfessorOut)
@@ -49,7 +49,7 @@ async def find_or_create_professor(
 
 @router.get("/professors", response_model=list[ProfessorOut])
 async def list_professors(db: DbSession) -> list[ProfessorOut]:
-    return list(await crud.list_professors(db))
+    return [ProfessorOut.model_validate(row) for row in await crud.list_professors(db)]
 
 
 @router.get("/course-offerings", response_model=list[CourseOfferingOut])
@@ -58,7 +58,8 @@ async def list_course_offerings(
     period_id: uuid.UUID | None = None,
     course_id: uuid.UUID | None = None,
 ) -> list[CourseOfferingOut]:
-    return list(await crud.list_course_offerings(db, period_id, course_id))
+    rows = await crud.list_course_offerings(db, period_id, course_id)
+    return [CourseOfferingOut.model_validate(row) for row in rows]
 
 
 # --- Admin ----------------------------------------------------------------------------------------

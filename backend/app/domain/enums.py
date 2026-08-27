@@ -214,7 +214,7 @@ class EnglishLevel(StrEnum):
         """Ordinal index used to compare English levels reliably."""
         return _ENGLISH_LEVEL_ORDER.index(self)
 
-    def __lt__(self, other: object) -> bool:  # type: ignore[override]
+    def __lt__(self, other: object) -> bool:
         if isinstance(other, EnglishLevel):
             return self.rank < other.rank
         return NotImplemented

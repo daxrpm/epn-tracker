@@ -60,7 +60,7 @@ async def list_schemes(
             id=s.id,
             course_id=s.course_id,
             title=s.title,
-            professor_name=names.get(s.professor_id),
+            professor_name=names.get(s.professor_id) if s.professor_id else None,
             status=s.status,
             approval_count=s.approval_count,
         )
