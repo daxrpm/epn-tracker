@@ -277,3 +277,13 @@ class ResourceStatus(StrEnum):
     ADMIN_VERIFIED = "ADMIN_VERIFIED"
     REJECTED = "REJECTED"
     ARCHIVED = "ARCHIVED"
+
+
+#: Statuses any authenticated user may see. Everything else is visible only to its author or a
+#: moderator. Declared here so the SQL filter (crud) and the in-memory predicate (service) can
+#: never drift apart.
+PUBLICLY_VISIBLE_RESOURCE_STATUSES: tuple[ResourceStatus, ...] = (
+    ResourceStatus.COMMUNITY_PENDING,
+    ResourceStatus.COMMUNITY_VERIFIED,
+    ResourceStatus.ADMIN_VERIFIED,
+)

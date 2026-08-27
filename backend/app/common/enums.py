@@ -4,6 +4,7 @@ The enums live in ``app.domain.enums`` (pure layer). The rest of the code import
 """
 
 from app.domain.enums import (
+    PUBLICLY_VISIBLE_RESOURCE_STATUSES,
     CalculationMode,
     Contribution,
     CourseFinalStatus,
@@ -37,6 +38,7 @@ from app.domain.enums import (
 )
 
 __all__ = [
+    "PUBLICLY_VISIBLE_RESOURCE_STATUSES",
     "CalculationMode",
     "Contribution",
     "CourseFinalStatus",

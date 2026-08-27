@@ -6,7 +6,7 @@ import uuid
 
 from fastapi import APIRouter, Depends
 
-from app.common.deps import CurrentUser, DbSession, require_super_admin
+from app.common.deps import ClientIp, CurrentUser, DbSession, require_super_admin
 from app.modules.iam import admin_service, service
 from app.modules.iam.schema import (
     AdminUserCreateIn,
@@ -27,8 +27,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register/request-code", response_model=MessageOut)
-async def request_code(payload: RequestCodeIn, db: DbSession) -> MessageOut:
-    await service.request_verification_code(db, payload.email)
+async def request_code(payload: RequestCodeIn, db: DbSession, client_ip: ClientIp) -> MessageOut:
+    await service.request_verification_code(db, payload.email, client_ip)
     # Neutral message: never reveals whether the account exists (ERS §RF-001).
     return MessageOut(message="Si el correo es válido, enviamos un código de verificación.")
 
@@ -41,13 +41,13 @@ async def verify_code(payload: VerifyCodeIn, db: DbSession) -> TokenOut:
 
 
 @router.post("/login", response_model=TokenOut)
-async def login(payload: LoginIn, db: DbSession) -> TokenOut:
-    return await service.login(db, payload.email, payload.password)
+async def login(payload: LoginIn, db: DbSession, client_ip: ClientIp) -> TokenOut:
+    return await service.login(db, payload.email, payload.password, client_ip)
 
 
 @router.post("/refresh", response_model=TokenOut)
-async def refresh(payload: RefreshIn) -> TokenOut:
-    return await service.refresh_tokens(payload.refresh_token)
+async def refresh(payload: RefreshIn, db: DbSession) -> TokenOut:
+    return await service.refresh_tokens(db, payload.refresh_token)
 
 
 @router.post("/logout", response_model=MessageOut)

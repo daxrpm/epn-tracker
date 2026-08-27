@@ -32,13 +32,15 @@ async def lifespan(_: FastAPI):
 
 def create_app() -> FastAPI:
     setup_logging()
+    # The interactive docs publish the full API surface, so they stay in development only.
     app = FastAPI(
         title=settings.app_name,
         version="0.1.0",
         debug=settings.debug,
         lifespan=lifespan,
-        docs_url="/docs",
-        openapi_url="/openapi.json",
+        docs_url="/docs" if settings.is_dev else None,
+        redoc_url="/redoc" if settings.is_dev else None,
+        openapi_url="/openapi.json" if settings.is_dev else None,
     )
 
     app.add_middleware(RequestContextMiddleware)

@@ -1,31 +1,33 @@
-"""Simple offset/limit pagination."""
+"""Shared pagination primitives.
+
+Every collection endpoint is bounded: an unbounded list is a latent denial of service once the
+community grows. ``Page`` is the reusable FastAPI dependency; ``DEFAULT_PAGE_SIZE`` is also the
+default applied at the crud layer so a service that forgets to pass one still cannot fetch a whole
+table.
+"""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Annotated
 
-from fastapi import Query
-from pydantic import BaseModel
+from fastapi import Depends, Query
+
+DEFAULT_PAGE_SIZE = 50
+MAX_PAGE_SIZE = 200
 
 
-class PageParams(BaseModel):
-    page: int = 1
-    size: int = 20
-
-    @property
-    def offset(self) -> int:
-        return (self.page - 1) * self.size
+@dataclass(slots=True, frozen=True)
+class Pagination:
+    limit: int
+    offset: int
 
 
-def page_params(
-    page: Annotated[int, Query(ge=1)] = 1,
-    size: Annotated[int, Query(ge=1, le=100)] = 20,
-) -> PageParams:
-    return PageParams(page=page, size=size)
+def _pagination(
+    limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> Pagination:
+    return Pagination(limit=limit, offset=offset)
 
 
-class Page[T](BaseModel):
-    items: list[T]
-    total: int
-    page: int
-    size: int
+Page = Annotated[Pagination, Depends(_pagination)]

@@ -6,7 +6,7 @@ import uuid
 from collections.abc import Callable
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +19,19 @@ from app.modules.iam.model import User
 DbSession = Annotated[AsyncSession, Depends(get_db)]
 
 _bearer = HTTPBearer(auto_error=False)
+
+
+def get_client_ip(request: Request) -> str:
+    """Best-effort client address for per-origin rate limiting.
+
+    ``request.client.host`` is the only value we can trust: ``X-Forwarded-For`` is attacker-
+    controlled unless a reverse proxy rewrites it, so deployments behind one must run uvicorn
+    with ``--proxy-headers`` and let Starlette populate ``request.client`` correctly.
+    """
+    return request.client.host if request.client else "unknown"
+
+
+ClientIp = Annotated[str, Depends(get_client_ip)]
 
 
 async def get_current_user(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import quote
 
 from pydantic import EmailStr, Field, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -49,6 +50,7 @@ class Settings(BaseSettings):
     redis_host: str = "localhost"
     redis_port: int = 6379
     redis_db: int = 0
+    redis_password: str | None = None
 
     # JWT — the dev default is long enough for HS256; production must override it.
     jwt_secret: str = "dev-insecure-secret-change-me-please-32bytes+"
@@ -62,9 +64,12 @@ class Settings(BaseSettings):
     email_code_max_attempts: int = 5
     email_code_resend_seconds: int = 60
     email_codes_per_hour: int = 5
+    email_codes_per_hour_per_ip: int = 20
 
-    # Login throttling (ERS §25.2)
+    # Login throttling (ERS §25.2). The per-IP ceilings are deliberately looser than the
+    # per-address ones: a shared campus NAT must not lock out a whole faculty.
     login_max_attempts: int = 10
+    login_max_attempts_per_ip: int = 50
     login_window_seconds: int = 900
 
     # Email. Console is intentionally restricted to local development.
@@ -97,6 +102,7 @@ class Settings(BaseSettings):
 
     @field_validator(
         "database_url_override",
+        "redis_password",
         "smtp_host",
         "smtp_username",
         "smtp_password",
@@ -127,6 +133,11 @@ class Settings(BaseSettings):
             raise ValueError("POSTGRES_PASSWORD must not use the development default.")
         if self.app_env != "dev" and self.first_superadmin_password == "ChangeMe-12345":
             raise ValueError("FIRST_SUPERADMIN_PASSWORD must not use the development default.")
+        if self.app_env != "dev" and not self.redis_password:
+            # Redis stores verification codes and the refresh-token allowlist.
+            raise ValueError("REDIS_PASSWORD is required outside of development.")
+        if self.app_env != "dev" and self.s3_secret_key == "epnminio123":
+            raise ValueError("S3_SECRET_KEY must not use the development default.")
         if self.email_backend == "smtp":
             if not self.smtp_host or not self.smtp_from_email:
                 raise ValueError(
@@ -143,15 +154,20 @@ class Settings(BaseSettings):
     def database_url(self) -> str:
         if self.database_url_override:
             return self.database_url_override
+        # Credentials are percent-encoded: a password containing @ or / would otherwise corrupt
+        # the DSN and produce a baffling connection error.
+        user = quote(self.postgres_user, safe="")
+        password = quote(self.postgres_password, safe="")
         return (
-            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
+            f"postgresql+asyncpg://{user}:{password}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
         )
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def redis_url(self) -> str:
-        return f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}"
+        credentials = f":{quote(self.redis_password, safe='')}@" if self.redis_password else ""
+        return f"redis://{credentials}{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
     @property
     def cors_origins(self) -> list[str]:

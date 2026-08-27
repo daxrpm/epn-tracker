@@ -10,7 +10,7 @@ from fastapi import APIRouter, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.deps import CurrentUser, DbSession
-from app.common.exception.errors import NotFoundError
+from app.common.pagination import Page
 from app.modules.evaluation import crud, service
 from app.modules.evaluation.schema import (
     ComponentOut,
@@ -37,13 +37,22 @@ async def create_scheme(
 
 @router.get("", response_model=list[SchemeListItem])
 async def list_schemes(
+    user: CurrentUser,
     db: DbSession,
+    page: Page,
     course_id: Annotated[uuid.UUID | None, Query()] = None,
     professor_id: Annotated[uuid.UUID | None, Query()] = None,
     section_id: Annotated[uuid.UUID | None, Query()] = None,
 ) -> list[SchemeListItem]:
     schemes = await crud.list_schemes(
-        db, course_id=course_id, professor_id=professor_id, section_id=section_id
+        db,
+        course_id=course_id,
+        professor_id=professor_id,
+        section_id=section_id,
+        viewer_id=user.id,
+        include_private=service.is_moderator(user),
+        limit=page.limit,
+        offset=page.offset,
     )
     names = await _professor_names(db, (s.professor_id for s in schemes))
     return [
@@ -70,6 +79,7 @@ async def _professor_names(
 
 @router.get("/suggest", response_model=list[SchemeSuggestionOut])
 async def suggest_schemes(
+    user: CurrentUser,
     db: DbSession,
     course_id: Annotated[uuid.UUID, Query()],
     academic_period_id: Annotated[uuid.UUID | None, Query()] = None,
@@ -78,6 +88,7 @@ async def suggest_schemes(
 ) -> list[SchemeSuggestionOut]:
     return await service.suggest_schemes(
         db,
+        user,
         course_id=course_id,
         academic_period_id=academic_period_id,
         section_id=section_id,
@@ -86,10 +97,8 @@ async def suggest_schemes(
 
 
 @router.get("/{scheme_id}", response_model=SchemeOut)
-async def get_scheme(scheme_id: uuid.UUID, db: DbSession) -> SchemeOut:
-    scheme = await crud.get_scheme(db, scheme_id)
-    if scheme is None or not scheme.is_active:
-        raise NotFoundError("Curso no encontrado.")
+async def get_scheme(scheme_id: uuid.UUID, user: CurrentUser, db: DbSession) -> SchemeOut:
+    scheme = await service.get_readable_scheme(db, user, scheme_id)
     components = await crud.get_components(db, scheme_id)
     names = await _professor_names(db, [scheme.professor_id])
     return SchemeOut(

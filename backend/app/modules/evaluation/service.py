@@ -29,6 +29,7 @@ from app.common.exception.errors import (
     ValidationAppError,
 )
 from app.domain.grading.scheme_validation import SchemeComponent, validate_scheme
+from app.modules.academic.model import AcademicPeriod, Course
 from app.modules.evaluation import crud
 from app.modules.evaluation.model import (
     EvaluationComponent,
@@ -45,8 +46,42 @@ from app.modules.evaluation.schema import (
 )
 from app.modules.iam.model import User
 from app.modules.offering import crud as offering_crud
+from app.modules.offering.model import Professor, Section
 
 COMMUNITY_VERIFICATION_THRESHOLD = 3
+COMMUNITY_REJECTION_THRESHOLD = 3
+
+#: Statuses a community vote can still move. Voting on anything else is a no-op we reject up front.
+_VOTABLE_STATUSES = (EvaluationSchemeStatus.COMMUNITY_PENDING,)
+
+
+def is_moderator(user: User) -> bool:
+    return user.role in (UserRole.ADMIN, UserRole.SUPER_ADMIN)
+
+
+def can_read_scheme(scheme: EvaluationScheme, user: User) -> bool:
+    """Author, moderators, and anyone when the scheme is not private (ERS §8.9).
+
+    This is the single definition of scheme visibility; every read path goes through it so the
+    rule cannot drift between the detail, list, copy and enrollment entry points.
+    """
+    if scheme.created_by_user_id == user.id or is_moderator(user):
+        return True
+    return scheme.visibility != Visibility.PRIVATE
+
+
+async def get_readable_scheme(
+    db: AsyncSession, user: User, scheme_id: uuid.UUID
+) -> EvaluationScheme:
+    """Load a scheme the caller is allowed to see, or raise 404.
+
+    Not-found and not-allowed deliberately return the same error so the endpoint cannot be used
+    to probe which scheme ids exist.
+    """
+    scheme = await crud.get_scheme(db, scheme_id)
+    if scheme is None or not scheme.is_active or not can_read_scheme(scheme, user):
+        raise NotFoundError("Curso no encontrado.")
+    return scheme
 
 
 def build_context_hash(
@@ -59,8 +94,25 @@ def build_context_hash(
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
+async def _validate_scheme_context(db: AsyncSession, payload: SchemeCreateIn) -> None:
+    """Reject unknown foreign keys with a 404 instead of letting the commit raise a 500."""
+    if await db.get(Course, payload.course_id) is None:
+        raise NotFoundError("Materia no encontrada.")
+    if (
+        payload.academic_period_id is not None
+        and await db.get(AcademicPeriod, payload.academic_period_id) is None
+    ):
+        raise NotFoundError("Periodo académico no encontrado.")
+    if payload.section_id is not None and await db.get(Section, payload.section_id) is None:
+        raise NotFoundError("Paralelo no encontrado.")
+    if payload.professor_id is not None and await db.get(Professor, payload.professor_id) is None:
+        raise NotFoundError("Docente no encontrado.")
+
+
 async def create_scheme(db: AsyncSession, user: User, payload: SchemeCreateIn) -> SchemeCreateOut:
     """Create a student scheme. Public schemes start as COMMUNITY_PENDING (ERS §RF-019)."""
+    await _validate_scheme_context(db, payload)
+
     # A two-decimal split such as 33.33 + 33.33 + 33.33 is academically 100%, although its
     # literal sum is 99.99. Complete the missing cent on a component with available capacity so
     # subsequent grade calculations operate on an exact 100%.
@@ -161,14 +213,14 @@ async def vote_scheme(
     db: AsyncSession, user: User, scheme_id: uuid.UUID, vote: SchemeVote
 ) -> VoteOut:
     """Register a community vote; auto-verify at three external approvals (ERS §8.11)."""
-    scheme = await crud.get_scheme(db, scheme_id)
-    if scheme is None or not scheme.is_active:
-        raise NotFoundError("Curso no encontrado.")
+    scheme = await get_readable_scheme(db, user, scheme_id)
     if not user.is_verified:
         raise ForbiddenError("Debes verificar tu correo para votar.")
     if scheme.created_by_user_id == user.id:
         # The creator does not count as an external approval (ERS §8.11).
         raise ForbiddenError("No puedes votar tu propio curso.")
+    if scheme.status not in _VOTABLE_STATUSES:
+        raise ConflictError("Este curso ya no está en votación comunitaria.")
     if await crud.get_user_vote(db, scheme_id, user.id) is not None:
         raise ConflictError("Ya votaste este curso.")
 
@@ -180,14 +232,19 @@ async def vote_scheme(
             context_hash=scheme.context_hash,
         )
     )
+    await db.flush()
 
-    if vote == SchemeVote.APPROVE:
-        scheme.approval_count += 1
-        if (
-            scheme.approval_count >= COMMUNITY_VERIFICATION_THRESHOLD
-            and scheme.status == EvaluationSchemeStatus.COMMUNITY_PENDING
-        ):
-            scheme.status = EvaluationSchemeStatus.COMMUNITY_VERIFIED
+    # The vote rows are the source of truth; the counter is derived from them so two concurrent
+    # votes cannot collapse into one the way a read-modify-write `+= 1` can.
+    scheme.approval_count = await crud.count_votes(db, scheme_id, SchemeVote.APPROVE)
+    rejections = await crud.count_votes(db, scheme_id, SchemeVote.REJECT)
+
+    if scheme.approval_count >= COMMUNITY_VERIFICATION_THRESHOLD:
+        scheme.status = EvaluationSchemeStatus.COMMUNITY_VERIFIED
+    elif rejections >= COMMUNITY_REJECTION_THRESHOLD:
+        # Rejection was previously recorded and ignored; it now archives the scheme (ERS §8.11).
+        scheme.status = EvaluationSchemeStatus.ARCHIVED
+        scheme.is_active = False
 
     await db.flush()
     return VoteOut(scheme_id=scheme.id, status=scheme.status, approval_count=scheme.approval_count)
@@ -197,9 +254,7 @@ async def copy_scheme_to_personal(
     db: AsyncSession, user: User, scheme_id: uuid.UUID
 ) -> SchemeCopyOut:
     """Duplicate a scheme (and its components) as a private personal copy (ERS §17.7)."""
-    source = await crud.get_scheme(db, scheme_id)
-    if source is None or not source.is_active:
-        raise NotFoundError("Curso no encontrado.")
+    source = await get_readable_scheme(db, user, scheme_id)
 
     copy = EvaluationScheme(
         course_id=source.course_id,
@@ -330,6 +385,7 @@ def rank_schemes(
 
 async def suggest_schemes(
     db: AsyncSession,
+    user: User,
     *,
     course_id: uuid.UUID,
     academic_period_id: uuid.UUID | None = None,
@@ -337,7 +393,9 @@ async def suggest_schemes(
     professor_id: uuid.UUID | None = None,
 ) -> list[SchemeSuggestionOut]:
     """Return active schemes for a course ordered by suggestion priority (ERS §8.12)."""
-    schemes = await crud.list_schemes(db, course_id=course_id)
+    schemes = await crud.list_schemes(
+        db, course_id=course_id, viewer_id=user.id, include_private=is_moderator(user)
+    )
     professor_ids = {s.professor_id for s in schemes if s.professor_id is not None}
     professors = await offering_crud.get_professors_by_ids(db, list(professor_ids))
     professor_names = {p.id: p.full_name for p in professors}

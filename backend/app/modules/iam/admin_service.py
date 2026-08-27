@@ -18,7 +18,7 @@ from app.common.enums import UserRole, UserStatus
 from app.common.exception.errors import ConflictError, ForbiddenError, NotFoundError
 from app.common.security.password import hash_password
 from app.modules.audit import crud as audit_crud
-from app.modules.iam import crud
+from app.modules.iam import crud, token_store
 from app.modules.iam.model import User
 from app.modules.iam.schema import AdminUserCreateIn
 
@@ -105,6 +105,9 @@ async def update_status(
         await _guard_last_superadmin(db, target)
     before = _snapshot(target)
     target.status = new_status
+    if new_status != UserStatus.ACTIVE:
+        # Suspension has to end the session now, not whenever the access token expires.
+        await token_store.revoke_all(str(target.id))
     await db.flush()
     await audit_crud.record(
         db,
@@ -125,6 +128,7 @@ async def delete_user(db: AsyncSession, actor: User, user_id: uuid.UUID) -> None
     await _guard_last_superadmin(db, target)
     before = _snapshot(target)
     target.status = UserStatus.DELETED
+    await token_store.revoke_all(str(target.id))
     await db.flush()
     await audit_crud.record(
         db,
