@@ -29,8 +29,14 @@ coverage.xml
 
 # IDE / OS
 .idea/
-.vscode/
 .DS_Store
+
+# Del directorio de VS Code se comparte solo la configuración del proyecto: los ajustes que
+# alinean el editor con `make lint` y las extensiones recomendadas. Lo personal (launch.json
+# propio, tareas locales) sigue fuera.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 
 # Runtime
 *.log

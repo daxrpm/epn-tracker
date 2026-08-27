@@ -10,12 +10,12 @@ revisar después.
 
 Las cuatro carreras están creadas en la base local y sus pénsums están activos:
 
-| Carrera | Pénsum | Entradas curriculares | Créditos | Prerrequisitos |
-|---|---:|---:|---:|---:|
-| Computación | 2020 | 50 | 135 | 39 |
-| Software | 2020 | 51 | 135 | 36 |
-| Sistemas de Información | 2023 | 51 | 135 | 26 |
-| Ciencia de Datos e Inteligencia Artificial | 2023 | 52 | 135 | 27 |
+| Carrera                                    | Pénsum | Entradas curriculares | Créditos | Prerrequisitos |
+| ------------------------------------------ | -----: | --------------------: | -------: | -------------: |
+| Computación                                |   2020 |                    50 |      135 |             39 |
+| Software                                   |   2020 |                    51 |      135 |             36 |
+| Sistemas de Información                    |   2023 |                    51 |      135 |             26 |
+| Ciencia de Datos e Inteligencia Artificial |   2023 |                    52 |      135 |             27 |
 
 > Las cifras de prerrequisitos subieron respecto a la extracción vectorial inicial tras la
 > **corrección manual del grafo** (ver sección “Corrección del grafo de prerrequisitos”).
@@ -37,12 +37,12 @@ créditos y deben existir en el sistema.
 
 Los PDFs fuente están en [`mallas/`](../mallas):
 
-| Archivo | SHA-256 |
-|---|---|
-| `malla_computacion.pdf` | `2d5003d29c8e24e35b028f1d68fa47d164a58668e328dad00ad49cace0a32f5c` |
-| `malla_software.pdf` | `024b349ffca15562f49c43fe2066265195a090c2c4d6c2f5a8d5714eb065bab5` |
+| Archivo                          | SHA-256                                                            |
+| -------------------------------- | ------------------------------------------------------------------ |
+| `malla_computacion.pdf`          | `2d5003d29c8e24e35b028f1d68fa47d164a58668e328dad00ad49cace0a32f5c` |
+| `malla_software.pdf`             | `024b349ffca15562f49c43fe2066265195a090c2c4d6c2f5a8d5714eb065bab5` |
 | `malla_sistemas_informacion.pdf` | `fed453de216cfc6dfa490ea03668432dc1f8b5713b3569ef496ecfcc73acb168` |
-| `malla_ciencia_datos_IA.pdf` | `7dcef8f1130661546bb0462ec0bccfbf742b0b90c88e7905264eaa8a6565a1f9` |
+| `malla_ciencia_datos_IA.pdf`     | `7dcef8f1130661546bb0462ec0bccfbf742b0b90c88e7905264eaa8a6565a1f9` |
 
 No hacen falta capturas adicionales: estos cuatro PDFs contienen texto y conectores vectoriales. Una
 foto sería menos precisa porque perdería coordenadas, texto seleccionable y geometría de flechas.
@@ -51,12 +51,12 @@ foto sería menos precisa porque perdería coordenadas, texto seleccionable y ge
 
 Los datos importables viven en [`backend/seeds/data/`](../backend/seeds/data):
 
-| Seed | SHA-256 |
-|---|---|
-| `computacion_2020.json` | `c3f4dc04eda35363964f31ddd747ca7e47565c62e0f337e1e1a35b40edd32ff2` |
-| `software_2020.json` | `00b2dcec0763ca603cd374756dea17179857800424201fa7e9e77a0257533d77` |
+| Seed                             | SHA-256                                                            |
+| -------------------------------- | ------------------------------------------------------------------ |
+| `computacion_2020.json`          | `c3f4dc04eda35363964f31ddd747ca7e47565c62e0f337e1e1a35b40edd32ff2` |
+| `software_2020.json`             | `00b2dcec0763ca603cd374756dea17179857800424201fa7e9e77a0257533d77` |
 | `sistemas_informacion_2023.json` | `5467568c8e195ca3ad0e50b97de4d79c2e40f8370cb2c9ee466e0ecfa8731862` |
-| `ciencia_datos_ia_2023.json` | `b8a6f2fb1287223a605ed5d1e2da2ed1a9265b1b95274a12a705c0e76d3c1252` |
+| `ciencia_datos_ia_2023.json`     | `b8a6f2fb1287223a605ed5d1e2da2ed1a9265b1b95274a12a705c0e76d3c1252` |
 
 Estos JSON son la fuente persistente del sistema. PostgreSQL usa además el volumen Docker
 `epn_pgdata`; si ese volumen se conserva, los registros sobreviven reinicios y reconstrucciones. Si
@@ -255,4 +255,3 @@ PostgreSQL: 4 carreras, 4 pénsums, 204 entradas curriculares, 116 prerrequisito
 > Los conectores de prerrequisito/correquisito ya se dibujan en la malla interactiva
 > ([`CurriculumMap.tsx`](../frontend/src/features/curriculum/components/CurriculumMap.tsx)),
 > con un overlay SVG que mide las tarjetas en vivo (azul = prerrequisito, naranja = correquisito).
-

@@ -1,100 +1,108 @@
 # EPN Notas Mallas
 
-Aplicación web para estudiantes de la Escuela Politécnica Nacional (inicio en FIS/EPN) que permite
-controlar notas, avance de malla, requisitos de graduación y simulaciones de matrícula, con reglas
-académicas configurables.
+Aplicación web para estudiantes de la Escuela Politécnica Nacional (inicio en FIS) que permite
+controlar notas, avance de malla, requisitos de graduación y simulaciones de matrícula, con
+reglas académicas configurables.
 
-La especificación completa vive en [`ERS_EPN_Notas_Mallas.md`](./ERS_EPN_Notas_Mallas.md).
-La extracción y carga reproducible de las cuatro mallas está documentada en
-[`docs/CURRICULUM_DATA_HANDOFF.md`](./docs/CURRICULUM_DATA_HANDOFF.md).
+> Proyecto hecho por estudiantes. **No es un sistema oficial de la EPN** y no tiene respaldo
+> institucional.
 
-## Estructura del monorepo
+## Documentación
+
+| Documento                                                              | Para qué                                                |
+| ---------------------------------------------------------------------- | ------------------------------------------------------- |
+| [`CONTRIBUTING.md`](./CONTRIBUTING.md)                                 | Entorno de desarrollo y flujo de trabajo                |
+| [`AGENTS.md`](./AGENTS.md)                                             | Contrato de trabajo para agentes de IA y contribuyentes |
+| [`CLAUDE.md`](./CLAUDE.md)                                             | Guía operativa de Claude Code en este repo              |
+| [`DESIGN.md`](./DESIGN.md)                                             | Dirección de diseño y sistema visual                    |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md)                       | Cómo está organizado el sistema y por qué               |
+| [`docs/SECURITY.md`](./docs/SECURITY.md)                               | Modelo de amenaza y controles                           |
+| [`docs/CURRICULUM_DATA_HANDOFF.md`](./docs/CURRICULUM_DATA_HANDOFF.md) | Extracción y carga de las mallas                        |
+| [`ERS_EPN_Notas_Mallas.md`](./ERS_EPN_Notas_Mallas.md)                 | Especificación funcional completa                       |
+
+## Estructura
 
 ```
 EPN-system/
-├── backend/            # API FastAPI (Python + uv) — arquitectura fba + dominio puro
-├── frontend/           # SPA Vite + React + TS — shadcn, Aceternity UI y variante HeroUI
-├── mallas/             # PDFs fuente de las mallas FIS
-├── Silabos/            # PDFs fuente de sílabos de ejemplo
-└── ERS_EPN_Notas_Mallas.md
+├── backend/      API FastAPI (Python + uv) — arquitectura fba + dominio puro
+├── frontend/     SPA Vite + React + TS — shadcn/ui sobre Tailwind 4
+├── mallas/       PDFs fuente de las mallas FIS
+├── Silabos/      PDFs fuente de sílabos de ejemplo
+└── .claude/      Skills del proyecto (anti-slop, taste-skill)
 ```
 
-## Arquitectura
-
-- **Backend:** FastAPI + SQLAlchemy 2 (async) + PostgreSQL + Redis, siguiendo el formato de
-  [`fastapi-best-architecture`](https://github.com/fastapi-practices/fastapi_best_architecture)
-  (capas `api` / `schema` / `service` / `crud` / `model` por módulo).
-- **Núcleo de dominio puro** (`backend/app/domain/`): reglas académicas (notas, recuperación,
-  elegibilidad, créditos, inglés) implementadas como funciones puras con `Decimal`, sin dependencias
-  de framework y cubiertas por tests unitarios. **Toda la lógica académica vive aquí, nunca en
-  routers ni CRUD.**
-
-## Arranque completo con Docker (recomendado)
-
-Con Docker instalado, un solo comando levanta Postgres + Redis + la API, aplica migraciones, carga
-las cuatro mallas FIS y crea el super admin:
+## Arranque con Docker
 
 ```bash
 cp .env.dev.example .env.dev
 docker compose --env-file .env.dev up --build
 ```
 
-- API: `http://localhost:8000` · Docs: `http://localhost:8000/docs`
-- Super admin inicial: `admin@epn.edu.ec` / `ChangeMe-12345` (sobrescríbelo con variables de
-  entorno fuera del desarrollo local).
-- Readiness: `GET /api/v1/health/ready` (verifica base de datos y Redis).
+Levanta Postgres, Redis, MinIO y la API; aplica migraciones, carga las cuatro mallas FIS y crea
+el super admin.
 
-En local hay dos formas de entrar:
+- API: `http://localhost:8000` · Docs: `http://localhost:8000/docs` (solo en dev)
+- Readiness: `GET /api/v1/health/ready`
+- Super admin inicial: `admin@epn.edu.ec` / `ChangeMe-12345`
 
-- Credenciales listas: `admin@epn.edu.ec` / `ChangeMe-12345`.
-- Registro: solicita el código desde la UI y léelo con
-  `docker compose --env-file .env.dev logs backend`; el backend `console` solo imprime códigos
-  cuando `APP_ENV=dev`.
+`docker compose up` carga además `docker-compose.override.yml`, que publica los puertos de las
+bases de datos en el host para poder inspeccionarlas. Si alguno está ocupado:
 
-## Correo SMTP en despliegue
+```bash
+MINIO_PORT=9100 MINIO_CONSOLE_PORT=9101 POSTGRES_PORT=55432 docker compose --env-file .env.dev up -d
+```
 
-En un entorno distinto de `dev`, la aplicación exige un secreto JWT fuerte, SMTP y que no se use la
-contraseña inicial de desarrollo. Parte de la plantilla, reemplaza todos los valores `CHANGE_ME` y
-mantén el archivo resultante fuera de Git:
+Para entrar en local hay dos caminos: las credenciales de arriba, o registrarte y leer el código
+en `docker compose --env-file .env.dev logs backend` (el backend `console` solo los imprime
+cuando `APP_ENV=dev`).
+
+## Desarrollo local
+
+Requisitos: [`uv`](https://docs.astral.sh/uv/), Node 22 y Docker. Las versiones exactas están
+ancladas en `backend/.python-version` y `frontend/.nvmrc`, y son las mismas que se despliegan.
+
+```bash
+make setup     # dependencias y .env.dev
+make up        # Postgres, Redis y MinIO
+make migrate   # esquema
+make seed      # las cuatro mallas FIS y el super admin
+make dev       # API en :8000 y app en :5173
+```
+
+`make` sin argumentos lista todas las tareas. Si algún puerto está ocupado:
+
+```bash
+make up POSTGRES_PORT=55432 REDIS_PORT=56379 MINIO_PORT=9100 MINIO_CONSOLE_PORT=9101
+```
+
+Detalles del flujo, formato, migraciones y commits: [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+## Verificación
+
+```bash
+make check         # lo mismo que ejecuta CI: formato, estilo, tipos y pruebas
+make migrate-check # migraciones vs modelos, contra Postgres real
+```
+
+## Despliegue
+
+Producción usa **solo** el fichero base de Compose, para que Postgres, Redis y MinIO queden en la
+red interna y no publicados:
 
 ```bash
 cp .env.prod.example .env.prod
-# Edita .env.prod o inyecta estos valores desde el gestor de secretos de tu plataforma.
-docker compose --env-file .env.prod config
-docker compose --env-file .env.prod up --build -d
+# Reemplaza todos los CHANGE_ME. La app se niega a arrancar si queda alguno.
+docker compose -f docker-compose.yml --env-file .env.prod config
+docker compose -f docker-compose.yml --env-file .env.prod up --build -d
 ```
 
-Usa `SMTP_STARTTLS=true` normalmente en el puerto 587. Para TLS implícito (habitualmente 465), usa
-`SMTP_USE_SSL=true` y `SMTP_STARTTLS=false`. Las migraciones se aplican automáticamente antes de
-arrancar la API en el contenedor. Los archivos `.env.dev` y `.env.prod` están ignorados por Git;
-solo se versionan sus plantillas `.example`.
+SMTP: usa `SMTP_STARTTLS=true` en el puerto 587, o `SMTP_USE_SSL=true` con `SMTP_STARTTLS=false`
+para TLS implícito (465). Las migraciones se aplican antes de arrancar la API.
 
-## Desarrollo local (sin Docker para la app)
-
-Requisitos: [`uv`](https://docs.astral.sh/uv/). La base de datos puede venir de `docker compose up -d
-postgres redis`.
-
-```bash
-cd backend
-uv sync
-uv run pytest -q                   # 62 tests (dominio + integración, sin DB externa)
-uv run alembic upgrade head        # migraciones (requiere Postgres)
-uv run python -m seeds.loader      # cuatro mallas oficiales FIS
-uv run python -m seeds.create_admin  # super admin (usa FIRST_SUPERADMIN_*)
-uv run uvicorn app.main:app --reload
-```
-
-## Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev        # http://localhost:5173 (proxya /api al backend en :8000)
-```
-
-Arquitectura, seguridad de tokens y comandos en `frontend/README.md`.
+Los ficheros `.env.dev` y `.env.prod` están ignorados por Git; solo se versionan sus plantillas.
 
 ## Precisión numérica
 
-Notas, pesos y créditos usan `Decimal` en el backend y `NUMERIC` en PostgreSQL. El redondeo es solo
-visual en la UI; nunca se almacena redondeado. No se usa `float`.
+Notas, pesos y créditos usan `Decimal` en el backend y `NUMERIC` en PostgreSQL. **No se usa
+`float`**: `to_decimal()` lo rechaza explícitamente. El redondeo es solo visual; nunca se
+almacena redondeado, y el frontend no recalcula ninguna nota — muestra lo que envía la API.
