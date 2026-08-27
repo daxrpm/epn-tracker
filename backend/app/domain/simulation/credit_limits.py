@@ -15,6 +15,13 @@ from app.domain.simulation.english_rules import EnglishState, calculate_english_
 MAX_CREDITS_NORMAL = Decimal("15")
 MAX_CREDITS_REPETITION = Decimal("12")
 
+#: Ceiling once the student holds a special authorization (merit, career change, curriculum
+#: transition — ERS §8.16 / Art. 61). The regulation says the 15-credit cap *may* be exceeded but
+#: never fixes the replacement number, so this is institutional policy rather than a rule we can
+#: derive. It is a named constant so the value is reviewable in one place, and the caller may
+#: override it.
+MAX_CREDITS_SPECIAL_AUTHORIZATION = Decimal("18")
+
 
 @dataclass(slots=True)
 class RestrictionReason:
@@ -34,10 +41,26 @@ def calculate_credit_limit(
     has_pending_failed_courses: bool,
     english: EnglishState,
     has_special_credit_authorization: bool = False,
+    authorized_ceiling: Decimal = MAX_CREDITS_SPECIAL_AUTHORIZATION,
 ) -> CreditLimitResult:
-    """Compute the credit limit applying every restriction (takes the minimum)."""
+    """Compute the credit limit applying every restriction.
+
+    The base ceiling is 15, or ``authorized_ceiling`` when the student holds a special
+    authorization. Every other restriction is a legal minimum layered on top, so the result is
+    the smallest applicable limit and each one that actually bound is reported.
+    """
     reasons: list[RestrictionReason] = []
-    max_credits = MAX_CREDITS_NORMAL
+
+    if has_special_credit_authorization:
+        max_credits = authorized_ceiling
+        reasons.append(
+            RestrictionReason(
+                "SPECIAL_AUTHORIZATION",
+                f"Con autorización especial tu techo sube a {authorized_ceiling} créditos.",
+            )
+        )
+    else:
+        max_credits = MAX_CREDITS_NORMAL
 
     if has_pending_failed_courses and max_credits > MAX_CREDITS_REPETITION:
         max_credits = MAX_CREDITS_REPETITION
@@ -60,9 +83,5 @@ def calculate_credit_limit(
                 f"simulado es {english_limit} créditos.",
             )
         )
-
-    # A special authorization only lifts the normal maximum, not the other restrictions.
-    if has_special_credit_authorization and not has_pending_failed_courses and not reasons:
-        max_credits = MAX_CREDITS_NORMAL
 
     return CreditLimitResult(max_credits=max_credits, reasons=reasons)

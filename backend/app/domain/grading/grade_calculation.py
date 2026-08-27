@@ -16,13 +16,28 @@ RECOVERY_FLOOR_40 = Decimal("18")
 FULL_WEIGHT = Decimal("100")
 STANDARD_SCALE = Decimal("20")
 
+#: Weights are entered with two decimals, so three components of 33.33 legitimately sum to 99.99.
+#: Validation accepts that shortfall, so completeness has to accept it too — with an exact
+#: equality check a perfectly valid scheme could never finish, leaving the course stuck
+#: IN_PROGRESS with every grade filled in.
+WEIGHT_TOLERANCE = Decimal("0.01")
+
 
 def normalize_score(score: Decimal | str | None, scale: Decimal | str | None) -> Decimal | None:
-    """Rescale a raw score (e.g. 14/24) to the standard /20 scale used internally."""
+    """Rescale a raw score (e.g. 14/24) to the standard /20 scale used internally.
+
+    A missing scale means "already on /20". A zero scale is a caller error, not something to
+    paper over with a default: silently substituting 20 would report a wrong grade.
+    """
     raw = to_decimal(score)
     if raw is None:
         return None
-    return raw * STANDARD_SCALE / (to_decimal(scale) or STANDARD_SCALE)
+    resolved = to_decimal(scale)
+    if resolved is None:
+        resolved = STANDARD_SCALE
+    elif resolved <= ZERO:
+        raise ValueError("Score scale must be greater than zero.")
+    return raw * STANDARD_SCALE / resolved
 
 
 @dataclass(slots=True)
@@ -128,7 +143,7 @@ def calculate_contribution(components: list[ComponentInput]) -> ContributionResu
     return ContributionResult(
         score_20=total,
         evaluated_weight_percent=evaluated_weight,
-        is_complete=evaluated_weight == FULL_WEIGHT,
+        is_complete=evaluated_weight >= FULL_WEIGHT - WEIGHT_TOLERANCE,
     )
 
 

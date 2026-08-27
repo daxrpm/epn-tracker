@@ -131,7 +131,9 @@ def simulate_next_courses(
         result = check_course_eligibility(course, scenario, selected)
         if result.is_eligible:
             eligible.append(course)
-        else:
+        elif course.key not in scenario.passed:
+            # Already-passed courses are not "blocked" in any useful sense: reporting them
+            # buries the handful of real blockers under the student's whole history.
             blocked.append(BlockedCourse(course=course, reasons=result.reasons))
 
     by_key = {c.key: c for c in courses}
@@ -139,6 +141,28 @@ def simulate_next_courses(
         (by_key[k].credit_value for k in selected if k in by_key), start=Decimal("0")
     )
     selected_valid = selected_credits <= limit.max_credits
+
+    # A selection is only valid if every course in it is actually takeable. Without this the
+    # simulator happily blesses a cart containing courses whose prerequisites are unmet.
+    eligible_keys = {c.key for c in eligible}
+    unknown = sorted(k for k in selected if k not in by_key)
+    not_eligible = sorted(k for k in selected if k in by_key and k not in eligible_keys)
+    if unknown:
+        selected_valid = False
+        reasons.append(
+            RestrictionReason(
+                "UNKNOWN_COURSE_SELECTED",
+                f"Estas materias no existen en la malla: {', '.join(unknown)}.",
+            )
+        )
+    if not_eligible:
+        selected_valid = False
+        reasons.append(
+            RestrictionReason(
+                "SELECTED_COURSE_NOT_ELIGIBLE",
+                f"No puedes matricular todavía: {', '.join(not_eligible)}.",
+            )
+        )
 
     if not _repeated_courses_selected_first(scenario, selected, eligible):
         selected_valid = False

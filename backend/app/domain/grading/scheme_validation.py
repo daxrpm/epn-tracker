@@ -12,11 +12,14 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 
 from app.domain.enums import Contribution, EvaluationType
+from app.domain.grading.grade_calculation import WEIGHT_TOLERANCE
 from app.domain.numeric import to_decimal
 
 MAX_COMPONENT_WEIGHT = Decimal("35")
 FULL_WEIGHT = Decimal("100")
-DEFAULT_TOLERANCE = Decimal("0.01")
+#: Shared with ``grade_calculation.WEIGHT_TOLERANCE``: what validation accepts as "sums to 100"
+#: must be exactly what the calculator accepts as "fully evaluated".
+DEFAULT_TOLERANCE = WEIGHT_TOLERANCE
 
 
 @dataclass(slots=True)
@@ -82,6 +85,8 @@ def validate_scheme(
             continue
 
         total = sum((to_decimal(c.weight_percent) or Decimal("0") for c in comps), Decimal("0"))
+        # Deliberately asymmetric: a contribution may fall a cent short (33.33 x 3 = 99.99) but
+        # must never add up to more than 100%.
         if total < FULL_WEIGHT - tolerance or total > FULL_WEIGHT:
             issue = SchemeIssue(
                 contribution.value,
